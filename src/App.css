@@ -1,0 +1,10 @@
+.dashboard-bg {
+  min-height: 100vh;
+  background: #f5ecd7; /* This is a soft beige color */
+  padding: 32px;
+}.dashboard-bg {
+  min-height: 100vh;
+  background: #f5ecd7; /* This is a soft beige color */
+  padding: 32px;
+  color: #8B5C2A; /* Brown text for better readability */
+}
