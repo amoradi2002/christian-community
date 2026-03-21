@@ -1,13 +1,630 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>God's Children — Christian Community</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#C9973A;--gold-light:#F5E6C8;--gold-dark:#8B6420;
+  --cream:#FAF7F2;--parchment:#F0E8D8;--brown:#5C3D1E;--brown-light:#7A5230;
+  --text:#2C1F0E;--text-muted:#8A7560;--white:#FFFFFF;--border:#E2D5C0;
+  --shadow:0 2px 20px rgba(92,61,30,0.08);--radius:12px;
+  --blue-soft:#E8F0F8;--green-soft:#E8F4EC;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh}
+nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;height:58px;box-shadow:0 2px 12px rgba(44,31,14,0.25)}
+.nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer}
+.nav-logo svg{width:30px;height:30px}
+.nav-logo-text{font-family:'Cormorant Garamond',serif;color:var(--gold-light);font-size:19px;font-weight:600}
+.nav-right{display:flex;align-items:center;gap:8px}
+.nav-links{display:flex;gap:2px;flex-wrap:wrap}
+.nav-link{background:none;border:none;color:rgba(240,232,216,0.75);padding:7px 9px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11.5px;transition:all 0.2s;white-space:nowrap}
+.nav-link:hover,.nav-link.active{color:var(--gold-light);background:rgba(255,255,255,0.1)}
+.nav-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--white);cursor:pointer;border:2px solid var(--gold-light)}
+.hamburger{display:none;background:none;border:none;cursor:pointer;flex-direction:column;gap:5px;padding:8px}
+.hamburger span{width:20px;height:2px;background:var(--gold-light);border-radius:2px}
+@media(max-width:750px){
+  .nav-links{display:none;position:absolute;top:58px;left:0;right:0;background:var(--brown);flex-direction:column;padding:10px;gap:2px;box-shadow:0 8px 20px rgba(0,0,0,0.3)}
+  .nav-links.open{display:flex}
+  .hamburger{display:flex}
+  .nav-link{font-size:14px;padding:10px 14px}
+}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(44,31,14,0.6);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:var(--radius);padding:30px;width:100%;max-width:400px;position:relative;max-height:90vh;overflow-y:auto}
+.modal h2{font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--brown);margin-bottom:4px}
+.modal p{font-size:13px;color:var(--text-muted);margin-bottom:18px}
+.modal-tabs{display:flex;margin-bottom:18px;border:1.5px solid var(--border);border-radius:8px;overflow:hidden}
+.modal-tab{flex:1;padding:10px;background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text-muted);transition:all 0.2s}
+.modal-tab.active{background:var(--brown);color:var(--gold-light)}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)}
+.msg-error{background:#fff0f0;border:1px solid #ffcccc;border-radius:8px;padding:10px 14px;font-size:13px;color:#c0392b;margin-bottom:14px;display:none}
+.msg-error.show{display:block}
+.msg-ok{background:var(--green-soft);border:1px solid #b5d9c0;border-radius:8px;padding:10px 14px;font-size:13px;color:#2a5c35;margin-bottom:14px;display:none}
+.msg-ok.show{display:block}
+main{max-width:900px;margin:0 auto;padding:28px 20px}
+.page{display:none;animation:fadeIn 0.3s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.hero{background:var(--brown);border-radius:var(--radius);padding:44px 32px;text-align:center;margin-bottom:22px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;opacity:0.04;background-image:repeating-linear-gradient(45deg,var(--gold) 0,var(--gold) 1px,transparent 0,transparent 50%);background-size:20px 20px}
+.hero h1{font-family:'Cormorant Garamond',serif;color:var(--gold-light);font-size:clamp(26px,5vw,40px);font-weight:700;line-height:1.2;margin-bottom:10px;position:relative}
+.hero p{color:rgba(240,232,216,0.8);font-size:15px;line-height:1.6;max-width:460px;margin:0 auto;position:relative}
+.verse-card{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:var(--radius);padding:18px 22px;margin-bottom:22px;box-shadow:var(--shadow)}
+.verse-label{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-weight:500;margin-bottom:7px}
+.verse-text{font-family:'Cormorant Garamond',serif;font-size:19px;line-height:1.5;color:var(--brown);font-style:italic;margin-bottom:5px}
+.verse-ref{font-size:12px;color:var(--text-muted);font-weight:500}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:22px}
+.feature-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:17px;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow)}
+.feature-card:hover{transform:translateY(-3px);box-shadow:0 6px 28px rgba(92,61,30,0.14);border-color:var(--gold)}
+.feature-icon{font-size:22px;margin-bottom:8px}
+.feature-title{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:var(--brown);margin-bottom:3px}
+.feature-desc{font-size:11px;color:var(--text-muted);line-height:1.5}
+.section-header{margin-bottom:20px}
+.section-header h2{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:700;color:var(--brown);margin-bottom:4px}
+.section-header p{color:var(--text-muted);font-size:13px}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:13px;box-shadow:var(--shadow)}
+label{display:block;font-size:13px;font-weight:500;color:var(--brown);margin-bottom:5px}
+input[type=text],input[type=email],input[type=password],input[type=url],textarea,select{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;background:var(--white);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border 0.2s}
+input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+textarea{resize:vertical;min-height:80px}
+.form-group{margin-bottom:14px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:500px){.form-row{grid-template-columns:1fr}}
+.form-check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--brown);cursor:pointer;margin-bottom:13px}
+.form-check input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:pointer}
+.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;transition:all 0.2s}
+.btn-primary{background:var(--brown);color:var(--gold-light)}
+.btn-primary:hover{background:var(--brown-light)}
+.btn-primary:disabled{opacity:0.6;cursor:not-allowed}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--brown)}
+.btn-ghost:hover{border-color:var(--gold)}
+.btn-gold{background:var(--gold);color:var(--white)}
+.btn-sm{padding:6px 13px;font-size:12px;border-radius:6px}
+.btn-danger{background:#fff0f0;border:1.5px solid #ffcccc;color:#c0392b}
+.badge-leader{background:var(--gold);color:var(--white);display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;margin-left:6px}
+.badge-denom{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:var(--gold-light);color:var(--gold-dark)}
+.auth-banner{background:var(--brown);border-radius:var(--radius);padding:18px 22px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.auth-banner p{color:rgba(240,232,216,0.85);font-size:13px}
+.church-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:13px;box-shadow:var(--shadow);transition:all 0.2s}
+.church-card:hover{border-color:var(--gold)}
+.church-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
+.church-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--brown);margin-bottom:3px}
+.church-pastor{font-size:12px;color:var(--text-muted);margin-bottom:6px}
+.church-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.church-meta-item{font-size:12px;color:var(--text-muted)}
+.church-links{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.church-link{font-size:12px;color:var(--gold-dark);text-decoration:none;background:var(--gold-light);padding:4px 10px;border-radius:20px;font-weight:500}
+.filter-bar{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.filter-bar .form-group{margin-bottom:0;flex:1;min-width:140px}
+.filter-count{font-size:13px;color:var(--text-muted);margin-bottom:8px}
+.group-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:11px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.group-info h3{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--brown)}
+.group-meta{font-size:12px;color:var(--text-muted);display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
+.admin-controls{background:#fff9ed;border:1px solid var(--gold);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px}
+.prayer-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:15px 17px;margin-bottom:11px;box-shadow:var(--shadow)}
+.avatar{width:33px;height:33px;border-radius:50%;background:var(--gold-light);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--gold-dark);flex-shrink:0}
+.pray-btn{background:var(--gold-light);border:none;border-radius:20px;padding:5px 12px;font-size:11px;color:var(--gold-dark);cursor:pointer;font-weight:500;transition:all 0.2s}
+.pray-btn:hover,.pray-btn.prayed{background:var(--gold);color:var(--white)}
+.comments-section{border-top:1px solid var(--border);margin-top:9px;padding-top:9px}
+.comment-item{background:var(--parchment);border-radius:7px;padding:6px 10px;margin-bottom:5px;font-size:12px}
+.comment-input-row{display:flex;gap:6px;margin-top:6px}
+.comment-input-row input{flex:1;padding:7px 10px;font-size:12px}
+.testimony-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:17px;margin-bottom:11px;box-shadow:var(--shadow)}
+.testimony-text{font-family:'Cormorant Garamond',serif;font-size:17px;line-height:1.6;color:var(--text);font-style:italic}
+.quote-mark{font-size:40px;line-height:0.5;color:var(--gold-light);font-family:Georgia,serif;margin-bottom:7px;display:block}
+.music-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:15px 17px;margin-bottom:11px;box-shadow:var(--shadow)}
+.music-card h3{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:700;color:var(--brown);margin-bottom:3px}
+.disc-item{border-left:3px solid var(--gold);padding:10px 13px;margin-bottom:8px;background:var(--white);border-radius:0 8px 8px 0;border:1px solid var(--border);border-left:3px solid var(--gold)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-muted)}
+.empty-icon{font-size:34px;margin-bottom:9px}
+.about-card{background:var(--blue-soft);border-radius:var(--radius);padding:16px 20px;margin-bottom:12px;border:1px solid #C5D8EE}
+.cta-card{background:var(--green-soft);border-radius:var(--radius);padding:16px 20px;border:1px solid #B5D9C0;text-align:center;font-family:'Cormorant Garamond',serif;font-size:17px;color:#2A5C35;font-style:italic}
+.divider{height:1px;background:var(--border);margin:18px 0}
+.loading{text-align:center;padding:28px;color:var(--text-muted);font-style:italic;font-size:13px}
+.sign-in-prompt{background:var(--gold-light);border-radius:8px;padding:11px 15px;font-size:13px;color:var(--brown);margin-bottom:13px}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--cream)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2>God's Children</h2>
+    <p>Join our Christian community</p>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+      <button class="modal-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+    <div id="modal-error" class="msg-error"></div>
+    <div id="modal-success" class="msg-ok"></div>
+    <div id="form-login">
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="your@email.com"/></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="Your password"/></div>
+      <button class="btn btn-primary" style="width:100%" id="login-btn" onclick="handleLogin()">Sign In</button>
+    </div>
+    <div id="form-signup" style="display:none">
+      <div class="form-group"><label>Full Name</label><input type="text" id="signup-name" placeholder="Your full name"/></div>
+      <div class="form-group"><label>Username</label><input type="text" id="signup-username" placeholder="username"/></div>
+      <div class="form-group"><label>Email</label><input type="email" id="signup-email" placeholder="your@email.com"/></div>
+      <div class="form-group"><label>Password</label><input type="password" id="signup-password" placeholder="Min 6 characters"/></div>
+      <button class="btn btn-primary" style="width:100%" id="signup-btn" onclick="handleSignup()">Create Account</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('profileModal').classList.remove('open')">✕</button>
+    <h2>Your Profile</h2>
+    <p>Update your community info</p>
+    <div class="form-group"><label>Full Name</label><input type="text" id="edit-name"/></div>
+    <div class="form-group"><label>Username</label><input type="text" id="edit-username"/></div>
+    <div class="form-group"><label>Bio</label><textarea id="edit-bio" placeholder="Tell the community about yourself..." rows="3"></textarea></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveProfile()">Save</button>
+      <button class="btn btn-danger btn-sm" onclick="handleLogout()">Sign Out</button>
+    </div>
+  </div>
+</div>
+<nav>
+  <div class="nav-logo" onclick="showPage('home')">
+    <svg viewBox="0 0 32 32" fill="none"><rect x="13" y="2" width="6" height="28" rx="2" fill="#C9973A"/><rect x="5" y="11" width="22" height="6" rx="2" fill="#C9973A"/></svg>
+    <span class="nav-logo-text">God's Children</span>
+  </div>
+  <button class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+  <div class="nav-links" id="navLinks">
+    <button class="nav-link active" onclick="showPage('home')">Home</button>
+    <button class="nav-link" onclick="showPage('churches')">Churches</button>
+    <button class="nav-link" onclick="showPage('life-groups')">Life Groups</button>
+    <button class="nav-link" onclick="showPage('discussions')">Discussions</button>
+    <button class="nav-link" onclick="window.location.href='bible.html'">Bible</button>
+    <button class="nav-link" onclick="showPage('testimonies')">Testimonies</button>
+    <button class="nav-link" onclick="showPage('prayer')">Prayer Wall</button>
+    <button class="nav-link" onclick="showPage('music')">Music</button>
+  </div>
+  <div class="nav-right">
+    <div id="nav-auth-btns"><button class="btn btn-sm" style="background:transparent;border:1.5px solid rgba(201,151,58,0.5);color:var(--gold-light);font-size:12px" onclick="openModal()">Sign In</button></div>
+    <div id="nav-user-area" style="display:none"><div class="nav-avatar" id="nav-avatar" onclick="openProfileModal()">?</div></div>
+  </div>
+</nav>
+<main>
+<div id="page-home" class="page active">
+  <div id="home-welcome"></div>
+  <div class="hero">
+    <svg style="margin:0 auto 14px;display:block" width="50" height="50" viewBox="0 0 50 50" fill="none"><rect x="20" y="3" width="10" height="44" rx="4" fill="#C9973A" opacity="0.9"/><rect x="6" y="18" width="38" height="10" rx="4" fill="#C9973A" opacity="0.9"/></svg>
+    <h1>Welcome to God's Children</h1>
+    <p>A place to connect, grow, and encourage one another in Christ.</p>
+  </div>
+  <div class="verse-card">
+    <div class="verse-label">✦ Daily Verse</div>
+    <div class="verse-text" id="verse-text">Loading...</div>
+    <div class="verse-ref" id="verse-ref"></div>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card" onclick="showPage('churches')"><div class="feature-icon">⛪</div><div class="feature-title">Churches</div><div class="feature-desc">Find a church near you by denomination.</div></div>
+    <div class="feature-card" onclick="showPage('life-groups')"><div class="feature-icon">🤝</div><div class="feature-title">Life Groups</div><div class="feature-desc">Find and join a group to grow in faith.</div></div>
+    <div class="feature-card" onclick="showPage('discussions')"><div class="feature-icon">📖</div><div class="feature-title">Discussions</div><div class="feature-desc">Share insights about the Word.</div></div>
+    <div class="feature-card" onclick="window.location.href='bible.html'"><div class="feature-icon">📚</div><div class="feature-title">Bible Reader</div><div class="feature-desc">Full Bible, highlights, notes & offline.</div></div>
+    <div class="feature-card" onclick="showPage('testimonies')"><div class="feature-icon">💬</div><div class="feature-title">Testimonies</div><div class="feature-desc">Read and share stories of faith.</div></div>
+    <div class="feature-card" onclick="showPage('prayer')"><div class="feature-icon">🙏</div><div class="feature-title">Prayer Wall</div><div class="feature-desc">Share requests and encourage one another.</div></div>
+    <div class="feature-card" onclick="showPage('music')"><div class="feature-icon">🎵</div><div class="feature-title">Music Forum</div><div class="feature-desc">Share your favorite worship songs.</div></div>
+  </div>
+  <div class="about-card"><strong>About this Community:</strong><br/><span style="font-size:13px;color:#2C3E50;line-height:1.6">We are believers dedicated to supporting each other in our walk with Christ. Whether you're new to faith or have been a Christian for years, you are welcome here!</span></div>
+  <div class="cta-card">"Share your testimony or join a group today — be a blessing to others!"</div>
+</div>
+<div id="page-churches" class="page">
+  <div class="section-header"><h2>⛪ Find a Church</h2><p>Browse churches by denomination, service times, and city.</p></div>
+  <div class="filter-bar">
+    <div class="form-group"><label>Denomination</label>
+      <select id="filter-denom" onchange="filterChurches()">
+        <option value="">All Denominations</option>
+        <option>Baptist</option><option>Catholic</option><option>Pentecostal</option>
+        <option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option>
+        <option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option>
+        <option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Service Day</label>
+      <select id="filter-day" onchange="filterChurches()">
+        <option value="">Any Day</option><option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option>
+      </select>
+    </div>
+    <div class="form-group"><label>City / Zip</label><input type="text" id="filter-city" placeholder="e.g. Los Angeles" oninput="filterChurches()"/></div>
+    <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear</button>
+  </div>
+  <div id="church-count" class="filter-count"></div>
+  <div id="churches-list"><div class="loading">Loading churches...</div></div>
+  <div class="divider"></div>
+  <div class="card">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:6px">⛪ List Your Church</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Help people in your area find your congregation.</p>
+    <div id="church-prompt"></div>
+    <div id="church-fields">
+      <div class="form-row">
+        <div class="form-group"><label>Church Name *</label><input type="text" id="ch-name" placeholder="Grace Community Church"/></div>
+        <div class="form-group"><label>Pastor Name</label><input type="text" id="ch-pastor" placeholder="Pastor John Smith"/></div>
+      </div>
+      <div class="form-group"><label>Address *</label><input type="text" id="ch-address" placeholder="123 Main St, Los Angeles, CA"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>City *</label><input type="text" id="ch-city" placeholder="Los Angeles"/></div>
+        <div class="form-group"><label>Zip Code</label><input type="text" id="ch-zip" placeholder="90001"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Denomination *</label>
+          <select id="ch-denom">
+            <option value="">Select denomination</option>
+            <option>Baptist</option><option>Catholic</option><option>Pentecostal</option>
+            <option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option>
+            <option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option>
+            <option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Service Day *</label>
+          <select id="ch-day">
+            <option value="">Select day</option>
+            <option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option><option>Multiple days</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Service Time *</label><input type="text" id="ch-time" placeholder="10:00 AM & 6:00 PM"/></div>
+        <div class="form-group"><label>Website</label><input type="url" id="ch-website" placeholder="https://yourchurch.com"/></div>
+      </div>
+      <div class="form-group"><label>Social Media</label><input type="url" id="ch-social" placeholder="https://instagram.com/yourchurch"/></div>
+      <div class="form-group"><label>About Your Church</label><textarea id="ch-about" placeholder="Tell people about your church..."></textarea></div>
+      <button class="btn btn-primary" onclick="addChurch()">List My Church</button>
+    </div>
+  </div>
+</div>
+<div id="page-life-groups" class="page">
+  <div class="section-header"><h2>Life Groups</h2><p>Find community near you.</p></div>
+  <div id="life-groups-list"><div class="loading">Loading groups...</div></div>
+  <div class="divider"></div>
+  <div class="card">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Start a Life Group</h3>
+    <div id="lg-prompt"></div>
+    <div id="lg-fields">
+      <div class="form-group"><label>Group Name</label><input type="text" id="lg-name" placeholder="Eastside Women's Bible Study"/></div>
+      <div class="form-group"><label>Meeting Time</label><input type="text" id="lg-time" placeholder="Tuesdays 7pm"/></div>
+      <div class="form-group"><label>Location</label><input type="text" id="lg-location" placeholder="123 Main St or Online"/></div>
+      <div class="form-group"><label>Description</label><textarea id="lg-desc" placeholder="Tell people about your group..."></textarea></div>
+      <button class="btn btn-primary" onclick="addLifeGroup()">Create Group</button>
+    </div>
+  </div>
+</div>
+<div id="page-discussions" class="page">
+  <div class="section-header"><h2>Bible Discussions</h2><p>Select a book and join the conversation.</p></div>
+  <div class="card" style="margin-bottom:14px"><div class="form-group" style="margin-bottom:0"><label>Select a Book</label><select id="disc-book-select" onchange="loadDiscussions()"></select></div></div>
+  <div id="disc-list"><div class="loading">Loading...</div></div>
+  <div class="divider"></div>
+  <div class="card">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Add Your Thoughts</h3>
+    <div id="disc-prompt"></div>
+    <div id="disc-fields">
+      <div class="form-group"><label>Comment</label><textarea id="disc-comment" placeholder="Share your insight or question..."></textarea></div>
+      <button class="btn btn-primary" onclick="addDiscussion()">Post Comment</button>
+    </div>
+  </div>
+</div>
+<div id="page-testimonies" class="page">
+  <div class="section-header"><h2>Testimonies</h2><p>Stories of what God has done.</p></div>
+  <div class="card">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Share Your Testimony</h3>
+    <div id="test-prompt"></div>
+    <div id="test-fields">
+      <div class="form-group"><label>Your Name (optional)</label><input type="text" id="test-name" placeholder="Leave blank to post anonymously"/></div>
+      <label class="form-check"><input type="checkbox" id="test-share-name"/> Share my name publicly</label>
+      <div class="form-group"><label>Your Testimony</label><textarea id="test-story" placeholder="Share what God has done in your life..."></textarea></div>
+      <button class="btn btn-primary" onclick="addTestimony()">Submit Testimony</button>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div id="testimonies-list"><div class="loading">Loading testimonies...</div></div>
+</div>
+<div id="page-prayer" class="page">
+  <div class="section-header"><h2>Prayer Wall</h2><p>Share your burdens — let the community lift you up.</p></div>
+  <div class="card">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Post a Prayer Request</h3>
+    <div id="prayer-prompt"></div>
+    <div id="prayer-fields">
+      <div class="form-group"><label>First Name</label><input type="text" id="prayer-name" placeholder="Your first name"/></div>
+      <div class="form-group"><label>Prayer Request</label><textarea id="prayer-request" placeholder="How can we pray for you?"></textarea></div>
+      <button class="btn btn-primary" onclick="addPrayer()">Post to Prayer Wall</button>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div id="prayer-list"><div class="loading">Loading prayer requests...</div></div>
+</div>
+<div id="page-music" class="page">
+  <div class="section-header"><h2>Music Forum</h2><p>Share songs that move your spirit.</p></div>
+  <div class="card">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Share a Song</h3>
+    <div id="music-prompt"></div>
+    <div id="music-fields">
+      <div class="form-group"><label>Song Title</label><input type="text" id="music-title" placeholder="Way Maker"/></div>
+      <div class="form-group"><label>Artist</label><input type="text" id="music-artist" placeholder="Sinach"/></div>
+      <div class="form-group"><label>Why does this song speak to you?</label><textarea id="music-note" placeholder="Share what this song means to you..."></textarea></div>
+      <button class="btn btn-primary" onclick="addMusic()">Share Song</button>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div id="music-list"><div class="loading">Loading music posts...</div></div>
+</div>
+</main>
+<script>
+const SUPABASE_URL='https://jnjhwftqkmklsxzllqvs.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impuamh3ZnRxa21rbHN4emxscXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNzExMTMsImV4cCI6MjA4OTY0NzExM30.JpZYP65tjH-HMayOd9qsnwKuLhjH6q64RCVZJIquVAE';
+const{createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let currentUser=null,currentProfile=null,allChurches=[];
+const dailyVerses=[
+  {ref:"Philippians 4:13",text:"I can do all this through him who gives me strength."},
+  {ref:"Psalm 23:1",text:"The Lord is my shepherd, I lack nothing."},
+  {ref:"Proverbs 3:5",text:"Trust in the Lord with all your heart and lean not on your own understanding."},
+  {ref:"Isaiah 41:10",text:"Do not fear, for I am with you; do not be dismayed, for I am your God."},
+  {ref:"Romans 8:28",text:"In all things God works for the good of those who love him."},
+  {ref:"Matthew 6:33",text:"Seek first his kingdom and his righteousness, and all these things will be given to you."},
+  {ref:"Joshua 1:9",text:"Be strong and courageous. Do not be afraid; the Lord your God will be with you wherever you go."},
+  {ref:"John 3:16",text:"For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life."},
+  {ref:"1 Peter 5:7",text:"Cast all your anxiety on him because he cares for you."},
+  {ref:"Jeremiah 29:11",text:"For I know the plans I have for you — plans to prosper you and not to harm you, plans to give you hope and a future."}
+];
+const bibleBookNames=["Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua","Judges","Ruth","1 Samuel","2 Samuel","1 Kings","2 Kings","1 Chronicles","2 Chronicles","Ezra","Nehemiah","Esther","Job","Psalms","Proverbs","Ecclesiastes","Song of Solomon","Isaiah","Jeremiah","Lamentations","Ezekiel","Daniel","Hosea","Joel","Amos","Obadiah","Jonah","Micah","Nahum","Habakkuk","Zephaniah","Haggai","Zechariah","Malachi","Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","2 Corinthians","Galatians","Ephesians","Philippians","Colossians","1 Thessalonians","2 Thessalonians","1 Timothy","2 Timothy","Titus","Philemon","Hebrews","James","1 Peter","2 Peter","1 John","2 John","3 John","Jude","Revelation"];
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const map={home:'Home',churches:'Churches','life-groups':'Life Groups',discussions:'Discussions',testimonies:'Testimonies',prayer:'Prayer Wall',music:'Music'};
+  document.querySelectorAll('.nav-link').forEach(l=>{l.classList.toggle('active',l.textContent===map[id])});
+  document.getElementById('navLinks').classList.remove('open');
+  window.scrollTo(0,0);
+  if(id==='churches')loadChurches();
+  if(id==='life-groups')loadLifeGroups();
+  if(id==='testimonies')loadTestimonies();
+  if(id==='prayer')loadPrayers();
+  if(id==='music')loadMusic();
+  if(id==='discussions')loadDiscussions();
+}
+function toggleMenu(){document.getElementById('navLinks').classList.toggle('open')}
+function openModal(){document.getElementById('authModal').classList.add('open')}
+function closeModal(){document.getElementById('authModal').classList.remove('open');clearMsgs()}
+function switchTab(t){['login','signup'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('active',x===t);document.getElementById('form-'+x).style.display=x===t?'block':'none'});clearMsgs()}
+function showErr(m){const e=document.getElementById('modal-error');e.textContent=m;e.classList.add('show');document.getElementById('modal-success').classList.remove('show')}
+function showOk(m){const e=document.getElementById('modal-success');e.textContent=m;e.classList.add('show');document.getElementById('modal-error').classList.remove('show')}
+function clearMsgs(){document.getElementById('modal-error').classList.remove('show');document.getElementById('modal-success').classList.remove('show')}
+async function handleSignup(){
+  const name=document.getElementById('signup-name').value.trim();
+  const username=document.getElementById('signup-username').value.trim();
+  const email=document.getElementById('signup-email').value.trim();
+  const password=document.getElementById('signup-password').value;
+  if(!name||!username||!email||!password){showErr('Please fill in all fields.');return}
+  if(password.length<6){showErr('Password must be at least 6 characters.');return}
+  const btn=document.getElementById('signup-btn');btn.disabled=true;btn.textContent='Creating...';
+  const{error}=await db.auth.signUp({email,password,options:{data:{full_name:name,username}}});
+  if(error){showErr(error.message);btn.disabled=false;btn.textContent='Create Account';return}
+  showOk('Account created! Check your email to confirm, then sign in.');
+  switchTab('login');btn.disabled=false;btn.textContent='Create Account';
+}
+async function handleLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const password=document.getElementById('login-password').value;
+  if(!email||!password){showErr('Please enter email and password.');return}
+  const btn=document.getElementById('login-btn');btn.disabled=true;btn.textContent='Signing in...';
+  const{error}=await db.auth.signInWithPassword({email,password});
+  if(error){showErr(error.message);btn.disabled=false;btn.textContent='Sign In';return}
+  closeModal();btn.disabled=false;btn.textContent='Sign In';
+}
+async function handleLogout(){await db.auth.signOut();document.getElementById('profileModal').classList.remove('open')}
+function openProfileModal(){
+  if(!currentUser){openModal();return}
+  document.getElementById('edit-name').value=currentProfile?.full_name||'';
+  document.getElementById('edit-username').value=currentProfile?.username||'';
+  document.getElementById('edit-bio').value=currentProfile?.bio||'';
+  document.getElementById('profileModal').classList.add('open');
+}
+async function saveProfile(){
+  if(!currentUser)return;
+  const full_name=document.getElementById('edit-name').value.trim();
+  const username=document.getElementById('edit-username').value.trim();
+  const bio=document.getElementById('edit-bio').value.trim();
+  await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio});
+  currentProfile={...currentProfile,full_name,username,bio};
+  updateUI();document.getElementById('profileModal').classList.remove('open');
+}
+function updateUI(){
+  const on=!!currentUser;
+  document.getElementById('nav-auth-btns').style.display=on?'none':'block';
+  document.getElementById('nav-user-area').style.display=on?'block':'none';
+  if(on)document.getElementById('nav-avatar').textContent=(currentProfile?.full_name||currentUser.email||'?')[0].toUpperCase();
+  document.getElementById('home-welcome').innerHTML=on
+    ?`<div style="background:var(--green-soft);border:1px solid #b5d9c0;border-radius:var(--radius);padding:13px 17px;margin-bottom:16px;font-size:14px;color:#2a5c35">👋 Welcome back, <strong>${currentProfile?.full_name||'friend'}</strong>!</div>`
+    :`<div class="auth-banner"><p>🙏 Join our community — sign in to pray, share, and connect.</p><div style="display:flex;gap:8px"><button class="btn btn-gold btn-sm" onclick="openModal()">Sign In</button><button class="btn btn-sm" style="background:transparent;border:1.5px solid rgba(201,151,58,0.5);color:var(--gold-light)" onclick="openModal();switchTab('signup')">Sign Up</button></div></div>`;
+  const prompts={'church-prompt':'church-fields','lg-prompt':'lg-fields','disc-prompt':'disc-fields','test-prompt':'test-fields','prayer-prompt':'prayer-fields','music-prompt':'music-fields'};
+  Object.entries(prompts).forEach(([pid,fid])=>{
+    const p=document.getElementById(pid),f=document.getElementById(fid);if(!p||!f)return;
+    if(!on){p.innerHTML=`<div class="sign-in-prompt">🙏 <strong>Sign in</strong> to post. <button class="btn btn-gold btn-sm" style="margin-left:8px" onclick="openModal()">Sign In</button></div>`;f.style.opacity='0.4';f.style.pointerEvents='none';}
+    else{p.innerHTML='';f.style.opacity='1';f.style.pointerEvents='auto'}
+  });
+}
+function setDailyVerse(){
+  const d=new Date(),start=new Date(d.getFullYear(),0,0);
+  const v=dailyVerses[Math.floor((d-start)/86400000)%dailyVerses.length];
+  document.getElementById('verse-text').textContent='"'+v.text+'"';
+  document.getElementById('verse-ref').textContent='— '+v.ref;
+}
+async function loadChurches(){
+  const c=document.getElementById('churches-list');
+  const{data}=await db.from('churches').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  const fallback=[
+    {id:'c1',name:'Grace Community Church',pastor:'Pastor Michael Thompson',address:'1200 Hope Blvd',city:'Los Angeles',zip:'90001',denomination:'Non-denominational',service_day:'Sunday',service_time:'9:00 AM & 11:00 AM',website:'https://gracecommunity.com',social:'',about:'A welcoming church for all people.',user_id:null},
+    {id:'c2',name:'First Baptist Church',pastor:'Pastor Sarah Williams',address:'456 Faith Ave',city:'Houston',zip:'77001',denomination:'Baptist',service_day:'Sunday',service_time:'8:30 AM & 10:30 AM',website:'',social:'',about:'Rooted in the Word, reaching the world.',user_id:null},
+    {id:'c3',name:'Calvary Pentecostal',pastor:'Pastor David Cruz',address:'789 Spirit Lane',city:'Miami',zip:'33101',denomination:'Pentecostal',service_day:'Sunday',service_time:'10:00 AM',website:'https://calvarymiami.org',social:'',about:'Spirit-filled worship and powerful prayer.',user_id:null}
+  ];
+  allChurches=data&&data.length>0?data:fallback;filterChurches();
+}
+function filterChurches(){
+  const denom=document.getElementById('filter-denom').value.toLowerCase();
+  const day=document.getElementById('filter-day').value.toLowerCase();
+  const city=document.getElementById('filter-city').value.toLowerCase().trim();
+  const filtered=allChurches.filter(ch=>{
+    if(denom&&!ch.denomination?.toLowerCase().includes(denom))return false;
+    if(day&&!ch.service_day?.toLowerCase().includes(day))return false;
+    if(city&&!ch.city?.toLowerCase().includes(city)&&!ch.zip?.includes(city))return false;
+    return true;
+  });
+  document.getElementById('church-count').textContent=`Showing ${filtered.length} church${filtered.length!==1?'es':''}`;
+  const c=document.getElementById('churches-list');
+  if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">⛪</div><p>No churches found. Try clearing filters!</p></div>';return}
+  c.innerHTML=filtered.map(ch=>`
+    <div class="church-card">
+      <div class="church-card-header">
+        <div>
+          <div class="church-name">${ch.name}</div>
+          ${ch.pastor?`<div class="church-pastor">👤 ${ch.pastor}</div>`:''}
+          <span class="badge-denom">${ch.denomination||'Christian'}</span>
+        </div>
+        ${ch.user_id===currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="deleteChurch('${ch.id}')">Remove</button>`:''}
+      </div>
+      ${ch.about?`<p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px">${ch.about}</p>`:''}
+      <div class="church-meta">
+        ${ch.address?`<span class="church-meta-item">📍 ${ch.address}, ${ch.city||''} ${ch.zip||''}</span>`:''}
+        ${ch.service_day?`<span class="church-meta-item">📅 ${ch.service_day}</span>`:''}
+        ${ch.service_time?`<span class="church-meta-item">🕐 ${ch.service_time}</span>`:''}
+      </div>
+      ${(ch.website||ch.social)?`<div class="church-links">${ch.website?`<a class="church-link" href="${ch.website}" target="_blank">🌐 Website</a>`:''} ${ch.social?`<a class="church-link" href="${ch.social}" target="_blank">📱 Social</a>`:''}</div>`:''}
+    </div>`).join('');
+}
+function clearFilters(){document.getElementById('filter-denom').value='';document.getElementById('filter-day').value='';document.getElementById('filter-city').value='';filterChurches()}
+async function addChurch(){
+  if(!currentUser){openModal();return}
+  const name=document.getElementById('ch-name').value.trim();
+  const address=document.getElementById('ch-address').value.trim();
+  const city=document.getElementById('ch-city').value.trim();
+  const denomination=document.getElementById('ch-denom').value;
+  const service_day=document.getElementById('ch-day').value;
+  const service_time=document.getElementById('ch-time').value.trim();
+  if(!name||!address||!city||!denomination||!service_day||!service_time){alert('Please fill in all required fields.');return}
+  await db.from('churches').insert({name,address,city,zip:document.getElementById('ch-zip').value.trim(),denomination,service_day,service_time,pastor:document.getElementById('ch-pastor').value.trim(),website:document.getElementById('ch-website').value.trim(),social:document.getElementById('ch-social').value.trim(),about:document.getElementById('ch-about').value.trim(),user_id:currentUser.id}).catch(()=>{});
+  ['ch-name','ch-pastor','ch-address','ch-city','ch-zip','ch-time','ch-website','ch-social','ch-about'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ch-denom').value='';document.getElementById('ch-day').value='';
+  loadChurches();alert('Your church has been listed! 🙏');
+}
+async function deleteChurch(id){if(!confirm('Remove this listing?'))return;await db.from('churches').delete().eq('id',id);loadChurches()}
+async function loadLifeGroups(){
+  const c=document.getElementById('life-groups-list');
+  const{data}=await db.from('life_groups').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  const fallback=[{id:'d1',name:'Downtown Fellowship',meeting_time:'Wednesdays 7pm',location:'123 Main St',description:'Mixed age group focused on Romans.',member_count:12,leader_id:null},{id:'d2',name:'Young Adults Group',meeting_time:'Fridays 6pm',location:'456 Oak Ave',description:'For young adults 18-35.',member_count:24,leader_id:null},{id:'d3',name:'Morning Prayer Circle',meeting_time:'Sundays 8am',location:'789 Pine Rd',description:'Early morning prayer.',member_count:8,leader_id:null}];
+  const list=data&&data.length>0?data:fallback;
+  c.innerHTML=list.map(g=>`<div class="group-card"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3><p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p><div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="deleteGroup('${g.id}')">Delete</button></div>`:''}</div><button class="btn btn-ghost btn-sm" onclick="joinGroup('${g.id}')">Join</button></div>`).join('');
+}
+async function joinGroup(id){if(!currentUser){openModal();return}alert('You joined! 🙌')}
+async function deleteGroup(id){if(!confirm('Delete?'))return;await db.from('life_groups').delete().eq('id',id);loadLifeGroups()}
+async function addLifeGroup(){
+  if(!currentUser){openModal();return}
+  const name=document.getElementById('lg-name').value.trim();
+  const meeting_time=document.getElementById('lg-time').value.trim();
+  const location=document.getElementById('lg-location').value.trim();
+  if(!name||!meeting_time||!location){alert('Please fill in name, time, and location.');return}
+  await db.from('life_groups').insert({name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),leader_id:currentUser.id,member_count:1});
+  ['lg-name','lg-time','lg-location','lg-desc'].forEach(id=>document.getElementById(id).value='');
+  loadLifeGroups();
+}
+function initDiscBooks(){
+  const sel=document.getElementById('disc-book-select');
+  bibleBookNames.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;sel.appendChild(o)});
+  sel.value='Matthew';
+}
+async function loadDiscussions(){
+  const book=document.getElementById('disc-book-select').value;
+  const c=document.getElementById('disc-list');
+  c.innerHTML='<div class="loading">Loading...</div>';
+  const{data}=await db.from('discussions').select('*,profiles(full_name)').eq('book',book).order('created_at',{ascending:false}).limit(30).catch(()=>({data:null}));
+  const fallback={"Matthew":[{profiles:{full_name:'Sarah'},comment:'The Great Commission inspires me daily.'},{profiles:{full_name:'John'},comment:'Jesus promises to be with us always!'}],"John":[{profiles:{full_name:'Alex'},comment:'John 3:16 is the heart of the gospel.'}],"Romans":[{profiles:{full_name:'Chris'},comment:"Nothing can separate us from God's love!"}]};
+  const list=data&&data.length>0?data:(fallback[book]||[]);
+  c.innerHTML=list.length===0?`<div class="empty-state"><div class="empty-icon">📖</div><p>No discussions yet for ${book}.</p></div>`:list.map(d=>`<div class="disc-item"><strong style="font-size:12px;color:var(--brown)">${d.profiles?.full_name||'Community member'}</strong><p style="font-size:13px;margin-top:3px;line-height:1.5">${d.comment}</p></div>`).join('');
+}
+async function addDiscussion(){
+  if(!currentUser){openModal();return}
+  const comment=document.getElementById('disc-comment').value.trim();
+  const book=document.getElementById('disc-book-select').value;
+  if(!comment){alert('Please write a comment.');return}
+  await db.from('discussions').insert({book,comment,user_id:currentUser.id}).catch(()=>{});
+  document.getElementById('disc-comment').value='';loadDiscussions();
+}
+async function loadTestimonies(){
+  const c=document.getElementById('testimonies-list');
+  const{data}=await db.from('testimonies').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  const fallback=[{name:'Anonymous',story:'I was deep in addiction for seven years. A friend invited me to church and I found Jesus. Three years clean — God is faithful.',created_at:new Date().toISOString()},{name:'Sarah M.',story:'I lost my job and clung to Jeremiah 29:11. Three months later I found a better position. Never doubt His timing.',created_at:new Date().toISOString()}];
+  const list=data&&data.length>0?data:fallback;
+  c.innerHTML=list.map(t=>`<div class="testimony-card"><div style="display:flex;align-items:center;gap:9px;margin-bottom:9px"><div class="avatar">${(t.name||'A')[0].toUpperCase()}</div><div><strong style="font-size:13px;color:var(--brown)">${t.name||'Anonymous'}</strong><div style="font-size:10px;color:var(--text-muted)">${new Date(t.created_at).toLocaleDateString()}</div></div></div><span class="quote-mark">"</span><div class="testimony-text">${t.story}</div></div>`).join('');
+}
+async function addTestimony(){
+  if(!currentUser){openModal();return}
+  const share=document.getElementById('test-share-name').checked;
+  const story=document.getElementById('test-story').value.trim();
+  if(!story){alert('Please share your testimony.');return}
+  await db.from('testimonies').insert({name:share&&document.getElementById('test-name').value.trim()?document.getElementById('test-name').value.trim():'Anonymous',story,user_id:currentUser.id});
+  document.getElementById('test-name').value='';document.getElementById('test-story').value='';document.getElementById('test-share-name').checked=false;
+  loadTestimonies();
+}
+async function loadPrayers(){
+  const c=document.getElementById('prayer-list');
+  const{data}=await db.from('prayer_requests').select('*,comments(*)').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  if(!data||!data.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">🙏</div><p>No prayer requests yet. Share one!</p></div>';return}
+  c.innerHTML=data.map(p=>`<div class="prayer-card"><div style="display:flex;align-items:center;gap:9px;margin-bottom:7px"><div class="avatar">${(p.first_name||'?')[0].toUpperCase()}</div><div><div style="font-weight:500;font-size:13px;color:var(--brown)">${p.first_name}</div><div style="font-size:10px;color:var(--text-muted)">${new Date(p.created_at).toLocaleDateString()}</div></div></div><div style="font-size:13px;line-height:1.6;margin-bottom:9px">${p.request}</div><button class="pray-btn" onclick="incrementPray('${p.id}',this)">🙏 ${p.pray_count||0} Praying</button><div class="comments-section"><strong style="font-size:10px;color:var(--text-muted)">ENCOURAGEMENTS</strong><div>${(p.comments||[]).length===0?'<p style="font-size:11px;color:var(--text-muted);margin-top:4px;font-style:italic">No comments yet.</p>':(p.comments||[]).map(c=>`<div class="comment-item">${c.content}</div>`).join('')}</div><div class="comment-input-row"><input type="text" id="ci-${p.id}" placeholder="Write an encouragement..."/><button class="btn btn-ghost btn-sm" onclick="addComment('${p.id}')">Send</button></div></div></div>`).join('');
+}
+async function addPrayer(){
+  if(!currentUser){openModal();return}
+  const first_name=document.getElementById('prayer-name').value.trim();
+  const request=document.getElementById('prayer-request').value.trim();
+  if(!first_name||!request){alert('Please enter name and request.');return}
+  await db.from('prayer_requests').insert({first_name,request,pray_count:0,user_id:currentUser.id});
+  document.getElementById('prayer-name').value='';document.getElementById('prayer-request').value='';
+  loadPrayers();
+}
+async function incrementPray(id,btn){
+  const n=parseInt(btn.textContent.match(/\d+/)?.[0]||0)+1;
+  await db.from('prayer_requests').update({pray_count:n}).eq('id',id);
+  btn.textContent=`🙏 ${n} Praying`;btn.classList.add('prayed');
+}
+async function addComment(pid){
+  const inp=document.getElementById('ci-'+pid);const val=inp.value.trim();if(!val)return;
+  if(!currentUser){openModal();return}
+  await db.from('comments').insert({prayer_id:pid,content:val,user_id:currentUser.id});
+  inp.value='';loadPrayers();
+}
+async function loadMusic(){
+  const c=document.getElementById('music-list');
+  const{data}=await db.from('music_posts').select('*,profiles(full_name)').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  const fallback=[{title:'Way Maker',artist:'Sinach',note:"This song reminds me that God is always at work.",profiles:{full_name:'James'}},{title:'Goodness of God',artist:'Bethel Music',note:'His goodness never fails.',profiles:{full_name:'Maria'}}];
+  const list=data&&data.length>0?data:fallback;
+  c.innerHTML=list.map(m=>`<div class="music-card"><h3>${m.title}</h3><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">by ${m.artist} · shared by ${m.profiles?.full_name||'Community member'}</div><p style="font-size:13px;line-height:1.5">${m.note||''}</p></div>`).join('');
+}
+async function addMusic(){
+  if(!currentUser){openModal();return}
+  const title=document.getElementById('music-title').value.trim();
+  const artist=document.getElementById('music-artist').value.trim();
+  if(!title||!artist){alert('Please enter title and artist.');return}
+  await db.from('music_posts').insert({title,artist,note:document.getElementById('music-note').value.trim(),user_id:currentUser.id});
+  ['music-title','music-artist','music-note'].forEach(id=>document.getElementById(id).value='');
+  loadMusic();
+}
+setDailyVerse();initDiscBooks();
+loadMusic();loadTestimonies();loadPrayers();loadLifeGroups();
+db.auth.onAuthStateChange(async(event,session)=>{
+  currentUser=session?.user||null;
+  if(currentUser){
+    const{data}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));
+    if(!data){await db.from('profiles').insert({id:currentUser.id,full_name:currentUser.user_metadata?.full_name||'',username:currentUser.user_metadata?.username||''}).catch(()=>{});const{data:p}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));currentProfile=p;}else{currentProfile=data}
+  }else{currentProfile=null}
+  updateUI();
+});
+</script>
+</body>
 </html>
