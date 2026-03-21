@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,6 +16,8 @@
   --text:#2C1F0E;--text-muted:#8A7560;--white:#FFFFFF;--border:#E2D5C0;
   --shadow:0 2px 20px rgba(92,61,30,0.08);--radius:12px;
   --blue-soft:#E8F0F8;--green-soft:#E8F4EC;
+  --hl-yellow:rgba(255,236,100,0.55);--hl-green:rgba(100,220,130,0.45);
+  --hl-blue:rgba(100,170,255,0.45);--hl-pink:rgba(255,120,170,0.45);--hl-orange:rgba(255,165,60,0.5);
 }
 body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh}
 nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;height:58px;box-shadow:0 2px 12px rgba(44,31,14,0.25)}
@@ -91,7 +94,7 @@ textarea{resize:vertical;min-height:80px}
 .badge-denom{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:var(--gold-light);color:var(--gold-dark)}
 .auth-banner{background:var(--brown);border-radius:var(--radius);padding:18px 22px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .auth-banner p{color:rgba(240,232,216,0.85);font-size:13px}
-.church-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:13px;box-shadow:var(--shadow);transition:all 0.2s}
+.church-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:13px;box-shadow:var(--shadow)}
 .church-card:hover{border-color:var(--gold)}
 .church-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
 .church-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--brown);margin-bottom:3px}
@@ -128,12 +131,79 @@ textarea{resize:vertical;min-height:80px}
 .divider{height:1px;background:var(--border);margin:18px 0}
 .loading{text-align:center;padding:28px;color:var(--text-muted);font-style:italic;font-size:13px}
 .sign-in-prompt{background:var(--gold-light);border-radius:8px;padding:11px 15px;font-size:13px;color:var(--brown);margin-bottom:13px}
-::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-track{background:var(--cream)}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* BIBLE READER STYLES */
+#page-bible{padding:0;max-width:100%}
+#page-bible main{padding:0}
+.bible-layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 58px)}
+@media(max-width:768px){.bible-layout{grid-template-columns:1fr}}
+.bible-sidebar{background:var(--white);border-right:1px solid var(--border);height:calc(100vh - 58px);position:sticky;top:58px;overflow:hidden;display:flex;flex-direction:column}
+@media(max-width:768px){.bible-sidebar{display:none}}
+.bible-sidebar-header{padding:14px 16px;border-bottom:1px solid var(--border);background:var(--parchment)}
+.bible-sidebar-title{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:var(--brown);margin-bottom:8px}
+.sidebar-search{width:100%;padding:7px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none}
+.sidebar-search:focus{border-color:var(--gold)}
+.testament-label{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-weight:500;padding:8px 14px 3px;background:var(--parchment)}
+.book-list-scroll{overflow-y:auto;flex:1}
+.book-item{padding:8px 14px;cursor:pointer;font-size:12px;color:var(--text);border-bottom:1px solid rgba(226,213,192,0.3);transition:all 0.15s;display:flex;justify-content:space-between;align-items:center}
+.book-item:hover{background:var(--gold-light);color:var(--brown)}
+.book-item.active{background:var(--brown);color:var(--gold-light);font-weight:500}
+.book-ch-count{font-size:10px;opacity:0.6}
+.bible-reader-main{display:flex;flex-direction:column;height:calc(100vh - 58px);overflow-y:auto}
+.bible-toolbar{background:var(--white);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:0;z-index:10}
+.tb-group{display:flex;align-items:center;gap:7px}
+.tb-label{font-size:11px;color:var(--text-muted);font-weight:500}
+.tb-select{padding:5px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);background:var(--white);outline:none;cursor:pointer}
+.tb-select:focus{border-color:var(--gold)}
+.ch-nav{display:flex;align-items:center;gap:5px}
+.ch-btn{background:var(--parchment);border:1.5px solid var(--border);border-radius:7px;width:30px;height:30px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--brown)}
+.ch-btn:hover{background:var(--gold-light);border-color:var(--gold)}
+.ch-display{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:700;color:var(--brown);min-width:55px;text-align:center}
+.hl-bar{display:flex;align-items:center;gap:5px}
+.hl-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.2s}
+.hl-dot:hover,.hl-dot.active{border-color:var(--brown);transform:scale(1.15)}
+.hl-yellow{background:#FFEC64}.hl-green{background:#64DC82}.hl-blue{background:#64AAFF}.hl-pink{background:#FF78AA}.hl-orange{background:#FFA53C}
+.hl-clear{background:var(--parchment);border:1.5px solid var(--border) !important;font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)}
+.dl-btn{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;border:1.5px solid var(--border);background:var(--white);cursor:pointer;font-size:11px;color:var(--brown);font-family:'DM Sans',sans-serif;font-weight:500;white-space:nowrap}
+.dl-btn:hover{border-color:var(--gold);background:var(--gold-light)}
+.dl-btn.done{border-color:#4CAF50;color:#2a5c35;background:#e8f4ec}
+.offline-prog{background:var(--parchment);border-radius:8px;padding:10px 14px;margin:12px 20px;display:none}
+.offline-prog.show{display:block}
+.prog-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:6px}
+.prog-fill{height:100%;background:var(--gold);border-radius:3px;transition:width 0.3s;width:0%}
+.prog-txt{font-size:11px;color:var(--text-muted);margin-top:4px}
+.verse-area{padding:24px 28px;max-width:740px;flex:1}
+@media(max-width:600px){.verse-area{padding:16px 14px}}
+.bk-ch-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--brown);margin-bottom:4px}
+.trans-note{font-size:11px;color:var(--text-muted);margin-bottom:20px}
+.verse-row{display:flex;gap:9px;padding:4px 7px;border-radius:8px;margin-bottom:2px;cursor:pointer;transition:background 0.15s;align-items:flex-start}
+.verse-row:hover{background:rgba(201,151,58,0.06)}
+.verse-row.selected{background:rgba(201,151,58,0.1);border-left:3px solid var(--gold);padding-left:4px}
+.verse-row.hl-yellow{background:var(--hl-yellow)}.verse-row.hl-green{background:var(--hl-green)}
+.verse-row.hl-blue{background:var(--hl-blue)}.verse-row.hl-pink{background:var(--hl-pink)}.verse-row.hl-orange{background:var(--hl-orange)}
+.v-num{font-size:10px;font-weight:600;color:var(--gold-dark);min-width:22px;margin-top:4px;user-select:none}
+.v-text{font-family:'Cormorant Garamond',serif;font-size:19px;line-height:1.65;color:var(--text);flex:1}
+.v-note-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-left:4px;vertical-align:middle}
+.verse-panel{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin:3px 0 8px 31px;box-shadow:var(--shadow);animation:fadeIn 0.2s ease}
+.panel-actions{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.panel-btn{padding:5px 11px;border-radius:20px;border:1.5px solid var(--border);background:var(--white);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--brown);transition:all 0.2s}
+.panel-btn:hover{border-color:var(--gold);background:var(--gold-light)}
+.note-input{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;min-height:65px;outline:none;margin-bottom:8px}
+.note-input:focus{border-color:var(--gold)}
+.panel-footer{display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.saved-note-preview{background:var(--parchment);border-radius:7px;padding:8px 11px;font-size:12px;line-height:1.5;margin-bottom:8px;border-left:3px solid var(--gold);font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--brown)}
+.mobile-book-btn{display:none;background:var(--brown);color:var(--gold-light);border:none;border-radius:8px;padding:7px 13px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
+@media(max-width:768px){.mobile-book-btn{display:block}}
+.mobile-book-panel{display:none;background:var(--white);border-bottom:1px solid var(--border);padding:10px;max-height:200px;overflow-y:auto}
+.mobile-book-panel.open{display:block}
+
+/* PUBLISH MODAL */
+#publishModal .modal{max-width:420px}
 </style>
 </head>
 <body>
+
+<!-- AUTH MODAL -->
 <div class="modal-overlay" id="authModal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">✕</button>
@@ -159,6 +229,8 @@ textarea{resize:vertical;min-height:80px}
     </div>
   </div>
 </div>
+
+<!-- PROFILE MODAL -->
 <div class="modal-overlay" id="profileModal">
   <div class="modal">
     <button class="modal-close" onclick="document.getElementById('profileModal').classList.remove('open')">✕</button>
@@ -166,13 +238,29 @@ textarea{resize:vertical;min-height:80px}
     <p>Update your community info</p>
     <div class="form-group"><label>Full Name</label><input type="text" id="edit-name"/></div>
     <div class="form-group"><label>Username</label><input type="text" id="edit-username"/></div>
-    <div class="form-group"><label>Bio</label><textarea id="edit-bio" placeholder="Tell the community about yourself..." rows="3"></textarea></div>
+    <div class="form-group"><label>Bio</label><textarea id="edit-bio" rows="3"></textarea></div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-primary" style="flex:1" onclick="saveProfile()">Save</button>
       <button class="btn btn-danger btn-sm" onclick="handleLogout()">Sign Out</button>
     </div>
   </div>
 </div>
+
+<!-- PUBLISH MODAL -->
+<div class="modal-overlay" id="publishModal">
+  <div class="modal" id="publishModal">
+    <button class="modal-close" onclick="document.getElementById('publishModal').classList.remove('open')">✕</button>
+    <h2>Publish to Discussions</h2>
+    <div id="pub-verse-preview" style="background:var(--parchment);border-radius:8px;padding:11px 13px;font-family:'Cormorant Garamond',serif;font-size:15px;line-height:1.5;color:var(--brown);margin-bottom:13px;font-style:italic"></div>
+    <div class="form-group"><label>Add a note (optional)</label><textarea id="pub-note" rows="3" placeholder="Share your thoughts..."></textarea></div>
+    <label class="form-check"><input type="checkbox" id="pub-anon"/> Post anonymously</label>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="confirmPublish()">Publish</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('publishModal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <nav>
   <div class="nav-logo" onclick="showPage('home')">
     <svg viewBox="0 0 32 32" fill="none"><rect x="13" y="2" width="6" height="28" rx="2" fill="#C9973A"/><rect x="5" y="11" width="22" height="6" rx="2" fill="#C9973A"/></svg>
@@ -184,7 +272,7 @@ textarea{resize:vertical;min-height:80px}
     <button class="nav-link" onclick="showPage('churches')">Churches</button>
     <button class="nav-link" onclick="showPage('life-groups')">Life Groups</button>
     <button class="nav-link" onclick="showPage('discussions')">Discussions</button>
-    <button class="nav-link" onclick="window.location.href='bible.html'">Bible</button>
+    <button class="nav-link" onclick="showPage('bible')">Bible</button>
     <button class="nav-link" onclick="showPage('testimonies')">Testimonies</button>
     <button class="nav-link" onclick="showPage('prayer')">Prayer Wall</button>
     <button class="nav-link" onclick="showPage('music')">Music</button>
@@ -194,8 +282,10 @@ textarea{resize:vertical;min-height:80px}
     <div id="nav-user-area" style="display:none"><div class="nav-avatar" id="nav-avatar" onclick="openProfileModal()">?</div></div>
   </div>
 </nav>
-<main>
+
+<!-- HOME -->
 <div id="page-home" class="page active">
+<main>
   <div id="home-welcome"></div>
   <div class="hero">
     <svg style="margin:0 auto 14px;display:block" width="50" height="50" viewBox="0 0 50 50" fill="none"><rect x="20" y="3" width="10" height="44" rx="4" fill="#C9973A" opacity="0.9"/><rect x="6" y="18" width="38" height="10" rx="4" fill="#C9973A" opacity="0.9"/></svg>
@@ -211,31 +301,101 @@ textarea{resize:vertical;min-height:80px}
     <div class="feature-card" onclick="showPage('churches')"><div class="feature-icon">⛪</div><div class="feature-title">Churches</div><div class="feature-desc">Find a church near you by denomination.</div></div>
     <div class="feature-card" onclick="showPage('life-groups')"><div class="feature-icon">🤝</div><div class="feature-title">Life Groups</div><div class="feature-desc">Find and join a group to grow in faith.</div></div>
     <div class="feature-card" onclick="showPage('discussions')"><div class="feature-icon">📖</div><div class="feature-title">Discussions</div><div class="feature-desc">Share insights about the Word.</div></div>
-    <div class="feature-card" onclick="window.location.href='bible.html'"><div class="feature-icon">📚</div><div class="feature-title">Bible Reader</div><div class="feature-desc">Full Bible, highlights, notes & offline.</div></div>
+    <div class="feature-card" onclick="showPage('bible')"><div class="feature-icon">📚</div><div class="feature-title">Bible Reader</div><div class="feature-desc">Full Bible, highlights, notes & offline.</div></div>
     <div class="feature-card" onclick="showPage('testimonies')"><div class="feature-icon">💬</div><div class="feature-title">Testimonies</div><div class="feature-desc">Read and share stories of faith.</div></div>
     <div class="feature-card" onclick="showPage('prayer')"><div class="feature-icon">🙏</div><div class="feature-title">Prayer Wall</div><div class="feature-desc">Share requests and encourage one another.</div></div>
     <div class="feature-card" onclick="showPage('music')"><div class="feature-icon">🎵</div><div class="feature-title">Music Forum</div><div class="feature-desc">Share your favorite worship songs.</div></div>
   </div>
   <div class="about-card"><strong>About this Community:</strong><br/><span style="font-size:13px;color:#2C3E50;line-height:1.6">We are believers dedicated to supporting each other in our walk with Christ. Whether you're new to faith or have been a Christian for years, you are welcome here!</span></div>
   <div class="cta-card">"Share your testimony or join a group today — be a blessing to others!"</div>
+</main>
 </div>
-<div id="page-churches" class="page">
-  <div class="section-header"><h2>⛪ Find a Church</h2><p>Browse churches by denomination, service times, and city.</p></div>
+
+<!-- BIBLE PAGE (full width, no main wrapper) -->
+<div id="page-bible" class="page">
+  <div class="bible-layout">
+    <!-- SIDEBAR -->
+    <div class="bible-sidebar">
+      <div class="bible-sidebar-header">
+        <div class="bible-sidebar-title">📚 Bible</div>
+        <input class="sidebar-search" type="text" placeholder="Search books..." id="book-search" oninput="filterBibleBooks()"/>
+      </div>
+      <div class="book-list-scroll" id="book-list"></div>
+    </div>
+    <!-- MAIN READER -->
+    <div class="bible-reader-main">
+      <div class="bible-toolbar">
+        <div class="tb-group">
+          <button class="mobile-book-btn" onclick="toggleMobileBooks()">📚 Books</button>
+        </div>
+        <div class="tb-group">
+          <span class="tb-label">Translation</span>
+          <select class="tb-select" id="b-version" onchange="loadBibleChapter()">
+            <optgroup label="Public Domain (Offline Available)">
+              <option value="kjv">KJV</option>
+              <option value="web" selected>WEB</option>
+              <option value="asv">ASV</option>
+              <option value="ylt">YLT</option>
+            </optgroup>
+            <optgroup label="Modern (Online Only)">
+              <option value="NIV">NIV</option>
+              <option value="ESV">ESV</option>
+              <option value="NLT">NLT</option>
+              <option value="NKJV">NKJV</option>
+              <option value="CSB">CSB</option>
+              <option value="MSG">MSG</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="tb-group">
+          <div class="ch-nav">
+            <button class="ch-btn" onclick="bibleChNav(-1)">‹</button>
+            <span class="ch-display" id="ch-display">Ch 1</span>
+            <button class="ch-btn" onclick="bibleChNav(1)">›</button>
+          </div>
+        </div>
+        <div class="tb-group">
+          <span class="tb-label">Highlight</span>
+          <div class="hl-bar">
+            <div class="hl-dot hl-yellow" onclick="setHL('yellow')" id="hld-yellow"></div>
+            <div class="hl-dot hl-green" onclick="setHL('green')" id="hld-green"></div>
+            <div class="hl-dot hl-blue" onclick="setHL('blue')" id="hld-blue"></div>
+            <div class="hl-dot hl-pink" onclick="setHL('pink')" id="hld-pink"></div>
+            <div class="hl-dot hl-orange" onclick="setHL('orange')" id="hld-orange"></div>
+            <div class="hl-dot hl-clear" onclick="setHL(null)">✕</div>
+          </div>
+        </div>
+        <div class="tb-group" style="margin-left:auto">
+          <button class="dl-btn" id="dl-btn" onclick="downloadKJV()">⬇ Download KJV Offline</button>
+          <button class="btn btn-ghost btn-sm" onclick="showMyNotes()">📝 Notes</button>
+        </div>
+      </div>
+      <!-- Mobile book selector -->
+      <div class="mobile-book-panel" id="mobile-book-panel"></div>
+      <!-- Offline progress -->
+      <div class="offline-prog" id="offline-prog">
+        <strong style="font-size:12px;color:var(--brown)">Downloading KJV Bible...</strong>
+        <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+        <div class="prog-txt" id="prog-txt">Starting...</div>
+      </div>
+      <!-- Verse content -->
+      <div class="verse-area" id="verse-area">
+        <div style="text-align:center;padding:50px 20px;color:var(--text-muted)">
+          <div style="font-size:36px;margin-bottom:12px">📖</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:6px">Select a book to begin reading</div>
+          <div style="font-size:13px">Choose from the sidebar on the left</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OTHER PAGES -->
+<div id="page-churches" class="page"><main>
+  <div class="section-header"><h2>⛪ Find a Church</h2><p>Browse by denomination, service times, and city.</p></div>
   <div class="filter-bar">
-    <div class="form-group"><label>Denomination</label>
-      <select id="filter-denom" onchange="filterChurches()">
-        <option value="">All Denominations</option>
-        <option>Baptist</option><option>Catholic</option><option>Pentecostal</option>
-        <option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option>
-        <option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option>
-        <option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option>
-      </select>
-    </div>
-    <div class="form-group"><label>Service Day</label>
-      <select id="filter-day" onchange="filterChurches()">
-        <option value="">Any Day</option><option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option>
-      </select>
-    </div>
+    <div class="form-group"><label>Denomination</label><select id="filter-denom" onchange="filterChurches()"><option value="">All Denominations</option><option>Baptist</option><option>Catholic</option><option>Pentecostal</option><option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option><option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option><option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option></select></div>
+    <div class="form-group"><label>Service Day</label><select id="filter-day" onchange="filterChurches()"><option value="">Any Day</option><option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option></select></div>
     <div class="form-group"><label>City / Zip</label><input type="text" id="filter-city" placeholder="e.g. Los Angeles" oninput="filterChurches()"/></div>
     <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear</button>
   </div>
@@ -244,46 +404,25 @@ textarea{resize:vertical;min-height:80px}
   <div class="divider"></div>
   <div class="card">
     <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:6px">⛪ List Your Church</h3>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Help people in your area find your congregation.</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Help people find your congregation.</p>
     <div id="church-prompt"></div>
     <div id="church-fields">
-      <div class="form-row">
-        <div class="form-group"><label>Church Name *</label><input type="text" id="ch-name" placeholder="Grace Community Church"/></div>
-        <div class="form-group"><label>Pastor Name</label><input type="text" id="ch-pastor" placeholder="Pastor John Smith"/></div>
-      </div>
+      <div class="form-row"><div class="form-group"><label>Church Name *</label><input type="text" id="ch-name" placeholder="Grace Community Church"/></div><div class="form-group"><label>Pastor Name</label><input type="text" id="ch-pastor" placeholder="Pastor John Smith"/></div></div>
       <div class="form-group"><label>Address *</label><input type="text" id="ch-address" placeholder="123 Main St, Los Angeles, CA"/></div>
+      <div class="form-row"><div class="form-group"><label>City *</label><input type="text" id="ch-city" placeholder="Los Angeles"/></div><div class="form-group"><label>Zip Code</label><input type="text" id="ch-zip" placeholder="90001"/></div></div>
       <div class="form-row">
-        <div class="form-group"><label>City *</label><input type="text" id="ch-city" placeholder="Los Angeles"/></div>
-        <div class="form-group"><label>Zip Code</label><input type="text" id="ch-zip" placeholder="90001"/></div>
+        <div class="form-group"><label>Denomination *</label><select id="ch-denom"><option value="">Select denomination</option><option>Baptist</option><option>Catholic</option><option>Pentecostal</option><option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option><option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option><option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option></select></div>
+        <div class="form-group"><label>Service Day *</label><select id="ch-day"><option value="">Select day</option><option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option><option>Multiple days</option></select></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>Denomination *</label>
-          <select id="ch-denom">
-            <option value="">Select denomination</option>
-            <option>Baptist</option><option>Catholic</option><option>Pentecostal</option>
-            <option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option>
-            <option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option>
-            <option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option>
-          </select>
-        </div>
-        <div class="form-group"><label>Service Day *</label>
-          <select id="ch-day">
-            <option value="">Select day</option>
-            <option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option><option>Multiple days</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Service Time *</label><input type="text" id="ch-time" placeholder="10:00 AM & 6:00 PM"/></div>
-        <div class="form-group"><label>Website</label><input type="url" id="ch-website" placeholder="https://yourchurch.com"/></div>
-      </div>
+      <div class="form-row"><div class="form-group"><label>Service Time *</label><input type="text" id="ch-time" placeholder="10:00 AM & 6:00 PM"/></div><div class="form-group"><label>Website</label><input type="url" id="ch-website" placeholder="https://yourchurch.com"/></div></div>
       <div class="form-group"><label>Social Media</label><input type="url" id="ch-social" placeholder="https://instagram.com/yourchurch"/></div>
       <div class="form-group"><label>About Your Church</label><textarea id="ch-about" placeholder="Tell people about your church..."></textarea></div>
       <button class="btn btn-primary" onclick="addChurch()">List My Church</button>
     </div>
   </div>
-</div>
-<div id="page-life-groups" class="page">
+</main></div>
+
+<div id="page-life-groups" class="page"><main>
   <div class="section-header"><h2>Life Groups</h2><p>Find community near you.</p></div>
   <div id="life-groups-list"><div class="loading">Loading groups...</div></div>
   <div class="divider"></div>
@@ -298,8 +437,9 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-primary" onclick="addLifeGroup()">Create Group</button>
     </div>
   </div>
-</div>
-<div id="page-discussions" class="page">
+</main></div>
+
+<div id="page-discussions" class="page"><main>
   <div class="section-header"><h2>Bible Discussions</h2><p>Select a book and join the conversation.</p></div>
   <div class="card" style="margin-bottom:14px"><div class="form-group" style="margin-bottom:0"><label>Select a Book</label><select id="disc-book-select" onchange="loadDiscussions()"></select></div></div>
   <div id="disc-list"><div class="loading">Loading...</div></div>
@@ -312,8 +452,9 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-primary" onclick="addDiscussion()">Post Comment</button>
     </div>
   </div>
-</div>
-<div id="page-testimonies" class="page">
+</main></div>
+
+<div id="page-testimonies" class="page"><main>
   <div class="section-header"><h2>Testimonies</h2><p>Stories of what God has done.</p></div>
   <div class="card">
     <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Share Your Testimony</h3>
@@ -327,8 +468,9 @@ textarea{resize:vertical;min-height:80px}
   </div>
   <div class="divider"></div>
   <div id="testimonies-list"><div class="loading">Loading testimonies...</div></div>
-</div>
-<div id="page-prayer" class="page">
+</main></div>
+
+<div id="page-prayer" class="page"><main>
   <div class="section-header"><h2>Prayer Wall</h2><p>Share your burdens — let the community lift you up.</p></div>
   <div class="card">
     <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Post a Prayer Request</h3>
@@ -341,8 +483,9 @@ textarea{resize:vertical;min-height:80px}
   </div>
   <div class="divider"></div>
   <div id="prayer-list"><div class="loading">Loading prayer requests...</div></div>
-</div>
-<div id="page-music" class="page">
+</main></div>
+
+<div id="page-music" class="page"><main>
   <div class="section-header"><h2>Music Forum</h2><p>Share songs that move your spirit.</p></div>
   <div class="card">
     <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Share a Song</h3>
@@ -356,14 +499,23 @@ textarea{resize:vertical;min-height:80px}
   </div>
   <div class="divider"></div>
   <div id="music-list"><div class="loading">Loading music posts...</div></div>
-</div>
-</main>
+</main></div>
+
 <script>
 const SUPABASE_URL='https://jnjhwftqkmklsxzllqvs.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impuamh3ZnRxa21rbHN4emxscXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNzExMTMsImV4cCI6MjA4OTY0NzExM30.JpZYP65tjH-HMayOd9qsnwKuLhjH6q64RCVZJIquVAE';
 const{createClient}=supabase;
 const db=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let currentUser=null,currentProfile=null,allChurches=[];
+
+// BIBLE STATE
+let bBook='Genesis',bChapter=1,bVersion='web',bHL=null,bHighlights={},bNotes={},offlineKJV=null,publishTarget=null,selVerse=null;
+
+const OT=[{name:"Genesis",ch:50},{name:"Exodus",ch:40},{name:"Leviticus",ch:27},{name:"Numbers",ch:36},{name:"Deuteronomy",ch:34},{name:"Joshua",ch:24},{name:"Judges",ch:21},{name:"Ruth",ch:4},{name:"1 Samuel",ch:31},{name:"2 Samuel",ch:24},{name:"1 Kings",ch:22},{name:"2 Kings",ch:25},{name:"1 Chronicles",ch:29},{name:"2 Chronicles",ch:36},{name:"Ezra",ch:10},{name:"Nehemiah",ch:13},{name:"Esther",ch:10},{name:"Job",ch:42},{name:"Psalms",ch:150},{name:"Proverbs",ch:31},{name:"Ecclesiastes",ch:12},{name:"Song of Solomon",ch:8},{name:"Isaiah",ch:66},{name:"Jeremiah",ch:52},{name:"Lamentations",ch:5},{name:"Ezekiel",ch:48},{name:"Daniel",ch:12},{name:"Hosea",ch:14},{name:"Joel",ch:3},{name:"Amos",ch:9},{name:"Obadiah",ch:1},{name:"Jonah",ch:4},{name:"Micah",ch:7},{name:"Nahum",ch:3},{name:"Habakkuk",ch:3},{name:"Zephaniah",ch:3},{name:"Haggai",ch:2},{name:"Zechariah",ch:14},{name:"Malachi",ch:4}];
+const NT=[{name:"Matthew",ch:28},{name:"Mark",ch:16},{name:"Luke",ch:24},{name:"John",ch:21},{name:"Acts",ch:28},{name:"Romans",ch:16},{name:"1 Corinthians",ch:16},{name:"2 Corinthians",ch:13},{name:"Galatians",ch:6},{name:"Ephesians",ch:6},{name:"Philippians",ch:4},{name:"Colossians",ch:4},{name:"1 Thessalonians",ch:5},{name:"2 Thessalonians",ch:3},{name:"1 Timothy",ch:6},{name:"2 Timothy",ch:4},{name:"Titus",ch:3},{name:"Philemon",ch:1},{name:"Hebrews",ch:13},{name:"James",ch:5},{name:"1 Peter",ch:5},{name:"2 Peter",ch:3},{name:"1 John",ch:5},{name:"2 John",ch:1},{name:"3 John",ch:1},{name:"Jude",ch:1},{name:"Revelation",ch:22}];
+const ALL_BOOKS=[...OT,...NT];
+const bibleBookNames=ALL_BOOKS.map(b=>b.name);
+
 const dailyVerses=[
   {ref:"Philippians 4:13",text:"I can do all this through him who gives me strength."},
   {ref:"Psalm 23:1",text:"The Lord is my shepherd, I lack nothing."},
@@ -376,11 +528,12 @@ const dailyVerses=[
   {ref:"1 Peter 5:7",text:"Cast all your anxiety on him because he cares for you."},
   {ref:"Jeremiah 29:11",text:"For I know the plans I have for you — plans to prosper you and not to harm you, plans to give you hope and a future."}
 ];
-const bibleBookNames=["Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua","Judges","Ruth","1 Samuel","2 Samuel","1 Kings","2 Kings","1 Chronicles","2 Chronicles","Ezra","Nehemiah","Esther","Job","Psalms","Proverbs","Ecclesiastes","Song of Solomon","Isaiah","Jeremiah","Lamentations","Ezekiel","Daniel","Hosea","Joel","Amos","Obadiah","Jonah","Micah","Nahum","Habakkuk","Zephaniah","Haggai","Zechariah","Malachi","Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","2 Corinthians","Galatians","Ephesians","Philippians","Colossians","1 Thessalonians","2 Thessalonians","1 Timothy","2 Timothy","Titus","Philemon","Hebrews","James","1 Peter","2 Peter","1 John","2 John","3 John","Jude","Revelation"];
+
+// ROUTING
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  const map={home:'Home',churches:'Churches','life-groups':'Life Groups',discussions:'Discussions',testimonies:'Testimonies',prayer:'Prayer Wall',music:'Music'};
+  const map={home:'Home',churches:'Churches','life-groups':'Life Groups',discussions:'Discussions',bible:'Bible',testimonies:'Testimonies',prayer:'Prayer Wall',music:'Music'};
   document.querySelectorAll('.nav-link').forEach(l=>{l.classList.toggle('active',l.textContent===map[id])});
   document.getElementById('navLinks').classList.remove('open');
   window.scrollTo(0,0);
@@ -390,8 +543,11 @@ function showPage(id){
   if(id==='prayer')loadPrayers();
   if(id==='music')loadMusic();
   if(id==='discussions')loadDiscussions();
+  if(id==='bible')initBible();
 }
 function toggleMenu(){document.getElementById('navLinks').classList.toggle('open')}
+
+// AUTH
 function openModal(){document.getElementById('authModal').classList.add('open')}
 function closeModal(){document.getElementById('authModal').classList.remove('open');clearMsgs()}
 function switchTab(t){['login','signup'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('active',x===t);document.getElementById('form-'+x).style.display=x===t?'block':'none'});clearMsgs()}
@@ -399,10 +555,7 @@ function showErr(m){const e=document.getElementById('modal-error');e.textContent
 function showOk(m){const e=document.getElementById('modal-success');e.textContent=m;e.classList.add('show');document.getElementById('modal-error').classList.remove('show')}
 function clearMsgs(){document.getElementById('modal-error').classList.remove('show');document.getElementById('modal-success').classList.remove('show')}
 async function handleSignup(){
-  const name=document.getElementById('signup-name').value.trim();
-  const username=document.getElementById('signup-username').value.trim();
-  const email=document.getElementById('signup-email').value.trim();
-  const password=document.getElementById('signup-password').value;
+  const name=document.getElementById('signup-name').value.trim(),username=document.getElementById('signup-username').value.trim(),email=document.getElementById('signup-email').value.trim(),password=document.getElementById('signup-password').value;
   if(!name||!username||!email||!password){showErr('Please fill in all fields.');return}
   if(password.length<6){showErr('Password must be at least 6 characters.');return}
   const btn=document.getElementById('signup-btn');btn.disabled=true;btn.textContent='Creating...';
@@ -412,8 +565,7 @@ async function handleSignup(){
   switchTab('login');btn.disabled=false;btn.textContent='Create Account';
 }
 async function handleLogin(){
-  const email=document.getElementById('login-email').value.trim();
-  const password=document.getElementById('login-password').value;
+  const email=document.getElementById('login-email').value.trim(),password=document.getElementById('login-password').value;
   if(!email||!password){showErr('Please enter email and password.');return}
   const btn=document.getElementById('login-btn');btn.disabled=true;btn.textContent='Signing in...';
   const{error}=await db.auth.signInWithPassword({email,password});
@@ -430,9 +582,7 @@ function openProfileModal(){
 }
 async function saveProfile(){
   if(!currentUser)return;
-  const full_name=document.getElementById('edit-name').value.trim();
-  const username=document.getElementById('edit-username').value.trim();
-  const bio=document.getElementById('edit-bio').value.trim();
+  const full_name=document.getElementById('edit-name').value.trim(),username=document.getElementById('edit-username').value.trim(),bio=document.getElementById('edit-bio').value.trim();
   await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio});
   currentProfile={...currentProfile,full_name,username,bio};
   updateUI();document.getElementById('profileModal').classList.remove('open');
@@ -458,20 +608,193 @@ function setDailyVerse(){
   document.getElementById('verse-text').textContent='"'+v.text+'"';
   document.getElementById('verse-ref').textContent='— '+v.ref;
 }
+
+// BIBLE READER
+let bibleInited=false;
+function initBible(){
+  if(bibleInited)return;
+  bibleInited=true;
+  buildBibleSidebar();
+  loadBibleLocal();
+}
+function buildBibleSidebar(filter=''){
+  const list=document.getElementById('book-list');
+  if(!list)return;
+  list.innerHTML='';
+  const addSec=(books,label)=>{
+    const filtered=books.filter(b=>b.name.toLowerCase().includes(filter.toLowerCase()));
+    if(!filtered.length)return;
+    const lbl=document.createElement('div');lbl.className='testament-label';lbl.textContent=label;list.appendChild(lbl);
+    filtered.forEach(b=>{
+      const el=document.createElement('div');
+      el.className='book-item'+(b.name===bBook?' active':'');
+      el.innerHTML=`<span>${b.name}</span><span class="book-ch-count">${b.ch}ch</span>`;
+      el.onclick=()=>{bBook=b.name;bChapter=1;buildBibleSidebar(filter);loadBibleChapter()};
+      list.appendChild(el);
+    });
+  };
+  addSec(OT,'Old Testament');addSec(NT,'New Testament');
+  // Mobile panel
+  const mp=document.getElementById('mobile-book-panel');
+  if(mp){
+    mp.innerHTML='';
+    [...OT,...NT].filter(b=>b.name.toLowerCase().includes(filter.toLowerCase())).forEach(b=>{
+      const el=document.createElement('div');el.className='book-item'+(b.name===bBook?' active':'');
+      el.textContent=b.name;el.onclick=()=>{bBook=b.name;bChapter=1;buildBibleSidebar();loadBibleChapter();mp.classList.remove('open')};
+      mp.appendChild(el);
+    });
+  }
+}
+function filterBibleBooks(){buildBibleSidebar(document.getElementById('book-search').value)}
+function toggleMobileBooks(){document.getElementById('mobile-book-panel').classList.toggle('open')}
+function bibleChNav(dir){
+  const maxCh=(ALL_BOOKS.find(b=>b.name===bBook)||{ch:1}).ch;
+  bChapter=Math.max(1,Math.min(maxCh,bChapter+dir));
+  loadBibleChapter();
+}
+async function loadBibleChapter(){
+  bVersion=document.getElementById('b-version').value;
+  document.getElementById('ch-display').textContent=`Ch ${bChapter}`;
+  const area=document.getElementById('verse-area');
+  area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div class="trans-note">${bVersion.toUpperCase()}</div><div class="loading">Loading verses...</div>`;
+  // Check offline
+  if(offlineKJV&&offlineKJV[bBook]&&offlineKJV[bBook][bChapter]){renderBibleVerses(offlineKJV[bBook][bChapter],area);return}
+  try{
+    const res=await fetch(`https://bible-api.com/${encodeURIComponent(bBook)}+${bChapter}?translation=${bVersion}`);
+    const data=await res.json();
+    if(data.error||!data.verses){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:20px;color:var(--text-muted);font-style:italic">Could not load. Try another translation.</div>`;return}
+    renderBibleVerses(data.verses,area);
+  }catch{area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:20px;color:var(--text-muted);font-style:italic">No internet. Download KJV for offline reading.</div>`}
+}
+function renderBibleVerses(verses,area){
+  const hlKey=`${bBook}-${bChapter}`;
+  const savedHL=bHighlights[hlKey]||{};
+  const savedNotes=bNotes[hlKey]||{};
+  area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div class="trans-note">${bVersion.toUpperCase()}</div>`;
+  verses.forEach(v=>{
+    const vn=v.verse,hlCls=savedHL[vn]?`hl-${savedHL[vn]}`:'',hasNote=savedNotes[vn]?'<span class="v-note-dot"></span>':'';
+    const row=document.createElement('div');
+    row.className=`verse-row ${hlCls}`;row.id=`vr-${vn}`;
+    row.innerHTML=`<span class="v-num">${vn}</span><span class="v-text">${v.text.trim()}${hasNote}</span>`;
+    row.onclick=(e)=>{if(e.target.closest('.verse-panel'))return;selectVerse(vn,v.text.trim(),row)};
+    area.appendChild(row);
+  });
+}
+function selectVerse(vn,text,row){
+  document.querySelectorAll('.verse-panel').forEach(p=>p.remove());
+  document.querySelectorAll('.verse-row.selected').forEach(r=>r.classList.remove('selected'));
+  if(selVerse===vn){selVerse=null;return}
+  selVerse=vn;row.classList.add('selected');
+  if(bHL)applyHL(vn,row,bHL);
+  const hlKey=`${bBook}-${bChapter}`;
+  const existNote=(bNotes[hlKey]||{})[vn]||'';
+  const panel=document.createElement('div');panel.className='verse-panel';
+  panel.innerHTML=`<div style="font-size:11px;font-weight:500;color:var(--gold-dark);margin-bottom:7px">${bBook} ${bChapter}:${vn}</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:14px;line-height:1.5;color:var(--text-muted);margin-bottom:9px;font-style:italic">"${text}"</div>
+    <div class="panel-actions">
+      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),'yellow')">🟡</button>
+      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),'green')">🟢</button>
+      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),'blue')">🔵</button>
+      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),'pink')">🩷</button>
+      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),'orange')">🟠</button>
+      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),null)">✕ Clear</button>
+    </div>
+    ${existNote?`<div class="saved-note-preview">${existNote}</div>`:''}
+    <textarea class="note-input" id="ni-${vn}" placeholder="Write a note about this verse...">${existNote}</textarea>
+    <div class="panel-footer">
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-primary btn-sm" onclick="saveVerseNote(${vn})">Save Note</button>
+        <button class="btn btn-ghost btn-sm" onclick="openPublish(${vn},'${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">📤 Publish</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.verse-panel').remove();selVerse=null;document.querySelectorAll('.verse-row.selected').forEach(r=>r.classList.remove('selected'))">✕</button>
+    </div>`;
+  row.insertAdjacentElement('afterend',panel);
+}
+function setHL(color){
+  bHL=color;
+  document.querySelectorAll('.hl-dot').forEach(d=>d.classList.remove('active'));
+  if(color)document.getElementById('hld-'+color)?.classList.add('active');
+}
+function applyHL(vn,row,color){
+  if(!row)return;
+  const hlKey=`${bBook}-${bChapter}`;
+  if(!bHighlights[hlKey])bHighlights[hlKey]={};
+  row.className='verse-row'+(row.classList.contains('selected')?' selected':'');
+  if(color){bHighlights[hlKey][vn]=color;row.classList.add('hl-'+color);}
+  else delete bHighlights[hlKey][vn];
+  saveBibleLocal();
+}
+function saveVerseNote(vn){
+  const inp=document.getElementById('ni-'+vn);if(!inp)return;
+  const text=inp.value.trim();
+  const hlKey=`${bBook}-${bChapter}`;
+  if(!bNotes[hlKey])bNotes[hlKey]={};
+  if(text)bNotes[hlKey][vn]=text;else delete bNotes[hlKey][vn];
+  saveBibleLocal();
+  inp.style.borderColor='#4CAF50';setTimeout(()=>{inp.style.borderColor=''},1500);
+}
+function openPublish(vn,text){
+  publishTarget={vn,text,book:bBook,chapter:bChapter,version:bVersion};
+  document.getElementById('pub-verse-preview').innerHTML=`<strong>${bBook} ${bChapter}:${vn}</strong> — "${text}"`;
+  const existNote=(bNotes[`${bBook}-${bChapter}`]||{})[vn]||'';
+  document.getElementById('pub-note').value=existNote;
+  document.getElementById('pub-anon').checked=false;
+  document.getElementById('publishModal').classList.add('open');
+}
+async function confirmPublish(){
+  if(!publishTarget)return;
+  const{vn,text,book,chapter,version}=publishTarget;
+  const note=document.getElementById('pub-note').value.trim();
+  const comment=`📖 ${book} ${chapter}:${vn} (${version.toUpperCase()}): "${text}"${note?` — ${note}`:''}`;
+  await db.from('discussions').insert({book,comment,user_id:currentUser?.id||null}).catch(()=>{});
+  document.getElementById('publishModal').classList.remove('open');
+  publishTarget=null;
+  alert(`Published to ${book} Discussions! 🙌`);
+}
+function showMyNotes(){
+  const entries=[];
+  Object.entries(bNotes).forEach(([k,vNotes])=>{
+    const[book,chapter]=k.split('-');
+    Object.entries(vNotes).forEach(([vn,text])=>entries.push({book,chapter,vn,text}));
+  });
+  if(!entries.length){alert('No notes yet! Tap any verse to add a note.');return}
+  const msg=entries.map(e=>`${e.book} ${e.chapter}:${e.vn} — ${e.text}`).join('\n\n');
+  alert('Your Notes:\n\n'+msg);
+}
+function saveBibleLocal(){try{localStorage.setItem('gc_hl',JSON.stringify(bHighlights));localStorage.setItem('gc_notes',JSON.stringify(bNotes))}catch{}}
+function loadBibleLocal(){
+  try{const h=localStorage.getItem('gc_hl');if(h)bHighlights=JSON.parse(h);const n=localStorage.getItem('gc_notes');if(n)bNotes=JSON.parse(n);}catch{}
+  try{const o=localStorage.getItem('gc_kjv');if(o){offlineKJV=JSON.parse(o);document.getElementById('dl-btn').classList.add('done');document.getElementById('dl-btn').textContent='✅ KJV Downloaded';}}catch{}
+}
+async function downloadKJV(){
+  if(offlineKJV){alert('KJV already downloaded! 🙌');return}
+  if(!confirm('Download full KJV Bible for offline reading? (~5MB, takes a few minutes)'))return;
+  const btn=document.getElementById('dl-btn');btn.disabled=true;btn.textContent='⬇ Downloading...';
+  const prog=document.getElementById('offline-prog');prog.classList.add('show');
+  const fill=document.getElementById('prog-fill');const txt=document.getElementById('prog-txt');
+  const data={};let done=0;const total=ALL_BOOKS.reduce((s,b)=>s+b.ch,0);
+  for(const book of ALL_BOOKS){
+    data[book.name]={};
+    for(let ch=1;ch<=book.ch;ch++){
+      try{const res=await fetch(`https://bible-api.com/${encodeURIComponent(book.name)}+${ch}?translation=kjv`);const d=await res.json();if(d.verses)data[book.name][ch]=d.verses;}catch{}
+      done++;const pct=Math.round((done/total)*100);
+      fill.style.width=pct+'%';txt.textContent=`${book.name} ch ${ch} — ${pct}%`;
+      await new Promise(r=>setTimeout(r,60));
+    }
+  }
+  try{localStorage.setItem('gc_kjv',JSON.stringify(data));offlineKJV=data;}catch{alert('Storage full.');btn.disabled=false;btn.textContent='⬇ Download KJV Offline';prog.classList.remove('show');return}
+  prog.classList.remove('show');btn.classList.add('done');btn.textContent='✅ KJV Downloaded';btn.disabled=false;
+  alert('KJV downloaded! Read offline anytime. 🙌');
+}
+
+// CHURCHES
 async function loadChurches(){
-  const c=document.getElementById('churches-list');
   const{data}=await db.from('churches').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
-  const fallback=[
-    {id:'c1',name:'Grace Community Church',pastor:'Pastor Michael Thompson',address:'1200 Hope Blvd',city:'Los Angeles',zip:'90001',denomination:'Non-denominational',service_day:'Sunday',service_time:'9:00 AM & 11:00 AM',website:'https://gracecommunity.com',social:'',about:'A welcoming church for all people.',user_id:null},
-    {id:'c2',name:'First Baptist Church',pastor:'Pastor Sarah Williams',address:'456 Faith Ave',city:'Houston',zip:'77001',denomination:'Baptist',service_day:'Sunday',service_time:'8:30 AM & 10:30 AM',website:'',social:'',about:'Rooted in the Word, reaching the world.',user_id:null},
-    {id:'c3',name:'Calvary Pentecostal',pastor:'Pastor David Cruz',address:'789 Spirit Lane',city:'Miami',zip:'33101',denomination:'Pentecostal',service_day:'Sunday',service_time:'10:00 AM',website:'https://calvarymiami.org',social:'',about:'Spirit-filled worship and powerful prayer.',user_id:null}
-  ];
+  const fallback=[{id:'c1',name:'Grace Community Church',pastor:'Pastor Michael Thompson',address:'1200 Hope Blvd',city:'Los Angeles',zip:'90001',denomination:'Non-denominational',service_day:'Sunday',service_time:'9:00 AM & 11:00 AM',website:'https://gracecommunity.com',social:'',about:'A welcoming church for all people.',user_id:null},{id:'c2',name:'First Baptist Church',pastor:'Pastor Sarah Williams',address:'456 Faith Ave',city:'Houston',zip:'77001',denomination:'Baptist',service_day:'Sunday',service_time:'8:30 AM & 10:30 AM',website:'',social:'',about:'Rooted in the Word, reaching the world.',user_id:null},{id:'c3',name:'Calvary Pentecostal',pastor:'Pastor David Cruz',address:'789 Spirit Lane',city:'Miami',zip:'33101',denomination:'Pentecostal',service_day:'Sunday',service_time:'10:00 AM',website:'https://calvarymiami.org',social:'',about:'Spirit-filled worship and powerful prayer.',user_id:null}];
   allChurches=data&&data.length>0?data:fallback;filterChurches();
 }
 function filterChurches(){
-  const denom=document.getElementById('filter-denom').value.toLowerCase();
-  const day=document.getElementById('filter-day').value.toLowerCase();
-  const city=document.getElementById('filter-city').value.toLowerCase().trim();
+  const denom=document.getElementById('filter-denom').value.toLowerCase(),day=document.getElementById('filter-day').value.toLowerCase(),city=document.getElementById('filter-city').value.toLowerCase().trim();
   const filtered=allChurches.filter(ch=>{
     if(denom&&!ch.denomination?.toLowerCase().includes(denom))return false;
     if(day&&!ch.service_day?.toLowerCase().includes(day))return false;
@@ -480,69 +803,46 @@ function filterChurches(){
   });
   document.getElementById('church-count').textContent=`Showing ${filtered.length} church${filtered.length!==1?'es':''}`;
   const c=document.getElementById('churches-list');
-  if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">⛪</div><p>No churches found. Try clearing filters!</p></div>';return}
-  c.innerHTML=filtered.map(ch=>`
-    <div class="church-card">
-      <div class="church-card-header">
-        <div>
-          <div class="church-name">${ch.name}</div>
-          ${ch.pastor?`<div class="church-pastor">👤 ${ch.pastor}</div>`:''}
-          <span class="badge-denom">${ch.denomination||'Christian'}</span>
-        </div>
-        ${ch.user_id===currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="deleteChurch('${ch.id}')">Remove</button>`:''}
-      </div>
-      ${ch.about?`<p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px">${ch.about}</p>`:''}
-      <div class="church-meta">
-        ${ch.address?`<span class="church-meta-item">📍 ${ch.address}, ${ch.city||''} ${ch.zip||''}</span>`:''}
-        ${ch.service_day?`<span class="church-meta-item">📅 ${ch.service_day}</span>`:''}
-        ${ch.service_time?`<span class="church-meta-item">🕐 ${ch.service_time}</span>`:''}
-      </div>
-      ${(ch.website||ch.social)?`<div class="church-links">${ch.website?`<a class="church-link" href="${ch.website}" target="_blank">🌐 Website</a>`:''} ${ch.social?`<a class="church-link" href="${ch.social}" target="_blank">📱 Social</a>`:''}</div>`:''}
-    </div>`).join('');
+  if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">⛪</div><p>No churches found.</p></div>';return}
+  c.innerHTML=filtered.map(ch=>`<div class="church-card"><div class="church-card-header"><div><div class="church-name">${ch.name}</div>${ch.pastor?`<div class="church-pastor">👤 ${ch.pastor}</div>`:''}<span class="badge-denom">${ch.denomination||'Christian'}</span></div>${ch.user_id===currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="deleteChurch('${ch.id}')">Remove</button>`:''}</div>${ch.about?`<p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px">${ch.about}</p>`:''}<div class="church-meta">${ch.address?`<span class="church-meta-item">📍 ${ch.address}, ${ch.city||''} ${ch.zip||''}</span>`:''} ${ch.service_day?`<span class="church-meta-item">📅 ${ch.service_day}</span>`:''} ${ch.service_time?`<span class="church-meta-item">🕐 ${ch.service_time}</span>`:''}</div>${(ch.website||ch.social)?`<div class="church-links">${ch.website?`<a class="church-link" href="${ch.website}" target="_blank">🌐 Website</a>`:''} ${ch.social?`<a class="church-link" href="${ch.social}" target="_blank">📱 Social</a>`:''}</div>`:''}</div>`).join('');
 }
 function clearFilters(){document.getElementById('filter-denom').value='';document.getElementById('filter-day').value='';document.getElementById('filter-city').value='';filterChurches()}
 async function addChurch(){
   if(!currentUser){openModal();return}
-  const name=document.getElementById('ch-name').value.trim();
-  const address=document.getElementById('ch-address').value.trim();
-  const city=document.getElementById('ch-city').value.trim();
-  const denomination=document.getElementById('ch-denom').value;
-  const service_day=document.getElementById('ch-day').value;
-  const service_time=document.getElementById('ch-time').value.trim();
+  const name=document.getElementById('ch-name').value.trim(),address=document.getElementById('ch-address').value.trim(),city=document.getElementById('ch-city').value.trim(),denomination=document.getElementById('ch-denom').value,service_day=document.getElementById('ch-day').value,service_time=document.getElementById('ch-time').value.trim();
   if(!name||!address||!city||!denomination||!service_day||!service_time){alert('Please fill in all required fields.');return}
   await db.from('churches').insert({name,address,city,zip:document.getElementById('ch-zip').value.trim(),denomination,service_day,service_time,pastor:document.getElementById('ch-pastor').value.trim(),website:document.getElementById('ch-website').value.trim(),social:document.getElementById('ch-social').value.trim(),about:document.getElementById('ch-about').value.trim(),user_id:currentUser.id}).catch(()=>{});
   ['ch-name','ch-pastor','ch-address','ch-city','ch-zip','ch-time','ch-website','ch-social','ch-about'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ch-denom').value='';document.getElementById('ch-day').value='';
   loadChurches();alert('Your church has been listed! 🙏');
 }
-async function deleteChurch(id){if(!confirm('Remove this listing?'))return;await db.from('churches').delete().eq('id',id);loadChurches()}
+async function deleteChurch(id){if(!confirm('Remove?'))return;await db.from('churches').delete().eq('id',id);loadChurches()}
+
+// LIFE GROUPS
 async function loadLifeGroups(){
-  const c=document.getElementById('life-groups-list');
   const{data}=await db.from('life_groups').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
   const fallback=[{id:'d1',name:'Downtown Fellowship',meeting_time:'Wednesdays 7pm',location:'123 Main St',description:'Mixed age group focused on Romans.',member_count:12,leader_id:null},{id:'d2',name:'Young Adults Group',meeting_time:'Fridays 6pm',location:'456 Oak Ave',description:'For young adults 18-35.',member_count:24,leader_id:null},{id:'d3',name:'Morning Prayer Circle',meeting_time:'Sundays 8am',location:'789 Pine Rd',description:'Early morning prayer.',member_count:8,leader_id:null}];
   const list=data&&data.length>0?data:fallback;
-  c.innerHTML=list.map(g=>`<div class="group-card"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3><p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p><div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="deleteGroup('${g.id}')">Delete</button></div>`:''}</div><button class="btn btn-ghost btn-sm" onclick="joinGroup('${g.id}')">Join</button></div>`).join('');
+  document.getElementById('life-groups-list').innerHTML=list.map(g=>`<div class="group-card"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3><p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p><div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="deleteGroup('${g.id}')">Delete</button></div>`:''}</div><button class="btn btn-ghost btn-sm" onclick="joinGroup()">Join</button></div>`).join('');
 }
-async function joinGroup(id){if(!currentUser){openModal();return}alert('You joined! 🙌')}
+async function joinGroup(){if(!currentUser){openModal();return}alert('You joined! 🙌')}
 async function deleteGroup(id){if(!confirm('Delete?'))return;await db.from('life_groups').delete().eq('id',id);loadLifeGroups()}
 async function addLifeGroup(){
   if(!currentUser){openModal();return}
-  const name=document.getElementById('lg-name').value.trim();
-  const meeting_time=document.getElementById('lg-time').value.trim();
-  const location=document.getElementById('lg-location').value.trim();
+  const name=document.getElementById('lg-name').value.trim(),meeting_time=document.getElementById('lg-time').value.trim(),location=document.getElementById('lg-location').value.trim();
   if(!name||!meeting_time||!location){alert('Please fill in name, time, and location.');return}
   await db.from('life_groups').insert({name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),leader_id:currentUser.id,member_count:1});
-  ['lg-name','lg-time','lg-location','lg-desc'].forEach(id=>document.getElementById(id).value='');
-  loadLifeGroups();
+  ['lg-name','lg-time','lg-location','lg-desc'].forEach(id=>document.getElementById(id).value='');loadLifeGroups();
 }
+
+// DISCUSSIONS
 function initDiscBooks(){
   const sel=document.getElementById('disc-book-select');
   bibleBookNames.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;sel.appendChild(o)});
   sel.value='Matthew';
 }
 async function loadDiscussions(){
-  const book=document.getElementById('disc-book-select').value;
-  const c=document.getElementById('disc-list');
+  const book=document.getElementById('disc-book-select').value,c=document.getElementById('disc-list');
   c.innerHTML='<div class="loading">Loading...</div>';
   const{data}=await db.from('discussions').select('*,profiles(full_name)').eq('book',book).order('created_at',{ascending:false}).limit(30).catch(()=>({data:null}));
   const fallback={"Matthew":[{profiles:{full_name:'Sarah'},comment:'The Great Commission inspires me daily.'},{profiles:{full_name:'John'},comment:'Jesus promises to be with us always!'}],"John":[{profiles:{full_name:'Alex'},comment:'John 3:16 is the heart of the gospel.'}],"Romans":[{profiles:{full_name:'Chris'},comment:"Nothing can separate us from God's love!"}]};
@@ -551,42 +851,41 @@ async function loadDiscussions(){
 }
 async function addDiscussion(){
   if(!currentUser){openModal();return}
-  const comment=document.getElementById('disc-comment').value.trim();
-  const book=document.getElementById('disc-book-select').value;
+  const comment=document.getElementById('disc-comment').value.trim(),book=document.getElementById('disc-book-select').value;
   if(!comment){alert('Please write a comment.');return}
   await db.from('discussions').insert({book,comment,user_id:currentUser.id}).catch(()=>{});
   document.getElementById('disc-comment').value='';loadDiscussions();
 }
+
+// TESTIMONIES
 async function loadTestimonies(){
-  const c=document.getElementById('testimonies-list');
   const{data}=await db.from('testimonies').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
   const fallback=[{name:'Anonymous',story:'I was deep in addiction for seven years. A friend invited me to church and I found Jesus. Three years clean — God is faithful.',created_at:new Date().toISOString()},{name:'Sarah M.',story:'I lost my job and clung to Jeremiah 29:11. Three months later I found a better position. Never doubt His timing.',created_at:new Date().toISOString()}];
   const list=data&&data.length>0?data:fallback;
-  c.innerHTML=list.map(t=>`<div class="testimony-card"><div style="display:flex;align-items:center;gap:9px;margin-bottom:9px"><div class="avatar">${(t.name||'A')[0].toUpperCase()}</div><div><strong style="font-size:13px;color:var(--brown)">${t.name||'Anonymous'}</strong><div style="font-size:10px;color:var(--text-muted)">${new Date(t.created_at).toLocaleDateString()}</div></div></div><span class="quote-mark">"</span><div class="testimony-text">${t.story}</div></div>`).join('');
+  document.getElementById('testimonies-list').innerHTML=list.map(t=>`<div class="testimony-card"><div style="display:flex;align-items:center;gap:9px;margin-bottom:9px"><div class="avatar">${(t.name||'A')[0].toUpperCase()}</div><div><strong style="font-size:13px;color:var(--brown)">${t.name||'Anonymous'}</strong><div style="font-size:10px;color:var(--text-muted)">${new Date(t.created_at).toLocaleDateString()}</div></div></div><span class="quote-mark">"</span><div class="testimony-text">${t.story}</div></div>`).join('');
 }
 async function addTestimony(){
   if(!currentUser){openModal();return}
-  const share=document.getElementById('test-share-name').checked;
-  const story=document.getElementById('test-story').value.trim();
+  const share=document.getElementById('test-share-name').checked,story=document.getElementById('test-story').value.trim();
   if(!story){alert('Please share your testimony.');return}
   await db.from('testimonies').insert({name:share&&document.getElementById('test-name').value.trim()?document.getElementById('test-name').value.trim():'Anonymous',story,user_id:currentUser.id});
   document.getElementById('test-name').value='';document.getElementById('test-story').value='';document.getElementById('test-share-name').checked=false;
   loadTestimonies();
 }
+
+// PRAYER WALL
 async function loadPrayers(){
-  const c=document.getElementById('prayer-list');
   const{data}=await db.from('prayer_requests').select('*,comments(*)').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  const c=document.getElementById('prayer-list');
   if(!data||!data.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">🙏</div><p>No prayer requests yet. Share one!</p></div>';return}
   c.innerHTML=data.map(p=>`<div class="prayer-card"><div style="display:flex;align-items:center;gap:9px;margin-bottom:7px"><div class="avatar">${(p.first_name||'?')[0].toUpperCase()}</div><div><div style="font-weight:500;font-size:13px;color:var(--brown)">${p.first_name}</div><div style="font-size:10px;color:var(--text-muted)">${new Date(p.created_at).toLocaleDateString()}</div></div></div><div style="font-size:13px;line-height:1.6;margin-bottom:9px">${p.request}</div><button class="pray-btn" onclick="incrementPray('${p.id}',this)">🙏 ${p.pray_count||0} Praying</button><div class="comments-section"><strong style="font-size:10px;color:var(--text-muted)">ENCOURAGEMENTS</strong><div>${(p.comments||[]).length===0?'<p style="font-size:11px;color:var(--text-muted);margin-top:4px;font-style:italic">No comments yet.</p>':(p.comments||[]).map(c=>`<div class="comment-item">${c.content}</div>`).join('')}</div><div class="comment-input-row"><input type="text" id="ci-${p.id}" placeholder="Write an encouragement..."/><button class="btn btn-ghost btn-sm" onclick="addComment('${p.id}')">Send</button></div></div></div>`).join('');
 }
 async function addPrayer(){
   if(!currentUser){openModal();return}
-  const first_name=document.getElementById('prayer-name').value.trim();
-  const request=document.getElementById('prayer-request').value.trim();
+  const first_name=document.getElementById('prayer-name').value.trim(),request=document.getElementById('prayer-request').value.trim();
   if(!first_name||!request){alert('Please enter name and request.');return}
   await db.from('prayer_requests').insert({first_name,request,pray_count:0,user_id:currentUser.id});
-  document.getElementById('prayer-name').value='';document.getElementById('prayer-request').value='';
-  loadPrayers();
+  document.getElementById('prayer-name').value='';document.getElementById('prayer-request').value='';loadPrayers();
 }
 async function incrementPray(id,btn){
   const n=parseInt(btn.textContent.match(/\d+/)?.[0]||0)+1;
@@ -599,29 +898,32 @@ async function addComment(pid){
   await db.from('comments').insert({prayer_id:pid,content:val,user_id:currentUser.id});
   inp.value='';loadPrayers();
 }
+
+// MUSIC
 async function loadMusic(){
-  const c=document.getElementById('music-list');
   const{data}=await db.from('music_posts').select('*,profiles(full_name)').order('created_at',{ascending:false}).catch(()=>({data:null}));
-  const fallback=[{title:'Way Maker',artist:'Sinach',note:"This song reminds me that God is always at work.",profiles:{full_name:'James'}},{title:'Goodness of God',artist:'Bethel Music',note:'His goodness never fails.',profiles:{full_name:'Maria'}}];
+  const fallback=[{title:'Way Maker',artist:'Sinach',note:"Reminds me that God is always at work.",profiles:{full_name:'James'}},{title:'Goodness of God',artist:'Bethel Music',note:'His goodness never fails.',profiles:{full_name:'Maria'}}];
   const list=data&&data.length>0?data:fallback;
-  c.innerHTML=list.map(m=>`<div class="music-card"><h3>${m.title}</h3><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">by ${m.artist} · shared by ${m.profiles?.full_name||'Community member'}</div><p style="font-size:13px;line-height:1.5">${m.note||''}</p></div>`).join('');
+  document.getElementById('music-list').innerHTML=list.map(m=>`<div class="music-card"><h3>${m.title}</h3><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">by ${m.artist} · shared by ${m.profiles?.full_name||'Community member'}</div><p style="font-size:13px;line-height:1.5">${m.note||''}</p></div>`).join('');
 }
 async function addMusic(){
   if(!currentUser){openModal();return}
-  const title=document.getElementById('music-title').value.trim();
-  const artist=document.getElementById('music-artist').value.trim();
+  const title=document.getElementById('music-title').value.trim(),artist=document.getElementById('music-artist').value.trim();
   if(!title||!artist){alert('Please enter title and artist.');return}
   await db.from('music_posts').insert({title,artist,note:document.getElementById('music-note').value.trim(),user_id:currentUser.id});
-  ['music-title','music-artist','music-note'].forEach(id=>document.getElementById(id).value='');
-  loadMusic();
+  ['music-title','music-artist','music-note'].forEach(id=>document.getElementById(id).value='');loadMusic();
 }
+
+// INIT
 setDailyVerse();initDiscBooks();
 loadMusic();loadTestimonies();loadPrayers();loadLifeGroups();
+
 db.auth.onAuthStateChange(async(event,session)=>{
   currentUser=session?.user||null;
   if(currentUser){
     const{data}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));
-    if(!data){await db.from('profiles').insert({id:currentUser.id,full_name:currentUser.user_metadata?.full_name||'',username:currentUser.user_metadata?.username||''}).catch(()=>{});const{data:p}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));currentProfile=p;}else{currentProfile=data}
+    if(!data){await db.from('profiles').insert({id:currentUser.id,full_name:currentUser.user_metadata?.full_name||'',username:currentUser.user_metadata?.username||''}).catch(()=>{});const{data:p}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));currentProfile=p;}
+    else{currentProfile=data}
   }else{currentProfile=null}
   updateUI();
 });
