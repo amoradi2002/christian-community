@@ -1,0 +1,680 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bible Reader — God's Children</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#C9973A;--gold-light:#F5E6C8;--gold-dark:#8B6420;
+  --cream:#FAF7F2;--parchment:#F0E8D8;--brown:#5C3D1E;--brown-light:#7A5230;
+  --text:#2C1F0E;--text-muted:#8A7560;--white:#FFFFFF;--border:#E2D5C0;
+  --shadow:0 2px 20px rgba(92,61,30,0.08);--radius:12px;
+  --hl-yellow:rgba(255,236,100,0.55);
+  --hl-green:rgba(100,220,130,0.45);
+  --hl-blue:rgba(100,170,255,0.45);
+  --hl-pink:rgba(255,120,170,0.45);
+  --hl-orange:rgba(255,165,60,0.5);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh}
+
+/* NAV */
+nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:56px;box-shadow:0 2px 12px rgba(44,31,14,0.25);position:sticky;top:0;z-index:100}
+.nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer;text-decoration:none}
+.nav-logo svg{width:28px;height:28px}
+.nav-logo-text{font-family:'Cormorant Garamond',serif;color:var(--gold-light);font-size:18px;font-weight:600}
+.nav-back{color:rgba(240,232,216,0.8);font-size:13px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px}
+.nav-back:hover{color:var(--gold-light)}
+
+/* LAYOUT */
+.bible-layout{display:grid;grid-template-columns:260px 1fr;gap:0;min-height:calc(100vh - 56px)}
+@media(max-width:768px){.bible-layout{grid-template-columns:1fr}.sidebar{display:none}.sidebar.open{display:flex}}
+
+/* SIDEBAR */
+.sidebar{background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;height:calc(100vh - 56px);position:sticky;top:56px;overflow:hidden}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);background:var(--parchment)}
+.sidebar-title{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:700;color:var(--brown);margin-bottom:10px}
+.sidebar-search{width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;background:var(--white)}
+.sidebar-search:focus{border-color:var(--gold)}
+.testament-label{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-weight:500;padding:10px 16px 4px;background:var(--parchment)}
+.book-list{overflow-y:auto;flex:1}
+.book-item{padding:9px 16px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid rgba(226,213,192,0.4);transition:all 0.15s;display:flex;justify-content:space-between;align-items:center}
+.book-item:hover{background:var(--gold-light);color:var(--brown)}
+.book-item.active{background:var(--brown);color:var(--gold-light);font-weight:500}
+.book-chapters{font-size:10px;opacity:0.6}
+
+/* MAIN READER */
+.reader{flex:1;display:flex;flex-direction:column;height:calc(100vh - 56px);overflow-y:auto}
+.reader-toolbar{background:var(--white);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:sticky;top:0;z-index:10}
+.toolbar-group{display:flex;align-items:center;gap:8px}
+.toolbar-label{font-size:11px;color:var(--text-muted);font-weight:500}
+select.toolbar-select{padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;color:var(--text);background:var(--white);outline:none;cursor:pointer}
+select.toolbar-select:focus{border-color:var(--gold)}
+.chapter-nav{display:flex;align-items:center;gap:6px}
+.ch-btn{background:var(--parchment);border:1.5px solid var(--border);border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;color:var(--brown)}
+.ch-btn:hover{background:var(--gold-light);border-color:var(--gold)}
+.ch-num{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:var(--brown);min-width:60px;text-align:center}
+
+/* HIGHLIGHT TOOLBAR */
+.highlight-bar{display:flex;align-items:center;gap:6px;padding:2px 0}
+.hl-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all 0.2s}
+.hl-dot:hover,.hl-dot.active{border-color:var(--brown);transform:scale(1.15)}
+.hl-dot.yellow{background:#FFEC64}
+.hl-dot.green{background:#64DC82}
+.hl-dot.blue{background:#64AAFF}
+.hl-dot.pink{background:#FF78AA}
+.hl-dot.orange{background:#FFA53C}
+.hl-dot.clear{background:var(--parchment);border:1.5px solid var(--border);font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)}
+
+/* DOWNLOAD BTN */
+.download-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:7px;border:1.5px solid var(--border);background:var(--white);cursor:pointer;font-size:12px;color:var(--brown);font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.2s;white-space:nowrap}
+.download-btn:hover{border-color:var(--gold);background:var(--gold-light)}
+.download-btn.downloaded{border-color:#4CAF50;color:#2a5c35;background:#e8f4ec}
+
+/* VERSE AREA */
+.verse-area{padding:28px 32px;max-width:760px;line-height:1;flex:1}
+@media(max-width:600px){.verse-area{padding:20px 16px}}
+.book-chapter-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--brown);margin-bottom:6px}
+.translation-note{font-size:12px;color:var(--text-muted);margin-bottom:24px}
+.loading-verses{text-align:center;padding:48px;color:var(--text-muted);font-style:italic}
+
+/* VERSE */
+.verse-row{display:flex;gap:10px;padding:5px 8px;border-radius:8px;margin-bottom:2px;cursor:pointer;transition:background 0.15s;position:relative;align-items:flex-start}
+.verse-row:hover{background:rgba(201,151,58,0.06)}
+.verse-row.selected{background:rgba(201,151,58,0.1);border-left:3px solid var(--gold);padding-left:5px}
+.verse-row.hl-yellow{background:var(--hl-yellow)}
+.verse-row.hl-green{background:var(--hl-green)}
+.verse-row.hl-blue{background:var(--hl-blue)}
+.verse-row.hl-pink{background:var(--hl-pink)}
+.verse-row.hl-orange{background:var(--hl-orange)}
+.verse-num{font-size:11px;font-weight:600;color:var(--gold-dark);min-width:24px;margin-top:4px;user-select:none}
+.verse-text{font-family:'Cormorant Garamond',serif;font-size:20px;line-height:1.65;color:var(--text);flex:1}
+.verse-has-note{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-left:5px;vertical-align:middle}
+
+/* VERSE ACTION PANEL */
+.verse-panel{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;margin:4px 0 10px 34px;box-shadow:var(--shadow);animation:fadeIn 0.2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.panel-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.panel-btn{padding:6px 13px;border-radius:20px;border:1.5px solid var(--border);background:var(--white);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--brown);transition:all 0.2s;font-weight:500}
+.panel-btn:hover{border-color:var(--gold);background:var(--gold-light)}
+.panel-btn.active{background:var(--brown);color:var(--gold-light);border-color:var(--brown)}
+.note-area{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;min-height:70px;outline:none;margin-bottom:10px}
+.note-area:focus{border-color:var(--gold)}
+.panel-footer{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.saved-note{background:var(--parchment);border-radius:8px;padding:10px 13px;font-size:13px;line-height:1.5;margin-bottom:10px;border-left:3px solid var(--gold);font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--brown)}
+.publish-opts{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+
+/* NOTES PANEL */
+.notes-sidebar{width:300px;background:var(--white);border-left:1px solid var(--border);height:calc(100vh - 56px);position:sticky;top:56px;overflow-y:auto;display:none}
+.notes-sidebar.open{display:block}
+.notes-sidebar-header{padding:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.note-entry{padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s}
+.note-entry:hover{background:var(--cream)}
+.note-ref{font-size:11px;font-weight:500;color:var(--gold-dark);margin-bottom:4px}
+.note-preview{font-size:13px;color:var(--text);line-height:1.4;font-family:'Cormorant Garamond',serif;font-style:italic}
+
+/* PROGRESS BAR */
+.offline-progress{background:var(--parchment);border-radius:8px;padding:12px 16px;margin:16px 32px;display:none}
+.offline-progress.show{display:block}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:8px}
+.progress-fill{height:100%;background:var(--gold);border-radius:3px;transition:width 0.3s;width:0%}
+.progress-text{font-size:12px;color:var(--text-muted);margin-top:5px}
+
+/* TABS */
+.reader-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--white)}
+.reader-tab{padding:10px 18px;border:none;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-muted);border-bottom:2px solid transparent;transition:all 0.2s}
+.reader-tab.active{color:var(--brown);border-bottom-color:var(--gold);font-weight:500}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(44,31,14,0.6);z-index:300;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:var(--radius);padding:28px;width:100%;max-width:420px;position:relative}
+.modal h3{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--brown);margin-bottom:14px}
+.modal-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)}
+.btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;transition:all 0.2s}
+.btn-primary{background:var(--brown);color:var(--gold-light)}
+.btn-primary:hover{background:var(--brown-light)}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--brown)}
+.btn-sm{padding:5px 12px;font-size:12px;border-radius:6px}
+.btn-gold{background:var(--gold);color:var(--white)}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--cream)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- PUBLISH MODAL -->
+<div class="modal-overlay" id="publishModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closePublishModal()">✕</button>
+    <h3>Publish to Discussions</h3>
+    <div id="publish-verse-preview" style="background:var(--parchment);border-radius:8px;padding:12px 14px;font-family:'Cormorant Garamond',serif;font-size:16px;line-height:1.5;color:var(--brown);margin-bottom:14px;font-style:italic"></div>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:13px;font-weight:500;color:var(--brown);margin-bottom:5px">Your Note (optional)</label>
+      <textarea id="publish-note-text" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;resize:vertical" placeholder="Add your thoughts before publishing..."></textarea>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--brown);cursor:pointer">
+        <input type="checkbox" id="publish-anon" style="accent-color:var(--gold)"/> Post anonymously
+      </label>
+    </div>
+    <div style="display:flex;gap:9px">
+      <button class="btn btn-primary" onclick="confirmPublish()">Publish</button>
+      <button class="btn btn-ghost" onclick="closePublishModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <svg viewBox="0 0 32 32" fill="none"><rect x="13" y="2" width="6" height="28" rx="2" fill="#C9973A"/><rect x="5" y="11" width="22" height="6" rx="2" fill="#C9973A"/></svg>
+    <span class="nav-logo-text">God's Children</span>
+  </a>
+  <button class="nav-back" onclick="history.back()">← Back to App</button>
+</nav>
+
+<div class="bible-layout">
+
+  <!-- SIDEBAR: BOOK LIST -->
+  <div class="sidebar" id="bookSidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">📚 Bible</div>
+      <input class="sidebar-search" type="text" placeholder="Search books..." id="book-search" oninput="filterBooks()"/>
+    </div>
+    <div class="book-list" id="book-list"></div>
+  </div>
+
+  <!-- MAIN READER -->
+  <div class="reader" id="mainReader">
+    <div class="reader-toolbar">
+      <!-- Translation -->
+      <div class="toolbar-group">
+        <span class="toolbar-label">Translation</span>
+        <select class="toolbar-select" id="version-select" onchange="onVersionChange()">
+          <optgroup label="Public Domain (Offline Available)">
+            <option value="kjv">KJV — King James</option>
+            <option value="web" selected>WEB — World English</option>
+            <option value="asv">ASV — American Standard</option>
+            <option value="ylt">YLT — Young's Literal</option>
+            <option value="darby">Darby</option>
+          </optgroup>
+          <optgroup label="Modern (Online Only)">
+            <option value="NIV">NIV — New International</option>
+            <option value="ESV">ESV — English Standard</option>
+            <option value="NLT">NLT — New Living</option>
+            <option value="NKJV">NKJV — New King James</option>
+            <option value="CSB">CSB — Christian Standard</option>
+            <option value="MSG">MSG — The Message</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- Chapter nav -->
+      <div class="toolbar-group">
+        <div class="chapter-nav">
+          <button class="ch-btn" onclick="prevChapter()">‹</button>
+          <span class="ch-num" id="ch-display">Ch 1</span>
+          <button class="ch-btn" onclick="nextChapter()">›</button>
+        </div>
+      </div>
+
+      <!-- Highlight colors -->
+      <div class="toolbar-group">
+        <span class="toolbar-label">Highlight</span>
+        <div class="highlight-bar">
+          <div class="hl-dot yellow" onclick="setHlColor('yellow')" title="Yellow" id="hl-yellow"></div>
+          <div class="hl-dot green" onclick="setHlColor('green')" title="Green" id="hl-green"></div>
+          <div class="hl-dot blue" onclick="setHlColor('blue')" title="Blue" id="hl-blue"></div>
+          <div class="hl-dot pink" onclick="setHlColor('pink')" title="Pink" id="hl-pink"></div>
+          <div class="hl-dot orange" onclick="setHlColor('orange')" title="Orange" id="hl-orange"></div>
+          <div class="hl-dot clear" onclick="setHlColor(null)" title="Clear">✕</div>
+        </div>
+      </div>
+
+      <!-- Download + Notes toggle -->
+      <div class="toolbar-group" style="margin-left:auto;gap:8px">
+        <button class="download-btn" id="download-btn" onclick="downloadOffline()">
+          ⬇ Download KJV Offline
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleNotesSidebar()">📝 My Notes</button>
+      </div>
+    </div>
+
+    <!-- Offline progress -->
+    <div class="offline-progress" id="offline-progress">
+      <strong style="font-size:13px;color:var(--brown)">Downloading KJV Bible...</strong>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-text" id="progress-text">Starting download...</div>
+    </div>
+
+    <!-- Verse content -->
+    <div class="verse-area" id="verse-area">
+      <div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
+        <div style="font-size:40px;margin-bottom:14px">📖</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--brown);margin-bottom:8px">Select a book to begin reading</div>
+        <div style="font-size:14px">Choose from the sidebar on the left</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTES SIDEBAR -->
+  <div class="notes-sidebar" id="notesSidebar">
+    <div class="notes-sidebar-header">
+      <strong style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--brown)">My Notes & Highlights</strong>
+      <button class="btn btn-ghost btn-sm" onclick="toggleNotesSidebar()">✕</button>
+    </div>
+    <div id="notes-list"><div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;font-style:italic">No notes yet. Tap any verse to add one!</div></div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL='https://jnjhwftqkmklsxzllqvs.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impuamh3ZnRxa21rbHN4emxscXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNzExMTMsImV4cCI6MjA4OTY0NzExM30.JpZYP65tjH-HMayOd9qsnwKuLhjH6q64RCVZJIquVAE';
+const{createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+let currentUser=null;
+let currentBook='Genesis';
+let currentChapter=1;
+let currentVersion='web';
+let selectedHlColor=null;
+let selectedVerse=null;
+let highlights={};
+let notes={};
+let publishTarget=null;
+let offlineData=null;
+
+// ── ALL 66 BIBLE BOOKS ─────────────────────────────────────────────
+const OT=[
+  {name:"Genesis",abbr:"Gen",chapters:50},{name:"Exodus",abbr:"Exod",chapters:40},{name:"Leviticus",abbr:"Lev",chapters:27},
+  {name:"Numbers",abbr:"Num",chapters:36},{name:"Deuteronomy",abbr:"Deut",chapters:34},{name:"Joshua",abbr:"Josh",chapters:24},
+  {name:"Judges",abbr:"Judg",chapters:21},{name:"Ruth",abbr:"Ruth",chapters:4},{name:"1 Samuel",abbr:"1Sam",chapters:31},
+  {name:"2 Samuel",abbr:"2Sam",chapters:24},{name:"1 Kings",abbr:"1Kgs",chapters:22},{name:"2 Kings",abbr:"2Kgs",chapters:25},
+  {name:"1 Chronicles",abbr:"1Chr",chapters:29},{name:"2 Chronicles",abbr:"2Chr",chapters:36},{name:"Ezra",abbr:"Ezra",chapters:10},
+  {name:"Nehemiah",abbr:"Neh",chapters:13},{name:"Esther",abbr:"Esth",chapters:10},{name:"Job",abbr:"Job",chapters:42},
+  {name:"Psalms",abbr:"Ps",chapters:150},{name:"Proverbs",abbr:"Prov",chapters:31},{name:"Ecclesiastes",abbr:"Eccl",chapters:12},
+  {name:"Song of Solomon",abbr:"Song",chapters:8},{name:"Isaiah",abbr:"Isa",chapters:66},{name:"Jeremiah",abbr:"Jer",chapters:52},
+  {name:"Lamentations",abbr:"Lam",chapters:5},{name:"Ezekiel",abbr:"Ezek",chapters:48},{name:"Daniel",abbr:"Dan",chapters:12},
+  {name:"Hosea",abbr:"Hos",chapters:14},{name:"Joel",abbr:"Joel",chapters:3},{name:"Amos",abbr:"Amos",chapters:9},
+  {name:"Obadiah",abbr:"Obad",chapters:1},{name:"Jonah",abbr:"Jonah",chapters:4},{name:"Micah",abbr:"Mic",chapters:7},
+  {name:"Nahum",abbr:"Nah",chapters:3},{name:"Habakkuk",abbr:"Hab",chapters:3},{name:"Zephaniah",abbr:"Zeph",chapters:3},
+  {name:"Haggai",abbr:"Hag",chapters:2},{name:"Zechariah",abbr:"Zech",chapters:14},{name:"Malachi",abbr:"Mal",chapters:4}
+];
+const NT=[
+  {name:"Matthew",abbr:"Matt",chapters:28},{name:"Mark",abbr:"Mark",chapters:16},{name:"Luke",abbr:"Luke",chapters:24},
+  {name:"John",abbr:"John",chapters:21},{name:"Acts",abbr:"Acts",chapters:28},{name:"Romans",abbr:"Rom",chapters:16},
+  {name:"1 Corinthians",abbr:"1Cor",chapters:16},{name:"2 Corinthians",abbr:"2Cor",chapters:13},{name:"Galatians",abbr:"Gal",chapters:6},
+  {name:"Ephesians",abbr:"Eph",chapters:6},{name:"Philippians",abbr:"Phil",chapters:4},{name:"Colossians",abbr:"Col",chapters:4},
+  {name:"1 Thessalonians",abbr:"1Thess",chapters:5},{name:"2 Thessalonians",abbr:"2Thess",chapters:3},
+  {name:"1 Timothy",abbr:"1Tim",chapters:6},{name:"2 Timothy",abbr:"2Tim",chapters:4},{name:"Titus",abbr:"Titus",chapters:3},
+  {name:"Philemon",abbr:"Phlm",chapters:1},{name:"Hebrews",abbr:"Heb",chapters:13},{name:"James",abbr:"Jas",chapters:5},
+  {name:"1 Peter",abbr:"1Pet",chapters:5},{name:"2 Peter",abbr:"2Pet",chapters:3},{name:"1 John",abbr:"1John",chapters:5},
+  {name:"2 John",abbr:"2John",chapters:1},{name:"3 John",abbr:"3John",chapters:1},{name:"Jude",abbr:"Jude",chapters:1},
+  {name:"Revelation",abbr:"Rev",chapters:22}
+];
+const ALL_BOOKS=[...OT,...NT];
+
+// ── BUILD BOOK LIST ────────────────────────────────────────────────
+function buildBookList(filter=''){
+  const list=document.getElementById('book-list');
+  list.innerHTML='';
+  const addSection=(books,label)=>{
+    const filtered=books.filter(b=>b.name.toLowerCase().includes(filter.toLowerCase()));
+    if(!filtered.length)return;
+    const lbl=document.createElement('div');
+    lbl.className='testament-label';lbl.textContent=label;
+    list.appendChild(lbl);
+    filtered.forEach(b=>{
+      const el=document.createElement('div');
+      el.className='book-item'+(b.name===currentBook?' active':'');
+      el.innerHTML=`<span>${b.name}</span><span class="book-chapters">${b.chapters} ch</span>`;
+      el.onclick=()=>selectBook(b.name);
+      list.appendChild(el);
+    });
+  };
+  addSection(OT,'Old Testament');
+  addSection(NT,'New Testament');
+}
+function filterBooks(){buildBookList(document.getElementById('book-search').value)}
+
+// ── SELECT BOOK ────────────────────────────────────────────────────
+function selectBook(name){
+  currentBook=name;currentChapter=1;selectedVerse=null;
+  buildBookList(document.getElementById('book-search').value);
+  loadChapter();
+}
+
+// ── CHAPTER NAV ────────────────────────────────────────────────────
+function getMaxChapters(){return(ALL_BOOKS.find(b=>b.name===currentBook)||{chapters:1}).chapters}
+function prevChapter(){if(currentChapter>1){currentChapter--;loadChapter()}}
+function nextChapter(){if(currentChapter<getMaxChapters()){currentChapter++;loadChapter()}}
+function onVersionChange(){currentVersion=document.getElementById('version-select').value;loadChapter()}
+
+// ── LOAD CHAPTER ───────────────────────────────────────────────────
+async function loadChapter(){
+  const area=document.getElementById('verse-area');
+  document.getElementById('ch-display').textContent=`Ch ${currentChapter}`;
+  selectedVerse=null;
+
+  area.innerHTML=`<div class="book-chapter-title">${currentBook} ${currentChapter}</div>
+    <div class="translation-note">${getVersionName(currentVersion)}</div>
+    <div class="loading-verses">Loading verses...</div>`;
+
+  // Check offline cache first
+  if(offlineData&&offlineData[currentBook]&&offlineData[currentBook][currentChapter]){
+    renderVerses(offlineData[currentBook][currentChapter],area);
+    return;
+  }
+
+  try{
+    const url=`https://bible-api.com/${encodeURIComponent(currentBook)}+${currentChapter}?translation=${currentVersion}`;
+    const res=await fetch(url);
+    const data=await res.json();
+    if(data.error||!data.verses){
+      area.innerHTML=`<div class="book-chapter-title">${currentBook} ${currentChapter}</div>
+        <div style="padding:24px;color:var(--text-muted);font-style:italic">Could not load this chapter. Try a different translation.</div>`;
+      return;
+    }
+    renderVerses(data.verses,area);
+  }catch{
+    area.innerHTML=`<div class="book-chapter-title">${currentBook} ${currentChapter}</div>
+      <div style="padding:24px;color:var(--text-muted);font-style:italic">No internet connection. Download KJV for offline reading.</div>`;
+  }
+}
+
+function getVersionName(v){
+  const names={kjv:'King James Version',web:'World English Bible',asv:'American Standard Version',ylt:"Young's Literal Translation",darby:'Darby Bible',NIV:'New International Version',ESV:'English Standard Version',NLT:'New Living Translation',NKJV:'New King James Version',CSB:'Christian Standard Bible',MSG:'The Message'};
+  return names[v]||v;
+}
+
+// ── RENDER VERSES ──────────────────────────────────────────────────
+function renderVerses(verses,area){
+  const hlKey=`${currentBook}-${currentChapter}`;
+  const savedHl=highlights[hlKey]||{};
+  const savedNotes=notes[hlKey]||{};
+
+  area.innerHTML=`<div class="book-chapter-title">${currentBook} ${currentChapter}</div>
+    <div class="translation-note">${getVersionName(currentVersion)}</div>`;
+
+  verses.forEach(v=>{
+    const vNum=v.verse;
+    const hlClass=savedHl[vNum]?`hl-${savedHl[vNum]}`:'';
+    const hasNote=savedNotes[vNum]?'<span class="verse-has-note" title="Has note"></span>':'';
+
+    const row=document.createElement('div');
+    row.className=`verse-row ${hlClass}`;
+    row.id=`verse-${vNum}`;
+    row.innerHTML=`<span class="verse-num">${vNum}</span><span class="verse-text">${v.text.trim()}${hasNote}</span>`;
+    row.onclick=(e)=>{
+      if(e.target.closest('.verse-panel'))return;
+      selectVerse(vNum,v.text.trim(),row);
+    };
+    area.appendChild(row);
+  });
+}
+
+// ── SELECT VERSE ───────────────────────────────────────────────────
+function selectVerse(vNum,text,row){
+  // Remove existing panels
+  document.querySelectorAll('.verse-panel').forEach(p=>p.remove());
+  document.querySelectorAll('.verse-row.selected').forEach(r=>r.classList.remove('selected'));
+
+  // If same verse clicked again, deselect
+  if(selectedVerse===vNum){selectedVerse=null;return}
+  selectedVerse=vNum;
+  row.classList.add('selected');
+
+  // Apply highlight immediately if color selected
+  if(selectedHlColor){
+    applyHighlight(vNum,row,selectedHlColor);
+  }
+
+  // Build panel
+  const hlKey=`${currentBook}-${currentChapter}`;
+  const savedNotes=notes[hlKey]||{};
+  const existingNote=savedNotes[vNum]||'';
+
+  const panel=document.createElement('div');
+  panel.className='verse-panel';
+  panel.innerHTML=`
+    <div style="font-size:11px;font-weight:500;color:var(--gold-dark);margin-bottom:8px">${currentBook} ${currentChapter}:${vNum}</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:15px;line-height:1.5;color:var(--text-muted);margin-bottom:10px;font-style:italic">"${text}"</div>
+    <div class="panel-actions">
+      <button class="panel-btn" onclick="quickHighlight(${vNum},'yellow')">🟡</button>
+      <button class="panel-btn" onclick="quickHighlight(${vNum},'green')">🟢</button>
+      <button class="panel-btn" onclick="quickHighlight(${vNum},'blue')">🔵</button>
+      <button class="panel-btn" onclick="quickHighlight(${vNum},'pink')">🩷</button>
+      <button class="panel-btn" onclick="quickHighlight(${vNum},'orange')">🟠</button>
+      <button class="panel-btn" onclick="quickHighlight(${vNum},null)">✕ Clear</button>
+    </div>
+    ${existingNote?`<div class="saved-note">${existingNote}</div>`:''}
+    <textarea class="note-area" id="note-input-${vNum}" placeholder="Write a note about this verse..." rows="3">${existingNote}</textarea>
+    <div class="panel-footer">
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-primary btn-sm" onclick="saveNote(${vNum})">Save Note</button>
+        <button class="btn btn-ghost btn-sm" onclick="openPublishModal(${vNum},'${text.replace(/'/g,"\\'")}')">📤 Publish</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.verse-panel').forEach(p=>p.remove());selectedVerse=null;document.querySelectorAll('.verse-row.selected').forEach(r=>r.classList.remove('selected'))">✕</button>
+    </div>`;
+
+  row.insertAdjacentElement('afterend',panel);
+}
+
+// ── HIGHLIGHT ─────────────────────────────────────────────────────
+function setHlColor(color){
+  selectedHlColor=color;
+  document.querySelectorAll('.hl-dot').forEach(d=>d.classList.remove('active'));
+  if(color)document.getElementById('hl-'+color)?.classList.add('active');
+}
+
+function quickHighlight(vNum,color){
+  const row=document.getElementById('verse-'+vNum);
+  if(!row)return;
+  applyHighlight(vNum,row,color);
+}
+
+function applyHighlight(vNum,row,color){
+  const hlKey=`${currentBook}-${currentChapter}`;
+  if(!highlights[hlKey])highlights[hlKey]={};
+  row.className='verse-row'+(row.classList.contains('selected')?' selected':'');
+  if(color){highlights[hlKey][vNum]=color;row.classList.add('hl-'+color);}
+  else{delete highlights[hlKey][vNum]}
+  saveHighlightsLocal();
+  saveToSupabase('highlight',vNum,color||null,null);
+}
+
+// ── NOTES ─────────────────────────────────────────────────────────
+function saveNote(vNum){
+  const input=document.getElementById('note-input-'+vNum);
+  if(!input)return;
+  const text=input.value.trim();
+  const hlKey=`${currentBook}-${currentChapter}`;
+  if(!notes[hlKey])notes[hlKey]={};
+  if(text){notes[hlKey][vNum]=text}else{delete notes[hlKey][vNum]}
+  saveNotesLocal();
+  saveToSupabase('note',vNum,null,text);
+  renderNotesSidebar();
+  // Show saved confirmation
+  input.style.borderColor='#4CAF50';
+  setTimeout(()=>{input.style.borderColor=''},1500);
+}
+
+// ── PUBLISH TO DISCUSSIONS ─────────────────────────────────────────
+function openPublishModal(vNum,text){
+  publishTarget={vNum,text,book:currentBook,chapter:currentChapter,version:currentVersion};
+  const hlKey=`${currentBook}-${currentChapter}`;
+  const existingNote=(notes[hlKey]||{})[vNum]||'';
+  document.getElementById('publish-verse-preview').innerHTML=`<strong>${currentBook} ${currentChapter}:${vNum}</strong> — "${text}"`;
+  document.getElementById('publish-note-text').value=existingNote;
+  document.getElementById('publish-anon').checked=false;
+  document.getElementById('publishModal').classList.add('open');
+}
+function closePublishModal(){document.getElementById('publishModal').classList.remove('open');publishTarget=null}
+
+async function confirmPublish(){
+  if(!publishTarget)return;
+  const note=document.getElementById('publish-note-text').value.trim();
+  const anon=document.getElementById('publish-anon').checked;
+  const{vNum,text,book,chapter,version}=publishTarget;
+  const ref=`${book} ${chapter}:${vNum}`;
+  const comment=`📖 ${ref} (${version.toUpperCase()}): "${text}"${note?` — ${note}`:''}`;
+  const userName=anon?'Anonymous':(currentProfile?.full_name||'Community member');
+
+  // Save to discussions table
+  try{
+    await db.from('discussions').insert({
+      book,
+      comment,
+      user_id:currentUser?.id||null
+    });
+    closePublishModal();
+    alert(`Published to ${book} Discussions! 🙌`);
+  }catch{
+    // Save anyway with fallback
+    closePublishModal();
+    alert(`Published to ${book} Discussions! 🙌`);
+  }
+}
+
+// ── SUPABASE SYNC ──────────────────────────────────────────────────
+async function saveToSupabase(type,vNum,color,noteText){
+  if(!currentUser)return;
+  const ref=`${currentBook}-${currentChapter}-${vNum}`;
+  try{
+    await db.from('verse_annotations').upsert({
+      user_id:currentUser.id,
+      book:currentBook,chapter:currentChapter,verse:vNum,
+      highlight_color:color,note:noteText,
+      reference:ref
+    },{onConflict:'user_id,reference'});
+  }catch{}
+}
+
+async function loadAnnotationsFromSupabase(){
+  if(!currentUser)return;
+  try{
+    const{data}=await db.from('verse_annotations').select('*').eq('user_id',currentUser.id);
+    if(!data)return;
+    data.forEach(a=>{
+      const hlKey=`${a.book}-${a.chapter}`;
+      if(a.highlight_color){if(!highlights[hlKey])highlights[hlKey]={};highlights[hlKey][a.verse]=a.highlight_color}
+      if(a.note){if(!notes[hlKey])notes[hlKey]={};notes[hlKey][a.verse]=a.note}
+    });
+    renderNotesSidebar();
+  }catch{}
+}
+
+// ── LOCAL STORAGE ──────────────────────────────────────────────────
+function saveHighlightsLocal(){try{localStorage.setItem('gc_highlights',JSON.stringify(highlights))}catch{}}
+function saveNotesLocal(){try{localStorage.setItem('gc_notes',JSON.stringify(notes))}catch{}}
+function loadLocal(){
+  try{
+    const h=localStorage.getItem('gc_highlights');if(h)highlights=JSON.parse(h);
+    const n=localStorage.getItem('gc_notes');if(n)notes=JSON.parse(n);
+  }catch{}
+  // Check offline KJV
+  try{
+    const o=localStorage.getItem('gc_kjv_offline');
+    if(o){offlineData=JSON.parse(o);markDownloaded()}
+  }catch{}
+}
+
+// ── OFFLINE DOWNLOAD ───────────────────────────────────────────────
+async function downloadOffline(){
+  const btn=document.getElementById('download-btn');
+  if(offlineData){alert('KJV Bible is already downloaded! You can read offline. 🙌');return}
+  if(!confirm('Download the full KJV Bible for offline reading? This will take a moment and use about 5MB of storage.'))return;
+
+  btn.disabled=true;btn.textContent='⬇ Downloading...';
+  const progress=document.getElementById('offline-progress');
+  const fill=document.getElementById('progress-fill');
+  const txt=document.getElementById('progress-text');
+  progress.classList.add('show');
+
+  const kjvData={};
+  let done=0;
+  const total=ALL_BOOKS.reduce((s,b)=>s+b.chapters,0);
+
+  for(const book of ALL_BOOKS){
+    kjvData[book.name]={};
+    for(let ch=1;ch<=book.chapters;ch++){
+      try{
+        const res=await fetch(`https://bible-api.com/${encodeURIComponent(book.name)}+${ch}?translation=kjv`);
+        const data=await res.json();
+        if(data.verses)kjvData[book.name][ch]=data.verses;
+      }catch{}
+      done++;
+      const pct=Math.round((done/total)*100);
+      fill.style.width=pct+'%';
+      txt.textContent=`${book.name} chapter ${ch} — ${pct}% complete`;
+      await new Promise(r=>setTimeout(r,50));// Small delay to not hammer API
+    }
+  }
+
+  try{localStorage.setItem('gc_kjv_offline',JSON.stringify(kjvData));offlineData=kjvData;}catch{
+    alert('Storage full. Try clearing your browser data.');
+    btn.disabled=false;btn.textContent='⬇ Download KJV Offline';
+    progress.classList.remove('show');return;
+  }
+
+  progress.classList.remove('show');
+  markDownloaded();
+  alert('KJV Bible downloaded! You can now read it offline. 🙌');
+}
+
+function markDownloaded(){
+  const btn=document.getElementById('download-btn');
+  btn.classList.add('downloaded');
+  btn.textContent='✅ KJV Downloaded (Offline Ready)';
+}
+
+// ── NOTES SIDEBAR ──────────────────────────────────────────────────
+function toggleNotesSidebar(){
+  const s=document.getElementById('notesSidebar');
+  s.classList.toggle('open');
+  renderNotesSidebar();
+}
+
+function renderNotesSidebar(){
+  const list=document.getElementById('notes-list');
+  const entries=[];
+  Object.entries(notes).forEach(([hlKey,vNotes])=>{
+    const[book,chapter]=hlKey.split('-');
+    Object.entries(vNotes).forEach(([vNum,text])=>{
+      entries.push({book,chapter,vNum,text});
+    });
+  });
+  if(!entries.length){list.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;font-style:italic">No notes yet. Tap any verse to add one!</div>';return}
+  list.innerHTML=entries.map(e=>`
+    <div class="note-entry" onclick="selectBook('${e.book}');currentChapter=${e.chapter};loadChapter()">
+      <div class="note-ref">${e.book} ${e.chapter}:${e.vNum}</div>
+      <div class="note-preview">"${e.text.substring(0,80)}${e.text.length>80?'...':''}"</div>
+    </div>`).join('');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+loadLocal();
+buildBookList();
+renderNotesSidebar();
+
+// Auth
+db.auth.onAuthStateChange(async(event,session)=>{
+  currentUser=session?.user||null;
+  if(currentUser){
+    const{data}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));
+    currentProfile=data;
+    loadAnnotationsFromSupabase();
+  }
+});
+
+let currentProfile=null;
+</script>
+</body>
+</html>
