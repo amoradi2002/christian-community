@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -192,10 +191,8 @@ textarea{resize:vertical;min-height:80px}
 .note-input:focus{border-color:var(--gold)}
 .panel-footer{display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 .saved-note-preview{background:var(--parchment);border-radius:7px;padding:8px 11px;font-size:12px;line-height:1.5;margin-bottom:8px;border-left:3px solid var(--gold);font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--brown)}
-.mobile-book-btn{display:none;background:var(--brown);color:var(--gold-light);border:none;border-radius:8px;padding:7px 13px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
-@media(max-width:768px){.mobile-book-btn{display:block}}
-.mobile-book-panel{display:none;background:var(--white);border-bottom:1px solid var(--border);padding:10px;max-height:200px;overflow-y:auto}
-.mobile-book-panel.open{display:block}
+.mobile-book-select{display:none;background:var(--white);border:1.5px solid var(--gold);border-radius:8px;padding:7px 11px;font-size:13px;color:var(--brown);font-family:'DM Sans',sans-serif;font-weight:500;outline:none;cursor:pointer}
+@media(max-width:768px){.mobile-book-select{display:block}}
 
 /* PUBLISH MODAL */
 #publishModal .modal{max-width:420px}
@@ -326,7 +323,12 @@ textarea{resize:vertical;min-height:80px}
     <div class="bible-reader-main">
       <div class="bible-toolbar">
         <div class="tb-group">
-          <button class="mobile-book-btn" onclick="toggleMobileBooks()">📚 Books</button>
+          <select class="mobile-book-select" id="mobile-book-select" onchange="mobileBibleBookSelect(this.value)">
+            <option value="">📚 Book...</option>
+          </select>
+          <select class="mobile-book-select" id="mobile-ch-select" onchange="mobileBibleChSelect(this.value)">
+            <option value="">Ch...</option>
+          </select>
         </div>
         <div class="tb-group">
           <span class="tb-label">Translation</span>
@@ -370,9 +372,7 @@ textarea{resize:vertical;min-height:80px}
           <button class="btn btn-ghost btn-sm" onclick="showMyNotes()">📝 Notes</button>
         </div>
       </div>
-      <!-- Mobile book selector -->
-      <div class="mobile-book-panel" id="mobile-book-panel"></div>
-      <!-- Offline progress -->
+      <!-- verse content -->
       <div class="offline-prog" id="offline-prog">
         <strong style="font-size:12px;color:var(--brown)">Downloading KJV Bible...</strong>
         <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
@@ -616,6 +616,8 @@ function initBible(){
   bibleInited=true;
   buildBibleSidebar();
   loadBibleLocal();
+  bBook='Genesis';bChapter=1;
+  loadBibleChapter();
 }
 function buildBibleSidebar(filter=''){
   const list=document.getElementById('book-list');
@@ -634,19 +636,51 @@ function buildBibleSidebar(filter=''){
     });
   };
   addSec(OT,'Old Testament');addSec(NT,'New Testament');
-  // Mobile panel
-  const mp=document.getElementById('mobile-book-panel');
-  if(mp){
-    mp.innerHTML='';
-    [...OT,...NT].filter(b=>b.name.toLowerCase().includes(filter.toLowerCase())).forEach(b=>{
-      const el=document.createElement('div');el.className='book-item'+(b.name===bBook?' active':'');
-      el.textContent=b.name;el.onclick=()=>{bBook=b.name;bChapter=1;buildBibleSidebar();loadBibleChapter();mp.classList.remove('open')};
-      mp.appendChild(el);
+  // Populate mobile book dropdown
+  const msel=document.getElementById('mobile-book-select');
+  if(msel){
+    msel.innerHTML='<option value="">📚 Book...</option>';
+    ALL_BOOKS.forEach(b=>{
+      const o=document.createElement('option');
+      o.value=b.name;o.textContent=b.name;
+      if(b.name===bBook)o.selected=true;
+      msel.appendChild(o);
     });
+    populateMobileChapters();
   }
 }
 function filterBibleBooks(){buildBibleSidebar(document.getElementById('book-search').value)}
-function toggleMobileBooks(){document.getElementById('mobile-book-panel').classList.toggle('open')}
+function mobileBibleBookSelect(name){
+  if(!name)return;
+  bBook=name;bChapter=1;
+  buildBibleSidebar();
+  populateMobileChapters();
+  loadBibleChapter();
+}
+function populateMobileChapters(){
+  const ch=document.getElementById('mobile-ch-select');if(!ch)return;
+  const book=ALL_BOOKS.find(b=>b.name===bBook)||ALL_BOOKS[0];
+  ch.innerHTML='<option value="">Ch...</option>';
+  for(let i=1;i<=book.ch;i++){const o=document.createElement('option');o.value=i;o.textContent='Ch '+i;if(i===bChapter)o.selected=true;ch.appendChild(o)}
+  populateMobileVerses();
+}
+function populateMobileVerses(){
+  const vs=document.getElementById('mobile-v-select');if(!vs)return;
+  vs.innerHTML='<option value="">V...</option>';
+  for(let i=1;i<=200;i++){const o=document.createElement('option');o.value=i;o.textContent='V '+i;vs.appendChild(o)}
+}
+function mobileBibleChSelect(val){
+  if(!val)return;
+  bChapter=parseInt(val);
+  populateMobileVerses();
+  loadBibleChapter();
+}
+function mobileBibleVerseSelect(val){
+  if(!val)return;
+  // Scroll to verse
+  const row=document.getElementById('vr-'+val);
+  if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
+}
 function bibleChNav(dir){
   const maxCh=(ALL_BOOKS.find(b=>b.name===bBook)||{ch:1}).ch;
   bChapter=Math.max(1,Math.min(maxCh,bChapter+dir));
