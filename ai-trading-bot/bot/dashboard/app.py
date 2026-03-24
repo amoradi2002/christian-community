@@ -29,6 +29,11 @@ def create_app():
         from flask import render_template
         return render_template("intelligence.html")
 
+    @app.route("/profile")
+    def profile():
+        from flask import render_template
+        return render_template("profile.html")
+
     @app.route("/")
     def index():
         from flask import render_template

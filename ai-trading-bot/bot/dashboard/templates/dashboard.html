@@ -3,6 +3,12 @@
 {% block content %}
 <h1>Trading Dashboard</h1>
 
+<!-- My Profile Quick View -->
+<div class="card" id="risk-card" style="display:none;">
+    <h2>My Profile <a href="/profile" style="font-size:0.8rem; font-weight:normal;">(edit)</a></h2>
+    <div class="grid" id="risk-grid"></div>
+</div>
+
 <!-- Account Info (shows when Alpaca is connected) -->
 <div class="card" id="account-card" style="display:none;">
     <h2>Account</h2>
@@ -237,6 +243,43 @@ function loadOptions() {
         .catch(e => { result.innerHTML = `<p class="muted">Error: ${e.message}. Make sure Alpaca API keys are set.</p>`; });
 }
 
+// --- Risk Profile Quick View ---
+function loadRiskProfile() {
+    fetch('/api/profile').then(r => r.json()).then(data => {
+        if (data.error) return;
+        const p = data.profile;
+        const card = document.getElementById('risk-card');
+        const grid = document.getElementById('risk-grid');
+        card.style.display = 'block';
+
+        const growthColor = p.growth_pct >= 0 ? 'positive' : 'negative';
+        const tradingStatus = data.can_trade_today ? '<span class="positive">ACTIVE</span>' : '<span class="negative">STOPPED</span>';
+
+        grid.innerHTML = `
+            <div class="stat">
+                <div class="stat-label">My Capital</div>
+                <div class="stat-value">$${parseFloat(p.current_capital).toLocaleString()}</div>
+                <div class="${growthColor}" style="font-size:0.85rem;">${p.growth_pct >= 0 ? '+' : ''}${p.growth_pct.toFixed(1)}%</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Next Trade Risk</div>
+                <div class="stat-value">$${data.next_trade_risk.toFixed(2)}</div>
+                <div style="font-size:0.85rem;">${p.effective_risk_pct}% | ${p.risk_multiplier}x mult</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Win Rate</div>
+                <div class="stat-value">${p.total_trades > 0 ? (p.win_rate * 100).toFixed(0) + '%' : 'N/A'}</div>
+                <div style="font-size:0.85rem;">${p.total_trades} trades</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Status</div>
+                <div class="stat-value">${tradingStatus}</div>
+                <div style="font-size:0.85rem;">Today: $${data.daily_pnl.toFixed(2)}</div>
+            </div>
+        `;
+    }).catch(() => {});
+}
+
 // --- Health check to show provider info ---
 fetch('/api/health').then(r => r.json()).then(data => {
     const source = document.getElementById('price-source');
@@ -250,6 +293,7 @@ fetch('/api/health').then(r => r.json()).then(data => {
 // Initial load
 loadPrices();
 loadAccount();
+loadRiskProfile();
 loadPositions();
 setInterval(loadPrices, 30000);
 setInterval(loadPositions, 30000);

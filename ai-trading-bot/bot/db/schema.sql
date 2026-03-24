@@ -65,6 +65,12 @@ CREATE TABLE IF NOT EXISTS trades (
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS user_profile (
+    id           INTEGER PRIMARY KEY DEFAULT 1,
+    data_json    TEXT NOT NULL,
+    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS fundamentals_cache (
     symbol       TEXT PRIMARY KEY,
     data_json    TEXT,

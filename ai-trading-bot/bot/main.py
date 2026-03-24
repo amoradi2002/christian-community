@@ -8,6 +8,7 @@ Usage:
     python -m bot.main train        # Train the AI model
     python -m bot.main dashboard    # Start dashboard only
     python -m bot.main learn <url>  # Learn strategies from a YouTube video
+    python -m bot.main profile       # Set up your trading profile (budget, risk, goals)
     python -m bot.main setup        # Interactive setup for Discord/Telegram/Email
 """
 
@@ -70,6 +71,99 @@ def run_learn(url):
         print(f"\n{result['message']}")
     else:
         print(f"\nError: {result.get('message', 'Unknown error')}")
+
+
+def run_profile():
+    """Interactive profile setup - set your budget, risk tolerance, and trading style."""
+    from bot.engine.risk_manager import load_profile, update_profile, RISK_PRESETS, RiskManager
+
+    print("\n=== Trading Profile Setup ===")
+    print("Let's set up your personal trading profile.\n")
+
+    current = load_profile()
+
+    # Starting capital
+    print(f"Current capital: ${current.current_capital:.2f}")
+    capital_input = input("How much are you starting with? (dollar amount, Enter to keep current): $").strip()
+    if capital_input:
+        try:
+            capital = float(capital_input.replace(",", ""))
+            update_profile(starting_capital=capital, current_capital=capital, peak_capital=capital)
+            print(f"  Set to ${capital:.2f}")
+        except ValueError:
+            print("  Invalid amount, keeping current.")
+
+    # Risk level
+    print(f"\nRisk levels:")
+    print("  1. Conservative - Risk 1% per trade, max 3 positions, tight stops")
+    print("     Best for: Small accounts, learning, preserving capital")
+    print("  2. Moderate     - Risk 2% per trade, max 5 positions, balanced")
+    print("     Best for: Most traders, steady growth")
+    print("  3. Aggressive   - Risk 4% per trade, max 8 positions, wider stops")
+    print("     Best for: Experienced traders, larger accounts")
+
+    risk_choice = input(f"\nYour risk level (1/2/3, current: {current.risk_level}): ").strip()
+    risk_map = {"1": "conservative", "2": "moderate", "3": "aggressive"}
+    if risk_choice in risk_map:
+        level = risk_map[risk_choice]
+        update_profile(risk_level=level)
+        preset = RISK_PRESETS[level]
+        print(f"  Set to {level}: {preset['risk_per_trade_pct']}% per trade, "
+              f"max {preset['max_open_positions']} positions")
+
+    # Custom risk per trade
+    custom = input("\nWant to customize risk per trade %? (Enter to skip, or type 1-10): ").strip()
+    if custom:
+        try:
+            pct = float(custom)
+            if 0.5 <= pct <= 10:
+                update_profile(risk_per_trade_pct=pct)
+                print(f"  Risk per trade set to {pct}%")
+            else:
+                print("  Must be between 0.5% and 10%")
+        except ValueError:
+            pass
+
+    # Daily loss limit
+    daily = input(f"\nMax daily loss before stopping? (%, current: {current.daily_loss_limit_pct}%, Enter to keep): ").strip()
+    if daily:
+        try:
+            update_profile(daily_loss_limit_pct=float(daily))
+            print(f"  Daily loss limit set to {daily}%")
+        except ValueError:
+            pass
+
+    # Max positions
+    max_pos = input(f"\nMax simultaneous positions? (current: {current.max_open_positions}, Enter to keep): ").strip()
+    if max_pos:
+        try:
+            update_profile(max_open_positions=int(max_pos))
+        except ValueError:
+            pass
+
+    # Show summary
+    rm = RiskManager()
+    profile = rm.profile
+    status = rm.get_status()
+
+    print("\n=== Your Trading Profile ===")
+    print(f"  Capital:          ${profile.current_capital:,.2f}")
+    print(f"  Risk Level:       {profile.risk_level.capitalize()}")
+    print(f"  Risk Per Trade:   {profile.risk_per_trade_pct}% (${profile.risk_per_trade_dollars():.2f})")
+    print(f"  Max Positions:    {profile.max_open_positions}")
+    print(f"  Daily Loss Limit: {profile.daily_loss_limit_pct}%")
+    print(f"  Max Per Stock:    {profile.max_portfolio_pct}% of portfolio")
+
+    if profile.total_trades > 0:
+        print(f"\n  --- Performance ---")
+        print(f"  Total Trades:     {profile.total_trades}")
+        print(f"  Win Rate:         {profile.win_rate:.1%}")
+        print(f"  Total P&L:        ${profile.total_pnl:,.2f}")
+        print(f"  Growth:           {profile.growth_pct:,.1f}%")
+        print(f"  Risk Multiplier:  {profile.risk_multiplier}x")
+
+    print(f"\nProfile saved! The bot will size all trades based on these settings.")
+    print(f"Run 'python -m bot.main' to start trading with your profile.\n")
 
 
 def run_setup():
@@ -222,11 +316,13 @@ def main():
                 print("Usage: python -m bot.main learn <youtube-url>")
                 sys.exit(1)
             run_learn(sys.argv[2])
+        elif command == "profile":
+            run_profile()
         elif command == "setup":
             run_setup()
         else:
             print(f"Unknown command: {command}")
-            print("Usage: python -m bot.main [scan|intel|train|dashboard|learn <url>|setup]")
+            print("Usage: python -m bot.main [scan|intel|train|dashboard|learn <url>|profile|setup]")
     else:
         # Full mode: scan + scheduler + dashboard
         print("AI Trading Bot initialized.")

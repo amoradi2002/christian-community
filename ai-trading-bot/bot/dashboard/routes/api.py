@@ -133,8 +133,11 @@ def list_orders():
 @api_bp.route("/trade/stock", methods=["POST"])
 def trade_stock():
     """
-    Place a stock order. JSON body:
-    {"symbol": "AAPL", "qty": 10, "side": "buy", "order_type": "limit", "limit_price": 170.50}
+    Place a stock order with risk management. JSON body:
+    {"symbol": "AAPL", "price": 175.50, "side": "buy", "confidence": 0.8}
+
+    If qty is omitted, the risk manager calculates optimal position size.
+    If qty is provided, it overrides risk-based sizing.
     """
     trading_cfg = CONFIG.get("trading", {})
     if not trading_cfg.get("enabled", False):
@@ -144,24 +147,56 @@ def trade_stock():
     if not data:
         return jsonify({"error": "JSON body required"}), 400
 
-    required = ["symbol", "qty", "side"]
-    missing = [f for f in required if f not in data]
-    if missing:
-        return jsonify({"error": f"Missing fields: {missing}"}), 400
+    symbol = data.get("symbol", "").upper()
+    side = data.get("side", "")
+    if not symbol or not side:
+        return jsonify({"error": "symbol and side are required"}), 400
 
     try:
         from bot.engine.trader import place_stock_order
+        from bot.engine.risk_manager import RiskManager
+
+        rm = RiskManager()
+        qty = data.get("qty")
+
+        # If no qty provided, calculate from risk profile
+        if qty is None and side.lower() == "buy":
+            price = float(data.get("price", data.get("limit_price", 0)))
+            if not price:
+                return jsonify({"error": "Need price or limit_price for risk-based sizing"}), 400
+
+            sizing = rm.calculate_position_size(
+                symbol=symbol,
+                price=price,
+                confidence=float(data.get("confidence", 0.65)),
+            )
+
+            if not sizing["can_trade"]:
+                return jsonify({"error": sizing["reason"], "sizing": sizing}), 403
+
+            qty = sizing["shares"]
+            # Include risk info in response
+            risk_info = sizing
+        else:
+            qty = float(qty or 1)
+            risk_info = None
+
         result = place_stock_order(
-            symbol=data["symbol"].upper(),
-            qty=float(data["qty"]),
-            side=data["side"],
+            symbol=symbol,
+            qty=qty,
+            side=side,
             order_type=data.get("order_type", trading_cfg.get("default_order_type", "market")),
             limit_price=data.get("limit_price"),
             stop_price=data.get("stop_price"),
             time_in_force=data.get("time_in_force", "day"),
         )
+
+        response = result.to_dict()
+        if risk_info:
+            response["risk_sizing"] = risk_info
+
         status_code = 200 if result.success else 400
-        return jsonify(result.to_dict()), status_code
+        return jsonify(response), status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -393,6 +428,90 @@ def earnings_watchlist():
         days = int(request.args.get("days", 30))
         events = get_watchlist_earnings(watchlist, days_ahead=days)
         return jsonify([e.to_dict() for e in events])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Profile & Risk Management API ---
+
+@api_bp.route("/profile", methods=["GET"])
+def get_profile():
+    """Get your trading profile and risk status."""
+    try:
+        from bot.engine.risk_manager import RiskManager
+        rm = RiskManager()
+        return jsonify(rm.get_status())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/profile", methods=["POST"])
+def update_user_profile():
+    """
+    Update your trading profile. JSON body with any of:
+    {"starting_capital": 1000, "risk_level": "moderate", "risk_per_trade_pct": 2, ...}
+    """
+    try:
+        from bot.engine.risk_manager import update_profile
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "JSON body required"}), 400
+
+        # Whitelist of fields users can update
+        allowed = {
+            "starting_capital", "current_capital", "risk_per_trade_pct",
+            "max_portfolio_pct", "max_open_positions", "risk_level",
+            "daily_loss_limit_pct", "weekly_loss_limit_pct",
+            "preferred_strategies",
+        }
+        filtered = {k: v for k, v in data.items() if k in allowed}
+
+        if not filtered:
+            return jsonify({"error": f"No valid fields. Allowed: {sorted(allowed)}"}), 400
+
+        # If setting starting capital for first time, also set current and peak
+        if "starting_capital" in filtered and "current_capital" not in filtered:
+            filtered["current_capital"] = filtered["starting_capital"]
+            filtered["peak_capital"] = filtered["starting_capital"]
+
+        profile = update_profile(**filtered)
+        return jsonify(profile.to_dict())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/profile/sync", methods=["POST"])
+def sync_profile_with_broker():
+    """Sync your profile capital with actual Alpaca account balance."""
+    try:
+        from bot.engine.risk_manager import RiskManager
+        rm = RiskManager()
+        rm.update_capital_from_broker()
+        return jsonify(rm.get_status())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/risk/calculate", methods=["POST"])
+def calculate_risk():
+    """
+    Calculate position size for a trade. JSON body:
+    {"symbol": "AAPL", "price": 175.50, "confidence": 0.8}
+    """
+    try:
+        from bot.engine.risk_manager import RiskManager
+        rm = RiskManager()
+        data = request.get_json()
+        if not data or "symbol" not in data or "price" not in data:
+            return jsonify({"error": "Need symbol and price"}), 400
+
+        result = rm.calculate_position_size(
+            symbol=data["symbol"],
+            price=float(data["price"]),
+            stop_loss_pct=data.get("stop_loss_pct"),
+            confidence=float(data.get("confidence", 0.65)),
+        )
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
