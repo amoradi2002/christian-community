@@ -53,6 +53,18 @@ CREATE TABLE IF NOT EXISTS market_cache (
     PRIMARY KEY (symbol, timeframe, date)
 );
 
+CREATE TABLE IF NOT EXISTS trades (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id     TEXT,
+    symbol       TEXT NOT NULL,
+    side         TEXT NOT NULL,
+    qty          REAL NOT NULL,
+    order_type   TEXT,
+    filled_price REAL,
+    status       TEXT,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS youtube_lessons (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     video_url    TEXT NOT NULL,

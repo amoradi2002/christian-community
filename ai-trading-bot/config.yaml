@@ -4,9 +4,16 @@ bot:
   confidence_threshold: 0.65
 
 data:
-  provider: yfinance
+  provider: alpaca          # "alpaca" for real-time or "yfinance" for free delayed data
   default_timeframe: 1d
+  intraday_interval: 5m     # For day trading: 1m, 5m, 15m
   history_days: 365
+
+trading:
+  enabled: false            # Set to true to enable order execution
+  paper: true               # Paper trading mode (safe to test)
+  max_position_pct: 5       # Max % of portfolio per position
+  default_order_type: limit # market, limit, or stop_limit
 
 ai:
   model_type: gradient_boosting

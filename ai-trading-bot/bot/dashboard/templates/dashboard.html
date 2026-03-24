@@ -3,14 +3,20 @@
 {% block content %}
 <h1>Trading Dashboard</h1>
 
+<!-- Account Info (shows when Alpaca is connected) -->
+<div class="card" id="account-card" style="display:none;">
+    <h2>Account</h2>
+    <div class="grid" id="account-grid"></div>
+</div>
+
+<!-- Live Prices -->
 <div class="card">
     <h2>Live Watchlist Prices</h2>
     <div id="price-grid" class="grid">
         <p class="muted" id="price-loading">Loading live prices...</p>
     </div>
-    <p class="muted" style="margin-top: 0.5rem; font-size: 0.8rem;">
-        Prices via Yahoo Finance (may be 15-20 min delayed during market hours).
-        Auto-refreshes every 60s.
+    <p class="muted" style="margin-top: 0.5rem; font-size: 0.8rem;" id="price-source">
+        Auto-refreshes every 30s.
     </p>
 </div>
 
@@ -37,6 +43,7 @@
 
     <div class="card">
         <h2>Open Positions</h2>
+        <div id="positions-live"></div>
         {% if positions %}
         <table>
             <tr><th>Symbol</th><th>Signal</th><th>Entry</th><th>Strategy</th></tr>
@@ -50,9 +57,24 @@
             {% endfor %}
         </table>
         {% else %}
-        <p class="muted">No open positions.</p>
+        <p class="muted" id="no-positions">No open positions.</p>
         {% endif %}
     </div>
+</div>
+
+<!-- Options Chain Lookup -->
+<div class="card">
+    <h2>Options Chain</h2>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <input type="text" id="options-symbol" placeholder="Symbol (e.g. AAPL)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+        <select id="options-type" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+            <option value="">Both</option>
+            <option value="call">Calls</option>
+            <option value="put">Puts</option>
+        </select>
+        <button onclick="loadOptions()" class="btn">Load Chain</button>
+    </div>
+    <div id="options-result"></div>
 </div>
 
 <div class="card">
@@ -66,6 +88,7 @@
 </div>
 
 <script>
+// --- Live Prices ---
 function loadPrices() {
     fetch('/api/prices')
         .then(r => r.json())
@@ -83,6 +106,9 @@ function loadPrices() {
                 const color = isUp ? 'positive' : 'negative';
                 const arrow = isUp ? '&#9650;' : '&#9660;';
 
+                // Show bid/ask if available (Alpaca)
+                const bidAsk = info.bid ? `<div style="font-size:0.75rem;color:#888;">Bid: $${info.bid.toFixed(2)} / Ask: $${info.ask.toFixed(2)}</div>` : '';
+
                 grid.innerHTML += `
                     <div class="stat">
                         <div class="stat-label">${symbol}</div>
@@ -90,17 +116,141 @@ function loadPrices() {
                         <div class="${color}" style="font-size:0.9rem;">
                             ${arrow} ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePct.toFixed(2)}%)
                         </div>
+                        ${bidAsk}
                     </div>
                 `;
             }
         })
         .catch(() => {
             const loading = document.getElementById('price-loading');
-            if (loading) loading.textContent = 'Could not load prices. Start the bot to fetch data.';
+            if (loading) loading.textContent = 'Could not load prices. Check your data provider config.';
         });
 }
 
+// --- Account Info ---
+function loadAccount() {
+    fetch('/api/account')
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) return;
+            const card = document.getElementById('account-card');
+            const grid = document.getElementById('account-grid');
+            card.style.display = 'block';
+
+            const mode = data.paper ? 'PAPER' : 'LIVE';
+            const modeColor = data.paper ? '#f59e0b' : '#ef4444';
+
+            grid.innerHTML = `
+                <div class="stat">
+                    <div class="stat-label">Mode</div>
+                    <div class="stat-value" style="color:${modeColor}">${mode}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Portfolio Value</div>
+                    <div class="stat-value">$${parseFloat(data.portfolio_value).toLocaleString()}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Buying Power</div>
+                    <div class="stat-value">$${parseFloat(data.buying_power).toLocaleString()}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Cash</div>
+                    <div class="stat-value">$${parseFloat(data.cash).toLocaleString()}</div>
+                </div>
+            `;
+        })
+        .catch(() => {});
+}
+
+// --- Live Positions from Alpaca ---
+function loadPositions() {
+    fetch('/api/positions')
+        .then(r => r.json())
+        .then(positions => {
+            if (!Array.isArray(positions) || positions.length === 0) return;
+            const container = document.getElementById('positions-live');
+            const noPos = document.getElementById('no-positions');
+            if (noPos) noPos.style.display = 'none';
+
+            let html = '<table><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th></tr>';
+            for (const p of positions) {
+                const pnlColor = p.unrealized_pnl >= 0 ? 'positive' : 'negative';
+                html += `<tr>
+                    <td><strong>${p.symbol}</strong></td>
+                    <td>${p.qty}</td>
+                    <td>$${p.avg_entry.toFixed(2)}</td>
+                    <td>$${p.current_price.toFixed(2)}</td>
+                    <td class="${pnlColor}">$${p.unrealized_pnl.toFixed(2)} (${p.unrealized_pnl_pct.toFixed(1)}%)</td>
+                </tr>`;
+            }
+            html += '</table>';
+            container.innerHTML = html;
+        })
+        .catch(() => {});
+}
+
+// --- Options Chain ---
+function loadOptions() {
+    const symbol = document.getElementById('options-symbol').value.toUpperCase();
+    const optType = document.getElementById('options-type').value;
+    const result = document.getElementById('options-result');
+
+    if (!symbol) { result.innerHTML = '<p class="muted">Enter a symbol.</p>'; return; }
+    result.innerHTML = '<p class="muted">Loading options chain...</p>';
+
+    let url = `/api/options/chain?symbol=${symbol}`;
+    if (optType) url += `&type=${optType}`;
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { result.innerHTML = `<p class="muted">${data.error}</p>`; return; }
+
+            let html = `<p>Underlying: <strong>${data.underlying}</strong> @ $${data.underlying_price?.toFixed(2) || 'N/A'}</p>`;
+            html += `<p class="muted">Expirations: ${data.expirations?.join(', ') || 'None'}</p>`;
+
+            const renderContracts = (contracts, label) => {
+                if (!contracts || contracts.length === 0) return '';
+                let t = `<h3>${label}</h3><table><tr><th>Exp</th><th>Strike</th><th>Bid</th><th>Ask</th><th>Mid</th><th>Vol</th><th>OI</th><th>IV</th><th>Delta</th></tr>`;
+                for (const c of contracts.slice(0, 30)) {
+                    t += `<tr>
+                        <td>${c.expiration}</td>
+                        <td>$${c.strike.toFixed(2)}</td>
+                        <td>$${c.bid.toFixed(2)}</td>
+                        <td>$${c.ask.toFixed(2)}</td>
+                        <td>$${c.mid.toFixed(2)}</td>
+                        <td>${c.volume}</td>
+                        <td>${c.open_interest}</td>
+                        <td>${(c.iv * 100).toFixed(1)}%</td>
+                        <td>${c.delta.toFixed(3)}</td>
+                    </tr>`;
+                }
+                t += '</table>';
+                return t;
+            };
+
+            html += renderContracts(data.calls, 'Calls');
+            html += renderContracts(data.puts, 'Puts');
+            result.innerHTML = html;
+        })
+        .catch(e => { result.innerHTML = `<p class="muted">Error: ${e.message}. Make sure Alpaca API keys are set.</p>`; });
+}
+
+// --- Health check to show provider info ---
+fetch('/api/health').then(r => r.json()).then(data => {
+    const source = document.getElementById('price-source');
+    if (data.data_provider === 'alpaca') {
+        source.textContent = 'Real-time prices via Alpaca Markets. Auto-refreshes every 30s.';
+    } else {
+        source.textContent = 'Prices via Yahoo Finance (may be 15-20 min delayed). Auto-refreshes every 30s.';
+    }
+});
+
+// Initial load
 loadPrices();
-setInterval(loadPrices, 60000);
+loadAccount();
+loadPositions();
+setInterval(loadPrices, 30000);
+setInterval(loadPositions, 30000);
 </script>
 {% endblock %}

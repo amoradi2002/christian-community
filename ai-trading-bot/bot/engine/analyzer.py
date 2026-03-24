@@ -1,8 +1,8 @@
 """
 Core Analyzer - Orchestrates data fetching, strategy evaluation, AI prediction, and alerts.
+Supports both Yahoo Finance (free/delayed) and Alpaca (real-time) data providers.
 """
 
-from bot.data.fetcher import fetch_market_data
 from bot.data.indicators import compute_indicators
 from bot.data.models import MarketSnapshot
 from bot.strategies.registry import StrategyRegistry
@@ -14,17 +14,36 @@ from bot.strategies.store import get_strategy_by_name
 from bot.config.settings import CONFIG
 
 
+def _fetch_candles(symbol: str, interval: str = "1d", days: int = 365) -> list:
+    """Fetch candles using the configured data provider."""
+    provider = CONFIG.get("data", {}).get("provider", "yfinance")
+
+    if provider == "alpaca":
+        try:
+            from bot.data.alpaca_provider import fetch_alpaca_bars
+            return fetch_alpaca_bars(symbol, interval=interval, days=days)
+        except (ImportError, ValueError) as e:
+            print(f"Alpaca unavailable ({e}), falling back to yfinance")
+
+    # Fallback to yfinance
+    from bot.data.fetcher import fetch_market_data
+    period_map = {"1m": "7d", "5m": "60d", "15m": "60d", "30m": "60d", "1h": "730d", "1d": "1y"}
+    period = period_map.get(interval, "1y")
+    return fetch_market_data(symbol, period=period, interval=interval)
+
+
 class Analyzer:
     def __init__(self):
         self.registry = StrategyRegistry()
         self.registry.load_all()
         self.alert_manager = AlertManager()
         self.threshold = CONFIG.get("bot", {}).get("confidence_threshold", 0.65)
+        self.provider = CONFIG.get("data", {}).get("provider", "yfinance")
 
-    def analyze_symbol(self, symbol: str) -> list[Signal]:
+    def analyze_symbol(self, symbol: str, interval: str = "1d") -> list[Signal]:
         """Run full analysis pipeline on a single symbol."""
-        # 1. Fetch data
-        candles = fetch_market_data(symbol, period="1y", interval="1d")
+        # 1. Fetch data (auto-selects Alpaca or Yahoo based on config)
+        candles = _fetch_candles(symbol, interval=interval)
         if len(candles) < 30:
             print(f"[{symbol}] Not enough data ({len(candles)} candles)")
             return []
@@ -35,7 +54,7 @@ class Analyzer:
         # 3. Build snapshot
         snapshot = MarketSnapshot(
             symbol=symbol,
-            timeframe="1d",
+            timeframe=interval,
             candles=candles,
             indicators=indicators,
         )
