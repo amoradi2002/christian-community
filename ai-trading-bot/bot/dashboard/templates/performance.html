@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Performance - AI Trading Bot{% endblock %}
+{% block content %}
+<h1>Strategy Performance</h1>
+
+<div class="card">
+    <h2>Strategy Stats</h2>
+    {% if stats %}
+    <table>
+        <tr><th>Strategy ID</th><th>Outcome</th><th>Count</th><th>Avg P&L %</th></tr>
+        {% for s in stats %}
+        <tr>
+            <td>{{ s.strategy_id or s.get('strategy_id', 'N/A') }}</td>
+            <td><span class="badge badge-{{ 'buy' if s.outcome == 'win' else 'sell' }}">{{ s.outcome }}</span></td>
+            <td>{{ s.cnt }}</td>
+            <td>{{ "%.2f"|format(s.avg_pnl or 0) }}%</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="muted">No performance data yet. Run scans to generate trading signals and track their outcomes.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Open Positions</h2>
+    {% if positions %}
+    <table>
+        <tr><th>Symbol</th><th>Direction</th><th>Entry Price</th><th>Strategy</th><th>Opened</th></tr>
+        {% for p in positions %}
+        <tr>
+            <td><strong>{{ p.symbol }}</strong></td>
+            <td>{{ p.signal }}</td>
+            <td>${{ "%.2f"|format(p.entry_price) }}</td>
+            <td>{{ p.strategy_name or "N/A" }}</td>
+            <td>{{ p.created_at }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="muted">No open positions.</p>
+    {% endif %}
+</div>
+{% endblock %}

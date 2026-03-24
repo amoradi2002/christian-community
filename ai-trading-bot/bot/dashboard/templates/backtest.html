@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Backtest - AI Trading Bot{% endblock %}
+{% block content %}
+<h1>Backtesting</h1>
+
+<div class="card">
+    <h2>Run Backtest</h2>
+    <form method="post">
+        <div class="form-row">
+            <label>Strategy</label>
+            <select name="strategy" required>
+                {% for s in strategies %}
+                <option value="{{ s.name }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Symbol</label>
+            <input type="text" name="symbol" value="SPY" required>
+        </div>
+        <div class="form-row">
+            <label>Period</label>
+            <select name="period">
+                <option value="1y">1 Year</option>
+                <option value="2y" selected>2 Years</option>
+                <option value="5y">5 Years</option>
+            </select>
+        </div>
+        <button type="submit" class="btn">Run Backtest</button>
+    </form>
+</div>
+
+{% if report %}
+<div class="card">
+    <h2>Results: {{ report.strategy }} on {{ report.symbol }}</h2>
+    {% if report.total_trades > 0 %}
+    <div class="grid">
+        <div class="stat">
+            <div class="stat-label">Total Return</div>
+            <div class="stat-value {{ 'positive' if report.total_return_pct > 0 else 'negative' }}">
+                {{ report.total_return_pct }}%
+            </div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Win Rate</div>
+            <div class="stat-value">{{ report.win_rate }}%</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Total Trades</div>
+            <div class="stat-value">{{ report.total_trades }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Sharpe Ratio</div>
+            <div class="stat-value">{{ report.sharpe_ratio }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Max Drawdown</div>
+            <div class="stat-value negative">-{{ report.max_drawdown_pct }}%</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Final Equity</div>
+            <div class="stat-value">${{ report.final_equity }}</div>
+        </div>
+    </div>
+
+    <h3>Equity Curve</h3>
+    <canvas id="equityChart" height="100"></canvas>
+
+    <h3>Trade Log</h3>
+    <table>
+        <tr><th>Entry Date</th><th>Exit Date</th><th>Entry $</th><th>Exit $</th><th>P&L %</th></tr>
+        {% for t in report.trades[:50] %}
+        <tr>
+            <td>{{ t.entry_date }}</td>
+            <td>{{ t.exit_date }}</td>
+            <td>${{ "%.2f"|format(t.entry_price) }}</td>
+            <td>${{ "%.2f"|format(t.exit_price) }}</td>
+            <td class="{{ 'positive' if t.pnl_pct > 0 else 'negative' }}">{{ "%.2f"|format(t.pnl_pct) }}%</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <script>
+    const curve = {{ report.equity_curve_chart | tojson }};
+    new Chart(document.getElementById('equityChart'), {
+        type: 'line',
+        data: {
+            labels: curve.map(p => p.date),
+            datasets: [{
+                label: 'Equity',
+                data: curve.map(p => p.equity),
+                borderColor: '#4CAF50',
+                fill: false,
+                pointRadius: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: { x: { display: false } }
+        }
+    });
+    </script>
+    {% else %}
+    <p class="muted">{{ report.message or "No trades were executed." }}</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

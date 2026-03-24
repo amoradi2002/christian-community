@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - AI Trading Bot{% endblock %}
+{% block content %}
+<h1>Trading Dashboard</h1>
+
+<div class="grid">
+    <div class="card">
+        <h2>Recent Alerts</h2>
+        {% if alerts %}
+        <table>
+            <tr><th>Time</th><th>Symbol</th><th>Signal</th><th>Price</th><th>Confidence</th></tr>
+            {% for a in alerts %}
+            <tr class="signal-{{ a.signal|lower }}">
+                <td>{{ a.created_at }}</td>
+                <td><strong>{{ a.symbol }}</strong></td>
+                <td><span class="badge badge-{{ a.signal|lower }}">{{ a.signal }}</span></td>
+                <td>${{ "%.2f"|format(a.price_at or 0) }}</td>
+                <td>{{ "%.0f"|format((a.confidence or 0) * 100) }}%</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p class="muted">No alerts yet. Run a scan to generate signals.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Open Positions</h2>
+        {% if positions %}
+        <table>
+            <tr><th>Symbol</th><th>Signal</th><th>Entry</th><th>Strategy</th></tr>
+            {% for p in positions %}
+            <tr>
+                <td><strong>{{ p.symbol }}</strong></td>
+                <td>{{ p.signal }}</td>
+                <td>${{ "%.2f"|format(p.entry_price) }}</td>
+                <td>{{ p.strategy_name or "N/A" }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p class="muted">No open positions.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <h2>Quick Actions</h2>
+    <div class="actions">
+        <a href="/strategies" class="btn">Manage Strategies</a>
+        <a href="/backtest" class="btn btn-secondary">Run Backtest</a>
+        <a href="/alerts" class="btn btn-secondary">View All Alerts</a>
+    </div>
+</div>
+{% endblock %}
