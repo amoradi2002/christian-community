@@ -82,6 +82,37 @@ def get_options_chain():
         return jsonify({"error": f"Options data unavailable: {e}"}), 500
 
 
+@api_bp.route("/options/recommend")
+def recommend_options():
+    """
+    Get options strategy recommendations. ?symbol=AAPL&direction=bullish&confidence=0.8&dte=30
+    """
+    symbol = request.args.get("symbol", "").upper()
+    if not symbol:
+        return jsonify({"error": "symbol parameter required"}), 400
+
+    direction = request.args.get("direction", "bullish")
+    if direction not in ("bullish", "bearish", "neutral"):
+        return jsonify({"error": "direction must be bullish, bearish, or neutral"}), 400
+
+    try:
+        from bot.engine.options_strategies import OptionsEngine
+        engine = OptionsEngine()
+        setups = engine.recommend(
+            symbol=symbol,
+            direction=direction,
+            confidence=float(request.args.get("confidence", 0.7)),
+            target_dte=int(request.args.get("dte", 30)),
+        )
+        return jsonify({
+            "symbol": symbol,
+            "direction": direction,
+            "strategies": [s.to_dict() for s in setups],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @api_bp.route("/options/quote")
 def get_option_quote():
     """Get quote for specific contract. ?contract=AAPL250321C00170000"""
@@ -222,16 +253,44 @@ def trade_option():
 
     try:
         from bot.engine.trader import place_option_order
+        from bot.engine.risk_manager import RiskManager
+
+        rm = RiskManager()
+        side = data["side"].lower()
+        qty = int(data["qty"])
+        limit_price = data.get("limit_price")
+
+        # Risk check for buying options
+        if side == "buy" and limit_price:
+            cost_per_contract = float(limit_price) * 100
+            total_cost = cost_per_contract * qty
+            sizing = rm.calculate_options_size(
+                premium_per_contract=float(limit_price),
+                confidence=float(data.get("confidence", 0.65)),
+            )
+            if not sizing["can_trade"]:
+                return jsonify({"error": sizing["reason"], "sizing": sizing}), 403
+            # Cap qty at what risk manager allows
+            qty = min(qty, sizing["contracts"])
+            risk_info = sizing
+        else:
+            risk_info = None
+
         result = place_option_order(
             contract_symbol=data["contract"],
-            qty=int(data["qty"]),
-            side=data["side"],
+            qty=qty,
+            side=side,
             order_type=data.get("order_type", "limit"),
-            limit_price=data.get("limit_price"),
+            limit_price=limit_price,
             time_in_force=data.get("time_in_force", "day"),
         )
+
+        response = result.to_dict()
+        if risk_info:
+            response["risk_sizing"] = risk_info
+
         status_code = 200 if result.success else 400
-        return jsonify(result.to_dict()), status_code
+        return jsonify(response), status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

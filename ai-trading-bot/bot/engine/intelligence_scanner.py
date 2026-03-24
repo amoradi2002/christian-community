@@ -160,6 +160,58 @@ def scan_unusual_volume() -> list[dict]:
         return []
 
 
+def scan_options_opportunities() -> list[dict]:
+    """
+    Scan watchlist for options strategy opportunities based on IV rank
+    and recent signals. High IV = sell premium, Low IV = buy options.
+    """
+    try:
+        from bot.engine.options_strategies import OptionsEngine
+        from bot.engine.analyzer import analyze_symbol
+
+        watchlist = CONFIG.get("bot", {}).get("watchlist", [])
+        engine = OptionsEngine()
+        alerts = []
+
+        for symbol in watchlist[:10]:  # Limit to avoid slow scans
+            try:
+                analysis = analyze_symbol(symbol)
+                if not analysis or not analysis.get("signal"):
+                    continue
+
+                signal = analysis["signal"]
+                confidence = analysis.get("confidence", 0.5)
+                if confidence < 0.6:
+                    continue
+
+                direction = "bullish" if signal == "BUY" else "bearish" if signal == "SELL" else "neutral"
+                setups = engine.recommend(symbol, direction=direction, confidence=confidence)
+                tradeable = [s for s in setups if s.can_trade]
+
+                if tradeable:
+                    best = tradeable[0]
+                    alert = {
+                        "type": "options_opportunity",
+                        "ticker": symbol,
+                        "message": (
+                            f"OPTIONS — {symbol}: {best.strategy_name.replace('_', ' ').upper()} "
+                            f"({direction}) | Max loss ${best.max_loss:.0f}, "
+                            f"Max profit ${best.max_profit:.0f} | "
+                            f"R/R {best.risk_reward_ratio:.1f}x | IV rank {best.iv_rank:.0f}%"
+                        ),
+                        "in_watchlist": True,
+                        "data": best.to_dict(),
+                    }
+                    alerts.append(alert)
+            except Exception:
+                continue
+
+        return alerts
+    except Exception as e:
+        print(f"Options opportunity scan error: {e}")
+        return []
+
+
 def run_intelligence_scan() -> list[dict]:
     """
     Run all intelligence scans and return combined alerts.
@@ -172,6 +224,7 @@ def run_intelligence_scan() -> list[dict]:
     all_alerts.extend(scan_earnings_warnings())
     all_alerts.extend(scan_insider_buys())
     all_alerts.extend(scan_unusual_volume())
+    all_alerts.extend(scan_options_opportunities())
 
     # Sort: watchlist items first, then by type
     all_alerts.sort(key=lambda a: (not a.get("in_watchlist", False), a.get("type", "")))
@@ -211,6 +264,12 @@ def _send_intelligence_discord(alerts: list[dict]):
     if insiders:
         lines.append("\n**:bust_in_silhouette: Insider Buys (Watchlist):**")
         for a in insiders[:5]:
+            lines.append(f"  {a['message']}")
+
+    options = [a for a in alerts if a["type"] == "options_opportunity"]
+    if options:
+        lines.append("\n**:chart_with_upwards_trend: Options Opportunities:**")
+        for a in options[:5]:
             lines.append(f"  {a['message']}")
 
     if not lines:

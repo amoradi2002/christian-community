@@ -68,6 +68,33 @@
     </div>
 </div>
 
+<!-- Options Strategy Recommender -->
+<div class="card">
+    <h2>Options Strategy Builder</h2>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;">
+        <input type="text" id="rec-symbol" placeholder="Symbol (e.g. AAPL)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+        <select id="rec-direction" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+            <option value="bullish">Bullish</option>
+            <option value="bearish">Bearish</option>
+            <option value="neutral">Neutral</option>
+        </select>
+        <select id="rec-confidence" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+            <option value="0.5">50% Confidence</option>
+            <option value="0.65">65% Confidence</option>
+            <option value="0.8" selected>80% Confidence</option>
+            <option value="0.9">90% Confidence</option>
+        </select>
+        <select id="rec-dte" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+            <option value="14">~2 Weeks</option>
+            <option value="30" selected>~30 Days</option>
+            <option value="45">~45 Days</option>
+            <option value="60">~60 Days</option>
+        </select>
+        <button onclick="loadRecommendations()" class="btn">Get Strategies</button>
+    </div>
+    <div id="rec-result"></div>
+</div>
+
 <!-- Options Chain Lookup -->
 <div class="card">
     <h2>Options Chain</h2>
@@ -194,6 +221,76 @@ function loadPositions() {
             container.innerHTML = html;
         })
         .catch(() => {});
+}
+
+// --- Options Strategy Recommendations ---
+function loadRecommendations() {
+    const symbol = document.getElementById('rec-symbol').value.toUpperCase();
+    const direction = document.getElementById('rec-direction').value;
+    const confidence = document.getElementById('rec-confidence').value;
+    const dte = document.getElementById('rec-dte').value;
+    const result = document.getElementById('rec-result');
+
+    if (!symbol) { result.innerHTML = '<p class="muted">Enter a symbol.</p>'; return; }
+    result.innerHTML = '<p class="muted">Analyzing options strategies...</p>';
+
+    fetch(`/api/options/recommend?symbol=${symbol}&direction=${direction}&confidence=${confidence}&dte=${dte}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { result.innerHTML = `<p class="muted">${data.error}</p>`; return; }
+            if (!data.strategies || data.strategies.length === 0) {
+                result.innerHTML = '<p class="muted">No strategies found.</p>';
+                return;
+            }
+
+            let html = `<p class="muted">IV Rank: ${data.strategies[0].iv_rank?.toFixed(0) || 'N/A'}% | Direction: <strong>${data.direction}</strong></p>`;
+
+            for (const s of data.strategies) {
+                const canTrade = s.can_trade;
+                const borderColor = canTrade ? (s.direction === 'bullish' ? '#22c55e' : s.direction === 'bearish' ? '#ef4444' : '#f59e0b') : '#666';
+
+                html += `<div style="border-left:4px solid ${borderColor}; padding:0.75rem 1rem; margin:0.75rem 0; background:#f8f9fa; border-radius:4px;">`;
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">`;
+                html += `<strong style="font-size:1.1rem;">${s.strategy_name.replace(/_/g, ' ').toUpperCase()}</strong>`;
+                html += `<span style="font-size:0.85rem; color:#666;">${s.days_to_expiry} DTE</span>`;
+                html += `</div>`;
+                html += `<p style="margin:0.25rem 0; font-size:0.9rem;">${s.description}</p>`;
+
+                html += `<div class="grid" style="margin:0.5rem 0; gap:0.5rem;">`;
+                html += `<div class="stat"><div class="stat-label">Max Loss</div><div class="stat-value negative">$${s.max_loss.toFixed(2)}</div></div>`;
+                html += `<div class="stat"><div class="stat-label">Max Profit</div><div class="stat-value positive">$${s.max_profit.toFixed(2)}</div></div>`;
+                html += `<div class="stat"><div class="stat-label">Risk/Reward</div><div class="stat-value">${s.risk_reward_ratio.toFixed(2)}x</div></div>`;
+                html += `<div class="stat"><div class="stat-label">Capital Needed</div><div class="stat-value">$${s.capital_required.toFixed(2)}</div></div>`;
+                html += `</div>`;
+
+                if (s.why && s.why.length > 0) {
+                    html += '<ul style="margin:0.25rem 0; padding-left:1.25rem; font-size:0.85rem; color:#555;">';
+                    for (const reason of s.why) {
+                        html += `<li>${reason}</li>`;
+                    }
+                    html += '</ul>';
+                }
+
+                // Show legs
+                if (s.contracts && s.contracts.length > 0) {
+                    html += '<div style="font-size:0.8rem; color:#777; margin-top:0.5rem;">';
+                    for (const c of s.contracts) {
+                        const action = c.action === 'BUY' ? '<span class="positive">BUY</span>' : '<span class="negative">SELL</span>';
+                        html += `${action} ${c.qty || 1}x ${c.strike} ${c.type} @ $${c.price.toFixed(2)} (Δ ${c.delta?.toFixed(3) || 'N/A'}) &nbsp;`;
+                    }
+                    html += '</div>';
+                }
+
+                if (!canTrade) {
+                    html += `<p style="color:#ef4444; font-size:0.85rem; margin:0.25rem 0;">${s.block_reason}</p>`;
+                }
+
+                html += `</div>`;
+            }
+
+            result.innerHTML = html;
+        })
+        .catch(e => { result.innerHTML = `<p class="muted">Error: ${e.message}. Make sure Alpaca API keys are set.</p>`; });
 }
 
 // --- Options Chain ---
