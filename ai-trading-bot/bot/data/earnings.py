@@ -1,22 +1,22 @@
 """
-Earnings data provider - calendar, whisper numbers, and earnings surprises.
+Earnings data provider - calendar, estimates, and earnings surprises.
 
-Sources:
-- Earnings Whispers (earningswhispers.com) - whisper numbers and calendar
-- Yahoo Finance - as fallback for earnings dates and estimates
-- Finviz - earnings date from fundamentals
+Data sources (in priority order):
+1. Finnhub (free API, reliable) - calendar, EPS estimates, surprises
+2. Yahoo Finance (free, no key) - earnings dates, estimates, history
+3. Earnings Whispers (best-effort scrape) - whisper numbers only
 
-Earnings Whispers doesn't have an official API, so we scrape their
-public calendar and whisper data.
+Note: Earnings Whispers has no API and uses JavaScript rendering,
+so scraping is fragile. Finnhub is the primary source.
 """
 
+import os
 import re
 import json
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 
 import requests
-from bs4 import BeautifulSoup
 
 from bot.db.database import get_connection
 
@@ -29,12 +29,14 @@ class EarningsEvent:
     date: str = ""            # YYYY-MM-DD
     time: str = ""            # "BMO" (before market open), "AMC" (after market close)
     eps_estimate: float | None = None
-    eps_whisper: float | None = None   # The whisper number (crowd estimate)
+    eps_whisper: float | None = None   # The whisper/crowd estimate
     eps_actual: float | None = None
     revenue_estimate: float | None = None
     revenue_actual: float | None = None
     surprise_pct: float | None = None
     confirmed: bool = False
+    quarters_beat: int = 0     # How many of last 4 quarters beat estimates
+    source: str = ""           # "finnhub", "yahoo", "whispers"
 
     @property
     def has_whisper(self) -> bool:
@@ -65,108 +67,136 @@ class EarningsEvent:
             "revenue_actual": self.revenue_actual,
             "surprise_pct": self.surprise_pct,
             "confirmed": self.confirmed,
+            "quarters_beat": self.quarters_beat,
+            "source": self.source,
             "has_whisper": self.has_whisper,
             "beat_whisper": self.beat_whisper,
             "beat_estimate": self.beat_estimate,
         }
 
 
-_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-}
+# ─── Finnhub (Primary Source) ─────────────────────────────────────────
+
+def _finnhub_get(endpoint: str, params: dict | None = None) -> dict | list | None:
+    """Make request to Finnhub API."""
+    token = os.getenv("FINNHUB_API_KEY")
+    if not token:
+        return None
+
+    try:
+        params = params or {}
+        params["token"] = token
+        resp = requests.get(
+            f"https://finnhub.io/api/v1/{endpoint}",
+            params=params,
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        return None
+    except Exception:
+        return None
 
 
-def get_earnings_calendar(days_ahead: int = 7) -> list[EarningsEvent]:
-    """
-    Get upcoming earnings calendar.
-    Tries Earnings Whispers first, falls back to Yahoo Finance.
-    """
-    events = _fetch_earnings_whispers_calendar(days_ahead)
-    if not events:
-        events = _fetch_yahoo_earnings_calendar(days_ahead)
+def _finnhub_earnings_calendar(from_date: str, to_date: str) -> list[EarningsEvent]:
+    """Fetch earnings calendar from Finnhub."""
+    data = _finnhub_get("calendar/earnings", {
+        "from": from_date,
+        "to": to_date,
+    })
 
-    # Cache results
-    _cache_earnings(events)
+    if not data or "earningsCalendar" not in data:
+        return []
+
+    events = []
+    for item in data["earningsCalendar"]:
+        event = EarningsEvent(
+            symbol=item.get("symbol", ""),
+            date=item.get("date", ""),
+            time=_map_finnhub_hour(item.get("hour", "")),
+            eps_estimate=_safe_float(item.get("epsEstimate")),
+            eps_actual=_safe_float(item.get("epsActual")),
+            revenue_estimate=_safe_float(item.get("revenueEstimate")),
+            revenue_actual=_safe_float(item.get("revenueActual")),
+            quarters_beat=item.get("quarter", 0),
+            source="finnhub",
+        )
+
+        # Calculate surprise
+        if event.eps_actual is not None and event.eps_estimate is not None and event.eps_estimate != 0:
+            event.surprise_pct = round(
+                ((event.eps_actual - event.eps_estimate) / abs(event.eps_estimate)) * 100, 2
+            )
+
+        events.append(event)
+
     return events
 
 
-def get_earnings_whisper(symbol: str) -> EarningsEvent | None:
-    """
-    Get the whisper number for a specific stock's upcoming earnings.
-    The whisper number is the unofficial crowd estimate that often
-    differs from Wall Street consensus.
-    """
-    try:
-        url = f"https://www.earningswhispers.com/stocks/{symbol.lower()}"
-        resp = requests.get(url, headers=_HEADERS, timeout=10)
-        if resp.status_code != 200:
-            return None
+def _finnhub_earnings_surprises(symbol: str) -> list[EarningsEvent]:
+    """Fetch earnings surprise history from Finnhub."""
+    data = _finnhub_get("stock/earnings", {"symbol": symbol.upper()})
+    if not data or not isinstance(data, list):
+        return []
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+    events = []
+    for item in data:
+        event = EarningsEvent(
+            symbol=symbol.upper(),
+            date=item.get("period", ""),
+            eps_estimate=_safe_float(item.get("estimate")),
+            eps_actual=_safe_float(item.get("actual")),
+            surprise_pct=_safe_float(item.get("surprisePercent")),
+            source="finnhub",
+        )
+        events.append(event)
 
-        event = EarningsEvent(symbol=symbol.upper())
-
-        # Extract company name
-        title = soup.find("title")
-        if title:
-            event.company = title.text.split("|")[0].strip().replace(" Earnings Whispers", "")
-
-        # Extract whisper number
-        whisper_el = soup.find("div", class_="whisper")
-        if not whisper_el:
-            whisper_el = soup.find(id="whisper")
-        if whisper_el:
-            whisper_text = whisper_el.get_text(strip=True)
-            event.eps_whisper = _parse_number(whisper_text)
-
-        # Extract consensus estimate
-        estimate_el = soup.find("div", class_="estimate")
-        if not estimate_el:
-            estimate_el = soup.find(id="estimate")
-        if estimate_el:
-            estimate_text = estimate_el.get_text(strip=True)
-            event.eps_estimate = _parse_number(estimate_text)
-
-        # Extract earnings date
-        date_el = soup.find("div", class_="date")
-        if not date_el:
-            date_el = soup.find(id="date")
-        if date_el:
-            date_text = date_el.get_text(strip=True)
-            event.date = _parse_date(date_text)
-
-        # Try to find BMO/AMC
-        page_text = soup.get_text().lower()
-        if "before market" in page_text or "bmo" in page_text:
-            event.time = "BMO"
-        elif "after market" in page_text or "amc" in page_text:
-            event.time = "AMC"
-
-        # Look for confirmed status
-        if "confirmed" in page_text:
-            event.confirmed = True
-
-        if event.eps_whisper or event.eps_estimate or event.date:
-            _cache_earnings([event])
-            return event
-        return None
-
-    except Exception as e:
-        print(f"Earnings Whispers fetch error for {symbol}: {e}")
-        return None
+    return events
 
 
-def get_earnings_history(symbol: str, quarters: int = 8) -> list[EarningsEvent]:
-    """
-    Get past earnings history with actual vs estimate.
-    Uses Yahoo Finance earnings data.
-    """
+def _map_finnhub_hour(hour: str) -> str:
+    """Map Finnhub hour codes to readable format."""
+    mapping = {"bmo": "BMO", "amc": "AMC", "dmh": "DMH"}
+    return mapping.get(hour.lower(), hour.upper()) if hour else ""
+
+
+# ─── Yahoo Finance (Fallback) ─────────────────────────────────────────
+
+def _yahoo_next_earnings(symbol: str) -> EarningsEvent | None:
+    """Get next earnings date from Yahoo Finance."""
     try:
         import yfinance as yf
         ticker = yf.Ticker(symbol)
+        cal = ticker.calendar
 
-        # Get earnings history
+        if cal is None or cal.empty:
+            return None
+
+        if "Earnings Date" in cal.index:
+            dates = cal.loc["Earnings Date"]
+            if len(dates) > 0:
+                event = EarningsEvent(
+                    symbol=symbol.upper(),
+                    date=str(dates.iloc[0])[:10],
+                    source="yahoo",
+                )
+                if "EPS Estimate" in cal.index:
+                    event.eps_estimate = _safe_float(cal.loc["EPS Estimate"].iloc[0])
+                if "Revenue Estimate" in cal.index:
+                    event.revenue_estimate = _safe_float(cal.loc["Revenue Estimate"].iloc[0])
+                return event
+        return None
+    except Exception:
+        return None
+
+
+def _yahoo_earnings_history(symbol: str, quarters: int = 8) -> list[EarningsEvent]:
+    """Get past earnings history from Yahoo Finance."""
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(symbol)
         earnings = ticker.earnings_history
+
         if earnings is None or earnings.empty:
             return []
 
@@ -178,13 +208,118 @@ def get_earnings_history(symbol: str, quarters: int = 8) -> list[EarningsEvent]:
                 eps_estimate=_safe_float(row.get("EPS Estimate")),
                 eps_actual=_safe_float(row.get("Reported EPS")),
                 surprise_pct=_safe_float(row.get("Surprise(%)")),
+                source="yahoo",
             )
             events.append(event)
-
         return events
-    except Exception as e:
-        print(f"Earnings history error for {symbol}: {e}")
+    except Exception:
         return []
+
+
+# ─── Earnings Whispers (Best-Effort) ──────────────────────────────────
+
+def _try_earnings_whispers(symbol: str) -> float | None:
+    """
+    Best-effort attempt to get the whisper number from Earnings Whispers.
+
+    WARNING: This scrapes a JavaScript-rendered site and may break at any time.
+    The site has no API. This is supplementary data only.
+    """
+    try:
+        from bs4 import BeautifulSoup
+        url = f"https://www.earningswhispers.com/stocks/{symbol.lower()}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        resp = requests.get(url, headers=headers, timeout=8)
+        if resp.status_code != 200:
+            return None
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        # Try multiple selectors since the site changes
+        for selector in ["#whisper", ".whisper", "[class*=whisper]"]:
+            el = soup.select_one(selector)
+            if el:
+                text = el.get_text(strip=True)
+                num = _parse_number(text)
+                if num is not None:
+                    return num
+
+        return None
+    except Exception:
+        return None
+
+
+# ─── Public API ────────────────────────────────────────────────────────
+
+def get_earnings_calendar(days_ahead: int = 7) -> list[EarningsEvent]:
+    """
+    Get upcoming earnings calendar.
+    Uses Finnhub first, falls back to Yahoo.
+    """
+    today = datetime.now().strftime("%Y-%m-%d")
+    end = (datetime.now() + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+
+    # Try Finnhub first (most reliable)
+    events = _finnhub_earnings_calendar(today, end)
+    if events:
+        _cache_earnings(events)
+        return events
+
+    # Fallback: return cached data
+    cached = get_cached_earnings()
+    if cached:
+        return cached
+
+    return []
+
+
+def get_earnings_whisper(symbol: str) -> EarningsEvent | None:
+    """
+    Get earnings data for a specific stock, including whisper number if available.
+    Combines: Finnhub estimates + Earnings Whispers whisper number + Yahoo fallback.
+    """
+    symbol = symbol.upper()
+
+    # Start with Finnhub data
+    upcoming = _finnhub_earnings_calendar(
+        datetime.now().strftime("%Y-%m-%d"),
+        (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d"),
+    )
+    event = next((e for e in upcoming if e.symbol == symbol), None)
+
+    # If Finnhub didn't have it, try Yahoo
+    if not event:
+        event = _yahoo_next_earnings(symbol)
+
+    if not event:
+        event = EarningsEvent(symbol=symbol, source="none")
+
+    # Try to get whisper number (best-effort, may fail)
+    whisper = _try_earnings_whispers(symbol)
+    if whisper is not None:
+        event.eps_whisper = whisper
+
+    if event.date or event.eps_estimate or event.eps_whisper:
+        _cache_earnings([event])
+        return event
+
+    return None
+
+
+def get_earnings_history(symbol: str, quarters: int = 8) -> list[EarningsEvent]:
+    """
+    Get past earnings history with actual vs estimate.
+    Tries Finnhub first, falls back to Yahoo.
+    """
+    # Try Finnhub
+    events = _finnhub_earnings_surprises(symbol)
+    if events:
+        return events[:quarters]
+
+    # Fallback to Yahoo
+    return _yahoo_earnings_history(symbol, quarters)
 
 
 def get_watchlist_earnings(watchlist: list[str], days_ahead: int = 30) -> list[EarningsEvent]:
@@ -192,36 +327,39 @@ def get_watchlist_earnings(watchlist: list[str], days_ahead: int = 30) -> list[E
     Check which watchlist stocks have upcoming earnings.
     Returns only stocks with earnings in the next N days.
     """
-    events = []
     today = datetime.now()
-    cutoff = today + timedelta(days=days_ahead)
+    end = today + timedelta(days=days_ahead)
+    today_str = today.strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
 
+    # Batch fetch from Finnhub calendar
+    all_events = _finnhub_earnings_calendar(today_str, end_str)
+
+    watchlist_set = set(s.upper() for s in watchlist)
+    watchlist_events = [e for e in all_events if e.symbol in watchlist_set]
+
+    # For watchlist matches, try to get whisper numbers
+    for event in watchlist_events:
+        whisper = _try_earnings_whispers(event.symbol)
+        if whisper is not None:
+            event.eps_whisper = whisper
+
+    # If Finnhub didn't have data, try Yahoo per-symbol
+    found_symbols = set(e.symbol for e in watchlist_events)
     for symbol in watchlist:
-        try:
-            # Try Earnings Whispers first for the whisper number
-            event = get_earnings_whisper(symbol)
+        if symbol.upper() not in found_symbols:
+            event = _yahoo_next_earnings(symbol)
             if event and event.date:
                 try:
                     event_date = datetime.strptime(event.date, "%Y-%m-%d")
-                    if today <= event_date <= cutoff:
-                        events.append(event)
+                    if today <= event_date <= end:
+                        watchlist_events.append(event)
                 except ValueError:
-                    events.append(event)
-            else:
-                # Fallback: check Yahoo for earnings date
-                event = _get_yahoo_next_earnings(symbol)
-                if event and event.date:
-                    try:
-                        event_date = datetime.strptime(event.date, "%Y-%m-%d")
-                        if today <= event_date <= cutoff:
-                            events.append(event)
-                    except ValueError:
-                        pass
-        except Exception:
-            continue
+                    pass
 
-    events.sort(key=lambda e: e.date)
-    return events
+    watchlist_events.sort(key=lambda e: e.date or "9999")
+    _cache_earnings(watchlist_events)
+    return watchlist_events
 
 
 def get_cached_earnings(symbol: str | None = None) -> list[EarningsEvent]:
@@ -239,157 +377,21 @@ def get_cached_earnings(symbol: str | None = None) -> list[EarningsEvent]:
             ).fetchall()
         conn.close()
 
-        return [
-            EarningsEvent(**json.loads(r["data_json"]))
-            for r in rows
-            if r["data_json"]
-        ]
+        events = []
+        for r in rows:
+            if r["data_json"]:
+                data = json.loads(r["data_json"])
+                # Remove properties that shouldn't be passed to constructor
+                data.pop("has_whisper", None)
+                data.pop("beat_whisper", None)
+                data.pop("beat_estimate", None)
+                events.append(EarningsEvent(**data))
+        return events
     except Exception:
         return []
 
 
-# --- Private helpers ---
-
-def _fetch_earnings_whispers_calendar(days_ahead: int) -> list[EarningsEvent]:
-    """Scrape the Earnings Whispers calendar page."""
-    try:
-        url = "https://www.earningswhispers.com/calendar"
-        resp = requests.get(url, headers=_HEADERS, timeout=10)
-        if resp.status_code != 200:
-            return []
-
-        soup = BeautifulSoup(resp.text, "html.parser")
-        events = []
-
-        # Look for earnings calendar entries
-        rows = soup.find_all("div", class_="cal-row")
-        if not rows:
-            rows = soup.find_all("li", class_="cal-item")
-        if not rows:
-            # Try table format
-            tables = soup.find_all("table")
-            for table in tables:
-                for tr in table.find_all("tr")[1:]:  # Skip header
-                    cells = tr.find_all("td")
-                    if len(cells) >= 3:
-                        event = EarningsEvent(
-                            symbol=cells[0].get_text(strip=True).upper(),
-                            company=cells[1].get_text(strip=True) if len(cells) > 1 else "",
-                            date=_parse_date(cells[2].get_text(strip=True)) if len(cells) > 2 else "",
-                        )
-                        if event.symbol and len(event.symbol) <= 5:
-                            events.append(event)
-
-        for row in rows:
-            try:
-                ticker_el = row.find(class_="ticker") or row.find("a")
-                if not ticker_el:
-                    continue
-
-                symbol = ticker_el.get_text(strip=True).upper()
-                if not symbol or len(symbol) > 5:
-                    continue
-
-                event = EarningsEvent(symbol=symbol)
-
-                company_el = row.find(class_="company")
-                if company_el:
-                    event.company = company_el.get_text(strip=True)
-
-                date_el = row.find(class_="date")
-                if date_el:
-                    event.date = _parse_date(date_el.get_text(strip=True))
-
-                whisper_el = row.find(class_="whisper")
-                if whisper_el:
-                    event.eps_whisper = _parse_number(whisper_el.get_text(strip=True))
-
-                estimate_el = row.find(class_="estimate")
-                if estimate_el:
-                    event.eps_estimate = _parse_number(estimate_el.get_text(strip=True))
-
-                events.append(event)
-            except Exception:
-                continue
-
-        return events
-
-    except Exception as e:
-        print(f"Earnings Whispers calendar error: {e}")
-        return []
-
-
-def _fetch_yahoo_earnings_calendar(days_ahead: int) -> list[EarningsEvent]:
-    """Fetch earnings calendar from Yahoo Finance as fallback."""
-    try:
-        import yfinance as yf
-        from datetime import date
-
-        start = date.today()
-        end = start + timedelta(days=days_ahead)
-
-        # Yahoo doesn't have a direct calendar API, use their earnings module
-        url = f"https://finance.yahoo.com/calendar/earnings?from={start}&to={end}"
-        resp = requests.get(url, headers=_HEADERS, timeout=10)
-        if resp.status_code != 200:
-            return []
-
-        soup = BeautifulSoup(resp.text, "html.parser")
-        events = []
-
-        table = soup.find("table")
-        if not table:
-            return []
-
-        for tr in table.find_all("tr")[1:]:
-            cells = tr.find_all("td")
-            if len(cells) >= 5:
-                event = EarningsEvent(
-                    symbol=cells[0].get_text(strip=True),
-                    company=cells[1].get_text(strip=True),
-                    date=_parse_date(cells[2].get_text(strip=True)),
-                    time=cells[3].get_text(strip=True) if len(cells) > 3 else "",
-                    eps_estimate=_parse_number(cells[4].get_text(strip=True)) if len(cells) > 4 else None,
-                )
-                events.append(event)
-
-        return events
-    except Exception as e:
-        print(f"Yahoo earnings calendar error: {e}")
-        return []
-
-
-def _get_yahoo_next_earnings(symbol: str) -> EarningsEvent | None:
-    """Get next earnings date from Yahoo Finance for a specific stock."""
-    try:
-        import yfinance as yf
-        ticker = yf.Ticker(symbol)
-        cal = ticker.calendar
-
-        if cal is None or cal.empty:
-            return None
-
-        # Calendar has Earnings Date
-        if "Earnings Date" in cal.index:
-            dates = cal.loc["Earnings Date"]
-            if len(dates) > 0:
-                date_val = dates.iloc[0]
-                event = EarningsEvent(
-                    symbol=symbol.upper(),
-                    date=str(date_val)[:10],
-                )
-
-                if "EPS Estimate" in cal.index:
-                    event.eps_estimate = _safe_float(cal.loc["EPS Estimate"].iloc[0])
-
-                if "Revenue Estimate" in cal.index:
-                    event.revenue_estimate = _safe_float(cal.loc["Revenue Estimate"].iloc[0])
-
-                return event
-        return None
-    except Exception:
-        return None
-
+# ─── Helpers ───────────────────────────────────────────────────────────
 
 def _cache_earnings(events: list[EarningsEvent]):
     """Cache earnings events to database."""
@@ -417,22 +419,6 @@ def _parse_number(text: str) -> float | None:
         return None
     match = re.search(r'-?\d+\.?\d*', text.replace(",", ""))
     return float(match.group()) if match else None
-
-
-def _parse_date(text: str) -> str:
-    """Try to parse various date formats to YYYY-MM-DD."""
-    if not text:
-        return ""
-    # Already in YYYY-MM-DD format
-    if re.match(r'\d{4}-\d{2}-\d{2}', text):
-        return text[:10]
-    # Try common formats
-    for fmt in ["%b %d, %Y", "%B %d, %Y", "%m/%d/%Y", "%m/%d/%y", "%d-%b-%Y"]:
-        try:
-            return datetime.strptime(text.strip(), fmt).strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-    return text
 
 
 def _safe_float(val, default=None):

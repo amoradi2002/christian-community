@@ -14,3 +14,4 @@ yt-dlp>=2024.1.0
 alpaca-py>=0.30.0
 finvizfinance>=0.14.0
 beautifulsoup4>=4.12.0
+finnhub-python>=2.4.0

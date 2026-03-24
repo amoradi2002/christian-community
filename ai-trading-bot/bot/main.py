@@ -85,17 +85,21 @@ def run_setup():
     if alpaca_key:
         alpaca_secret = input("   Secret Key: ").strip()
 
-    print("\n2. UNUSUAL WHALES (Options flow + Dark pool)")
-    print("   Get your API token at https://unusualwhales.com/api")
+    print("\n2. FINNHUB (FREE - Earnings calendar + estimates)")
+    print("   Sign up free at https://finnhub.io/register")
+    finnhub_key = input("   API Key (or Enter to skip): ").strip()
+
+    print("\n3. UNUSUAL WHALES (Options flow + Dark pool, $150/mo)")
+    print("   Get your API token at https://unusualwhales.com/settings/api-dashboard")
     uw_token = input("   API Token (or Enter to skip): ").strip()
 
-    print("\n3. DISCORD ALERTS")
+    print("\n4. DISCORD ALERTS")
     print("   To get your Discord webhook URL:")
     print("   - Open Discord > Server Settings > Integrations > Webhooks")
     print("   - Click 'New Webhook', pick a channel, copy the URL")
     discord_url = input("   Paste your Discord webhook URL (or press Enter to skip): ").strip()
 
-    print("\n4. TELEGRAM ALERTS")
+    print("\n5. TELEGRAM ALERTS")
     print("   To get your Telegram bot:")
     print("   - Message @BotFather on Telegram, create a bot, get the token")
     print("   - Message your bot, then get your chat_id from the API")
@@ -104,7 +108,7 @@ def run_setup():
     if tg_token:
         tg_chat = input("   Paste your Telegram chat ID: ").strip()
 
-    print("\n5. EMAIL ALERTS")
+    print("\n6. EMAIL ALERTS")
     email_sender = input("   Your Gmail address (or press Enter to skip): ").strip()
     email_pass = ""
     if email_sender:
@@ -118,6 +122,8 @@ def run_setup():
     if alpaca_secret:
         lines.append(f"ALPACA_SECRET_KEY={alpaca_secret}")
         lines.append("ALPACA_PAPER=true")
+    if finnhub_key:
+        lines.append(f"FINNHUB_API_KEY={finnhub_key}")
     if uw_token:
         lines.append(f"UNUSUAL_WHALES_TOKEN={uw_token}")
     if discord_url:
