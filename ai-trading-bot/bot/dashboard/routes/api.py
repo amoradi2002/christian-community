@@ -212,6 +212,191 @@ def cancel_order_route(order_id):
         return jsonify({"error": str(e)}), 500
 
 
+# --- Unusual Whales API ---
+
+@api_bp.route("/flow")
+def get_flow():
+    """Get unusual options flow. ?ticker=AAPL&min_premium=100000"""
+    try:
+        from bot.data.unusual_whales import get_options_flow, get_cached_flow
+        ticker = request.args.get("ticker")
+        min_premium = int(request.args.get("min_premium", 100000))
+
+        try:
+            flows = get_options_flow(ticker=ticker, min_premium=min_premium)
+        except ValueError:
+            flows = get_cached_flow(ticker=ticker)
+
+        return jsonify([f.to_dict() for f in flows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/flow/alerts")
+def get_whale_alerts():
+    """Get whale-level flow alerts (>$500k). ?sentiment=bullish"""
+    try:
+        from bot.data.unusual_whales import get_flow_alerts
+        sentiment = request.args.get("sentiment")
+        min_premium = int(request.args.get("min_premium", 500000))
+        flows = get_flow_alerts(min_premium=min_premium, sentiment=sentiment)
+        return jsonify([f.to_dict() for f in flows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/flow/sentiment")
+def get_market_sentiment():
+    """Get market-wide flow sentiment."""
+    try:
+        from bot.data.unusual_whales import get_flow_sentiment
+        return jsonify(get_flow_sentiment())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/flow/sentiment/<ticker>")
+def get_stock_flow_sentiment(ticker):
+    """Get flow sentiment for a specific ticker."""
+    try:
+        from bot.data.unusual_whales import get_ticker_sentiment
+        return jsonify(get_ticker_sentiment(ticker))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/darkpool")
+def get_darkpool():
+    """Get dark pool trades. ?ticker=AAPL"""
+    try:
+        from bot.data.unusual_whales import get_dark_pool
+        ticker = request.args.get("ticker")
+        trades = get_dark_pool(ticker=ticker)
+        return jsonify([t.to_dict() for t in trades])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/congress")
+def get_congress():
+    """Get congressional trades. ?ticker=AAPL&party=Democrat"""
+    try:
+        from bot.data.unusual_whales import get_congress_trades
+        ticker = request.args.get("ticker")
+        party = request.args.get("party")
+        trades = get_congress_trades(ticker=ticker, party=party)
+        return jsonify([t.to_dict() for t in trades])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Finviz API ---
+
+@api_bp.route("/fundamentals/<symbol>")
+def get_fundamentals(symbol):
+    """Get stock fundamentals from Finviz."""
+    try:
+        from bot.data.finviz_provider import get_stock_fundamentals
+        data = get_stock_fundamentals(symbol.upper())
+        return jsonify(data.to_dict())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/screener")
+def run_screener():
+    """
+    Run Finviz stock screener.
+    ?signal=top_gainers or ?signal=oversold or ?signal=unusual_volume
+    """
+    try:
+        from bot.data.finviz_provider import screen_stocks
+        signal = request.args.get("signal", "")
+        results = screen_stocks(signal=signal)
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/insider")
+def get_insider():
+    """Get insider trades. ?symbol=AAPL"""
+    try:
+        from bot.data.finviz_provider import get_insider_trades
+        symbol = request.args.get("symbol")
+        trades = get_insider_trades(symbol=symbol)
+        return jsonify([t.to_dict() for t in trades])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/news")
+def get_news():
+    """Get market or stock news. ?symbol=AAPL"""
+    try:
+        symbol = request.args.get("symbol")
+        if symbol:
+            from bot.data.finviz_provider import get_stock_news
+            return jsonify(get_stock_news(symbol.upper()))
+        else:
+            from bot.data.finviz_provider import get_market_news
+            return jsonify(get_market_news())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Earnings API ---
+
+@api_bp.route("/earnings/calendar")
+def earnings_calendar():
+    """Get upcoming earnings calendar. ?days=7"""
+    try:
+        from bot.data.earnings import get_earnings_calendar
+        days = int(request.args.get("days", 7))
+        events = get_earnings_calendar(days_ahead=days)
+        return jsonify([e.to_dict() for e in events])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/earnings/whisper/<symbol>")
+def earnings_whisper(symbol):
+    """Get whisper number for a stock."""
+    try:
+        from bot.data.earnings import get_earnings_whisper
+        event = get_earnings_whisper(symbol.upper())
+        if event:
+            return jsonify(event.to_dict())
+        return jsonify({"error": f"No whisper data for {symbol}"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/earnings/history/<symbol>")
+def earnings_history(symbol):
+    """Get past earnings history. ?quarters=8"""
+    try:
+        from bot.data.earnings import get_earnings_history
+        quarters = int(request.args.get("quarters", 8))
+        events = get_earnings_history(symbol.upper(), quarters=quarters)
+        return jsonify([e.to_dict() for e in events])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/earnings/watchlist")
+def earnings_watchlist():
+    """Check which watchlist stocks have upcoming earnings. ?days=30"""
+    try:
+        from bot.data.earnings import get_watchlist_earnings
+        watchlist = CONFIG.get("bot", {}).get("watchlist", [])
+        days = int(request.args.get("days", 30))
+        events = get_watchlist_earnings(watchlist, days_ahead=days)
+        return jsonify([e.to_dict() for e in events])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @api_bp.route("/health")
 def health():
     provider = CONFIG.get("data", {}).get("provider", "yfinance")

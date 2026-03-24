@@ -24,6 +24,11 @@ def create_app():
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(youtube_bp)
 
+    @app.route("/intelligence")
+    def intelligence():
+        from flask import render_template
+        return render_template("intelligence.html")
+
     @app.route("/")
     def index():
         from flask import render_template

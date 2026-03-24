@@ -65,6 +65,27 @@ CREATE TABLE IF NOT EXISTS trades (
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS fundamentals_cache (
+    symbol       TEXT PRIMARY KEY,
+    data_json    TEXT,
+    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS earnings_cache (
+    symbol       TEXT NOT NULL,
+    date         TEXT,
+    data_json    TEXT,
+    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (symbol, date)
+);
+
+CREATE TABLE IF NOT EXISTS flow_cache (
+    flow_id      TEXT PRIMARY KEY,
+    ticker       TEXT NOT NULL,
+    data_json    TEXT,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS youtube_lessons (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     video_url    TEXT NOT NULL,

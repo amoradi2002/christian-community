@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% block title %}Market Intelligence - AI Trading Bot{% endblock %}
+{% block content %}
+<h1>Market Intelligence</h1>
+<p class="muted">Unusual Whales flow, Finviz screener, and Earnings Whispers - all in one place.</p>
+
+<!-- Tab Navigation -->
+<div class="tab-nav" style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+    <button class="btn" onclick="showTab('flow')" id="tab-flow">Unusual Flow</button>
+    <button class="btn btn-secondary" onclick="showTab('darkpool')" id="tab-darkpool">Dark Pool</button>
+    <button class="btn btn-secondary" onclick="showTab('congress')" id="tab-congress">Congress Trades</button>
+    <button class="btn btn-secondary" onclick="showTab('screener')" id="tab-screener">Finviz Screener</button>
+    <button class="btn btn-secondary" onclick="showTab('fundamentals')" id="tab-fundamentals">Fundamentals</button>
+    <button class="btn btn-secondary" onclick="showTab('earnings')" id="tab-earnings">Earnings</button>
+    <button class="btn btn-secondary" onclick="showTab('insider')" id="tab-insider">Insider Trades</button>
+</div>
+
+<!-- Unusual Options Flow -->
+<div class="card tab-content" id="content-flow">
+    <h2>Unusual Options Flow</h2>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <input type="text" id="flow-ticker" placeholder="Ticker (blank=all)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
+        <select id="flow-min" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+            <option value="100000">$100k+ Premium</option>
+            <option value="500000" selected>$500k+ (Whale)</option>
+            <option value="1000000">$1M+ (Mega)</option>
+        </select>
+        <button onclick="loadFlow()" class="btn">Search</button>
+    </div>
+    <div id="flow-sentiment" style="margin-bottom:1rem;"></div>
+    <div id="flow-result"><p class="muted">Click Search to load options flow data.</p></div>
+</div>
+
+<!-- Dark Pool -->
+<div class="card tab-content" id="content-darkpool" style="display:none;">
+    <h2>Dark Pool Activity</h2>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+        <input type="text" id="dp-ticker" placeholder="Ticker (blank=all)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
+        <button onclick="loadDarkPool()" class="btn">Search</button>
+    </div>
+    <div id="dp-result"><p class="muted">Click Search to load dark pool data.</p></div>
+</div>
+
+<!-- Congress Trades -->
+<div class="card tab-content" id="content-congress" style="display:none;">
+    <h2>Congressional Trading</h2>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <input type="text" id="cong-ticker" placeholder="Ticker (blank=all)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
+        <select id="cong-party" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+            <option value="">All Parties</option>
+            <option value="Democrat">Democrat</option>
+            <option value="Republican">Republican</option>
+        </select>
+        <button onclick="loadCongress()" class="btn">Search</button>
+    </div>
+    <div id="cong-result"><p class="muted">Click Search to load congressional trades.</p></div>
+</div>
+
+<!-- Finviz Screener -->
+<div class="card tab-content" id="content-screener" style="display:none;">
+    <h2>Finviz Stock Screener</h2>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <select id="screener-signal" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+            <option value="top_gainers">Top Gainers</option>
+            <option value="top_losers">Top Losers</option>
+            <option value="new_high">New High</option>
+            <option value="new_low">New Low</option>
+            <option value="most_active">Most Active</option>
+            <option value="unusual_volume">Unusual Volume</option>
+            <option value="most_volatile">Most Volatile</option>
+            <option value="overbought">Overbought (RSI)</option>
+            <option value="oversold">Oversold (RSI)</option>
+            <option value="upgrades">Upgrades</option>
+            <option value="downgrades">Downgrades</option>
+        </select>
+        <button onclick="loadScreener()" class="btn">Screen</button>
+    </div>
+    <div id="screener-result"><p class="muted">Select a filter and click Screen.</p></div>
+</div>
+
+<!-- Fundamentals -->
+<div class="card tab-content" id="content-fundamentals" style="display:none;">
+    <h2>Stock Fundamentals</h2>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+        <input type="text" id="fund-symbol" placeholder="Symbol (e.g. AAPL)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
+        <button onclick="loadFundamentals()" class="btn">Lookup</button>
+    </div>
+    <div id="fund-result"><p class="muted">Enter a symbol to view fundamentals.</p></div>
+</div>
+
+<!-- Earnings -->
+<div class="card tab-content" id="content-earnings" style="display:none;">
+    <h2>Earnings Calendar & Whispers</h2>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <input type="text" id="earn-symbol" placeholder="Symbol for whisper" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:160px;">
+        <button onclick="loadWhisper()" class="btn">Get Whisper</button>
+        <button onclick="loadEarningsCalendar()" class="btn btn-secondary">This Week's Earnings</button>
+        <button onclick="loadWatchlistEarnings()" class="btn btn-secondary">Watchlist Earnings</button>
+    </div>
+    <div id="earn-result"><p class="muted">Search for whisper numbers or view the earnings calendar.</p></div>
+</div>
+
+<!-- Insider Trades -->
+<div class="card tab-content" id="content-insider" style="display:none;">
+    <h2>Insider Trading Activity</h2>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+        <input type="text" id="insider-symbol" placeholder="Symbol (blank=all)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
+        <button onclick="loadInsider()" class="btn">Search</button>
+    </div>
+    <div id="insider-result"><p class="muted">Click Search to view recent insider trades.</p></div>
+</div>
+
+<script>
+// --- Tab Management ---
+function showTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-nav button').forEach(btn => {
+        btn.classList.remove('btn');
+        btn.classList.add('btn-secondary');
+        btn.className = btn.className.replace('btn-secondary btn-secondary', 'btn-secondary');
+    });
+    document.getElementById('content-' + tab).style.display = 'block';
+    const activeBtn = document.getElementById('tab-' + tab);
+    activeBtn.classList.remove('btn-secondary');
+    activeBtn.classList.add('btn');
+}
+
+function formatMoney(n) {
+    if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
+    if (n >= 1000) return '$' + (n/1000).toFixed(0) + 'K';
+    return '$' + n.toFixed(2);
+}
+
+// --- Unusual Flow ---
+function loadFlow() {
+    const ticker = document.getElementById('flow-ticker').value.toUpperCase();
+    const minPrem = document.getElementById('flow-min').value;
+    const el = document.getElementById('flow-result');
+    el.innerHTML = '<p class="muted">Loading flow data...</p>';
+
+    let url = `/api/flow?min_premium=${minPrem}`;
+    if (ticker) url += `&ticker=${ticker}`;
+
+    fetch(url).then(r => r.json()).then(data => {
+        if (data.error) { el.innerHTML = `<p class="muted">${data.error}</p>`; return; }
+        if (!Array.isArray(data) || data.length === 0) {
+            el.innerHTML = '<p class="muted">No flow data found. Make sure UNUSUAL_WHALES_TOKEN is set in .env</p>';
+            return;
+        }
+
+        let html = '<table><tr><th>Ticker</th><th>Type</th><th>Strike</th><th>Exp</th><th>Premium</th><th>Sentiment</th><th>Size</th><th>Flags</th></tr>';
+        for (const f of data) {
+            const sentColor = f.sentiment === 'bullish' ? 'positive' : f.sentiment === 'bearish' ? 'negative' : '';
+            const flags = [f.is_sweep ? 'SWEEP' : '', f.is_block ? 'BLOCK' : ''].filter(Boolean).join(' ');
+            html += `<tr>
+                <td><strong>${f.ticker}</strong></td>
+                <td>${f.option_type?.toUpperCase() || ''}</td>
+                <td>$${f.strike?.toFixed(2) || ''}</td>
+                <td>${f.expiration || ''}</td>
+                <td>${formatMoney(f.premium)}</td>
+                <td class="${sentColor}">${f.sentiment || ''}</td>
+                <td><span class="badge">${f.size_label}</span></td>
+                <td>${flags}</td>
+            </tr>`;
+        }
+        html += '</table>';
+        el.innerHTML = html;
+    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
+
+    // Load sentiment
+    const sentUrl = ticker ? `/api/flow/sentiment/${ticker}` : '/api/flow/sentiment';
+    fetch(sentUrl).then(r => r.json()).then(data => {
+        const el = document.getElementById('flow-sentiment');
+        if (data.error) { el.innerHTML = ''; return; }
+        const sent = data.overall_sentiment || data.sentiment || 'N/A';
+        const color = sent === 'bullish' ? 'positive' : sent === 'bearish' ? 'negative' : '';
+        el.innerHTML = `<span class="${color}" style="font-size:1.1rem;"><strong>Market Sentiment: ${sent.toUpperCase()}</strong></span>`;
+    }).catch(() => {});
+}
+
+// --- Dark Pool ---
+function loadDarkPool() {
+    const ticker = document.getElementById('dp-ticker').value.toUpperCase();
+    const el = document.getElementById('dp-result');
+    el.innerHTML = '<p class="muted">Loading...</p>';
+
+    let url = '/api/darkpool';
+    if (ticker) url += `?ticker=${ticker}`;
+
+    fetch(url).then(r => r.json()).then(data => {
+        if (!Array.isArray(data) || data.length === 0) {
+            el.innerHTML = '<p class="muted">No dark pool data. Check UNUSUAL_WHALES_TOKEN.</p>'; return;
+        }
+        let html = '<table><tr><th>Ticker</th><th>Price</th><th>Size</th><th>Value</th><th>Exchange</th><th>Date</th></tr>';
+        for (const t of data) {
+            html += `<tr><td><strong>${t.ticker}</strong></td><td>$${t.price?.toFixed(2)}</td><td>${t.size?.toLocaleString()}</td><td>${formatMoney(t.notional_value)}</td><td>${t.exchange}</td><td>${t.date}</td></tr>`;
+        }
+        el.innerHTML = html + '</table>';
+    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
+}
+
+// --- Congress ---
+function loadCongress() {
+    const ticker = document.getElementById('cong-ticker').value.toUpperCase();
+    const party = document.getElementById('cong-party').value;
+    const el = document.getElementById('cong-result');
+    el.innerHTML = '<p class="muted">Loading...</p>';
+
+    let url = '/api/congress?';
+    if (ticker) url += `ticker=${ticker}&`;
+    if (party) url += `party=${party}`;
+
+    fetch(url).then(r => r.json()).then(data => {
+        if (!Array.isArray(data) || data.length === 0) {
+            el.innerHTML = '<p class="muted">No congress trades found.</p>'; return;
+        }
+        let html = '<table><tr><th>Politician</th><th>Party</th><th>Ticker</th><th>Transaction</th><th>Amount</th><th>Traded</th><th>Disclosed</th></tr>';
+        for (const t of data) {
+            const partyColor = t.party === 'Democrat' ? 'color:#3b82f6' : t.party === 'Republican' ? 'color:#ef4444' : '';
+            html += `<tr><td>${t.politician}</td><td style="${partyColor}">${t.party}</td><td><strong>${t.ticker}</strong></td><td>${t.transaction}</td><td>${t.amount_range}</td><td>${t.date_traded}</td><td>${t.date_disclosed}</td></tr>`;
+        }
+        el.innerHTML = html + '</table>';
+    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
+}
+
+// --- Screener ---
+function loadScreener() {
+    const signal = document.getElementById('screener-signal').value;
+    const el = document.getElementById('screener-result');
+    el.innerHTML = '<p class="muted">Screening...</p>';
+
+    fetch(`/api/screener?signal=${signal}`).then(r => r.json()).then(data => {
+        if (!Array.isArray(data) || data.length === 0) {
+            el.innerHTML = '<p class="muted">No results.</p>'; return;
+        }
+        let html = '<table><tr><th>Ticker</th><th>Company</th><th>Sector</th><th>Price</th><th>Change</th><th>Volume</th><th>P/E</th></tr>';
+        for (const s of data) {
+            const changeColor = String(s.change).includes('-') ? 'negative' : 'positive';
+            html += `<tr><td><strong>${s.ticker}</strong></td><td>${s.company}</td><td>${s.sector}</td><td>${s.price}</td><td class="${changeColor}">${s.change}</td><td>${s.volume}</td><td>${s.pe}</td></tr>`;
+        }
+        el.innerHTML = html + '</table>';
+    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
+}
+
+// --- Fundamentals ---
+function loadFundamentals() {
+    const symbol = document.getElementById('fund-symbol').value.toUpperCase();
+    const el = document.getElementById('fund-result');
+    if (!symbol) { el.innerHTML = '<p class="muted">Enter a symbol.</p>'; return; }
+    el.innerHTML = '<p class="muted">Loading fundamentals...</p>';
+
+    fetch(`/api/fundamentals/${symbol}`).then(r => r.json()).then(d => {
+        if (d.error) { el.innerHTML = `<p class="muted">${d.error}</p>`; return; }
+
+        const recLabel = d.analyst_recommendation <= 1.5 ? 'Strong Buy' :
+                         d.analyst_recommendation <= 2.5 ? 'Buy' :
+                         d.analyst_recommendation <= 3.5 ? 'Hold' :
+                         d.analyst_recommendation <= 4.5 ? 'Sell' : 'Strong Sell';
+
+        el.innerHTML = `
+            <h3>${d.company} (${d.symbol})</h3>
+            <p>${d.sector} / ${d.industry} / ${d.country}</p>
+            <div class="grid">
+                <div class="stat"><div class="stat-label">Market Cap</div><div class="stat-value">${d.market_cap}</div></div>
+                <div class="stat"><div class="stat-label">P/E</div><div class="stat-value">${d.pe || 'N/A'}</div></div>
+                <div class="stat"><div class="stat-label">Forward P/E</div><div class="stat-value">${d.forward_pe || 'N/A'}</div></div>
+                <div class="stat"><div class="stat-label">PEG</div><div class="stat-value">${d.peg || 'N/A'}</div></div>
+                <div class="stat"><div class="stat-label">EPS</div><div class="stat-value">$${d.eps}</div></div>
+                <div class="stat"><div class="stat-label">Target Price</div><div class="stat-value">$${d.target_price}</div></div>
+                <div class="stat"><div class="stat-label">Analyst Rating</div><div class="stat-value">${recLabel} (${d.analyst_recommendation})</div></div>
+                <div class="stat"><div class="stat-label">RSI (14)</div><div class="stat-value">${d.rsi_14}</div></div>
+                <div class="stat"><div class="stat-label">Beta</div><div class="stat-value">${d.beta}</div></div>
+                <div class="stat"><div class="stat-label">Dividend</div><div class="stat-value">${d.dividend_yield || 'N/A'}</div></div>
+                <div class="stat"><div class="stat-label">Short Float</div><div class="stat-value">${d.short_float || 'N/A'}</div></div>
+                <div class="stat"><div class="stat-label">Rel Volume</div><div class="stat-value">${d.relative_volume}</div></div>
+            </div>
+            <h3>Performance</h3>
+            <div class="grid">
+                <div class="stat"><div class="stat-label">SMA 20</div><div class="stat-value">${d.sma_20}</div></div>
+                <div class="stat"><div class="stat-label">SMA 50</div><div class="stat-value">${d.sma_50}</div></div>
+                <div class="stat"><div class="stat-label">SMA 200</div><div class="stat-value">${d.sma_200}</div></div>
+                <div class="stat"><div class="stat-label">EPS Growth (Y)</div><div class="stat-value">${d.eps_growth_this_y}</div></div>
+                <div class="stat"><div class="stat-label">Revenue Growth</div><div class="stat-value">${d.revenue_growth}</div></div>
+                <div class="stat"><div class="stat-label">Profit Margin</div><div class="stat-value">${d.profit_margin}</div></div>
+                <div class="stat"><div class="stat-label">ROE</div><div class="stat-value">${d.roe}</div></div>
+                <div class="stat"><div class="stat-label">Debt/Eq</div><div class="stat-value">${d.debt_equity}</div></div>
+                <div class="stat"><div class="stat-label">Earnings Date</div><div class="stat-value">${d.earnings_date || 'N/A'}</div></div>
+            </div>
+        `;
+    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
+}
+
+// --- Earnings ---
+function loadWhisper() {
+    const symbol = document.getElementById('earn-symbol').value.toUpperCase();
+    const el = document.getElementById('earn-result');
+    if (!symbol) { el.innerHTML = '<p class="muted">Enter a symbol.</p>'; return; }
+    el.innerHTML = '<p class="muted">Loading whisper data...</p>';
+
+    fetch(`/api/earnings/whisper/${symbol}`).then(r => r.json()).then(d => {
+        if (d.error) { el.innerHTML = `<p class="muted">${d.error}</p>`; return; }
+
+        let html = `<h3>${d.company || d.symbol} Earnings</h3>
+            <div class="grid">
+                <div class="stat"><div class="stat-label">Earnings Date</div><div class="stat-value">${d.date || 'TBD'}</div></div>
+                <div class="stat"><div class="stat-label">Time</div><div class="stat-value">${d.time || 'TBD'}</div></div>
+                <div class="stat"><div class="stat-label">Consensus Estimate</div><div class="stat-value">${d.eps_estimate !== null ? '$' + d.eps_estimate : 'N/A'}</div></div>
+                <div class="stat"><div class="stat-label">Whisper Number</div><div class="stat-value" style="color:#8b5cf6;font-weight:bold;">${d.eps_whisper !== null ? '$' + d.eps_whisper : 'N/A'}</div></div>
+            </div>`;
+
+        // Also load earnings history
+        fetch(`/api/earnings/history/${symbol}`).then(r => r.json()).then(hist => {
+            if (Array.isArray(hist) && hist.length > 0) {
+                html += '<h3>Earnings History</h3><table><tr><th>Date</th><th>EPS Est</th><th>EPS Actual</th><th>Surprise</th><th>Beat?</th></tr>';
+                for (const h of hist) {
+                    const beat = h.beat_estimate === true ? '<span class="positive">YES</span>' : h.beat_estimate === false ? '<span class="negative">NO</span>' : '-';
+                    html += `<tr><td>${h.date}</td><td>${h.eps_estimate !== null ? '$'+h.eps_estimate : '-'}</td><td>${h.eps_actual !== null ? '$'+h.eps_actual : '-'}</td><td>${h.surprise_pct !== null ? h.surprise_pct.toFixed(1)+'%' : '-'}</td><td>${beat}</td></tr>`;
+                }
+                html += '</table>';
+            }
+            el.innerHTML = html;
+        }).catch(() => { el.innerHTML = html; });
+    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
+}
+
+function loadEarningsCalendar() {
+    const el = document.getElementById('earn-result');
+    el.innerHTML = '<p class="muted">Loading earnings calendar...</p>';
+
+    fetch('/api/earnings/calendar?days=7').then(r => r.json()).then(data => {
+        if (!Array.isArray(data) || data.length === 0) {
+            el.innerHTML = '<p class="muted">No earnings found this week.</p>'; return;
+        }
+        let html = '<h3>This Week\'s Earnings</h3><table><tr><th>Date</th><th>Symbol</th><th>Company</th><th>Time</th><th>EPS Est</th><th>Whisper</th></tr>';
+        for (const e of data) {
+            const whisperStyle = e.eps_whisper !== null ? 'color:#8b5cf6;font-weight:bold;' : '';
+            html += `<tr><td>${e.date}</td><td><strong>${e.symbol}</strong></td><td>${e.company}</td><td>${e.time}</td><td>${e.eps_estimate !== null ? '$'+e.eps_estimate : '-'}</td><td style="${whisperStyle}">${e.eps_whisper !== null ? '$'+e.eps_whisper : '-'}</td></tr>`;
+        }
+        el.innerHTML = html + '</table>';
+    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
+}
+
+function loadWatchlistEarnings() {
+    const el = document.getElementById('earn-result');
+    el.innerHTML = '<p class="muted">Checking watchlist earnings...</p>';
+
+    fetch('/api/earnings/watchlist?days=30').then(r => r.json()).then(data => {
+        if (!Array.isArray(data) || data.length === 0) {
+            el.innerHTML = '<p class="muted">No watchlist stocks have earnings in the next 30 days.</p>'; return;
+        }
+        let html = '<h3>Watchlist Earnings (Next 30 Days)</h3><table><tr><th>Date</th><th>Symbol</th><th>Company</th><th>Time</th><th>Whisper</th><th>Confirmed</th></tr>';
+        for (const e of data) {
+            html += `<tr><td>${e.date}</td><td><strong>${e.symbol}</strong></td><td>${e.company}</td><td>${e.time || 'TBD'}</td><td style="color:#8b5cf6;">${e.eps_whisper !== null ? '$'+e.eps_whisper : '-'}</td><td>${e.confirmed ? 'Yes' : 'Unconfirmed'}</td></tr>`;
+        }
+        el.innerHTML = html + '</table>';
+    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
+}
+
+// --- Insider Trades ---
+function loadInsider() {
+    const symbol = document.getElementById('insider-symbol').value.toUpperCase();
+    const el = document.getElementById('insider-result');
+    el.innerHTML = '<p class="muted">Loading...</p>';
+
+    let url = '/api/insider';
+    if (symbol) url += `?symbol=${symbol}`;
+
+    fetch(url).then(r => r.json()).then(data => {
+        if (!Array.isArray(data) || data.length === 0) {
+            el.innerHTML = '<p class="muted">No insider trades found.</p>'; return;
+        }
+        let html = '<table><tr><th>Ticker</th><th>Owner</th><th>Relationship</th><th>Type</th><th>Shares</th><th>Value</th><th>Date</th></tr>';
+        for (const t of data) {
+            const txColor = t.transaction?.toLowerCase().includes('buy') || t.transaction?.toLowerCase().includes('purchase') ? 'positive' : 'negative';
+            html += `<tr><td><strong>${t.ticker}</strong></td><td>${t.owner}</td><td>${t.relationship}</td><td class="${txColor}">${t.transaction}</td><td>${t.shares?.toLocaleString()}</td><td>${formatMoney(t.value)}</td><td>${t.date}</td></tr>`;
+        }
+        el.innerHTML = html + '</table>';
+    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
+}
+</script>
+{% endblock %}

@@ -4,6 +4,7 @@ AI Trading Bot - Main Entry Point
 Usage:
     python -m bot.main              # Start bot (scan + dashboard)
     python -m bot.main scan         # Run a single scan
+    python -m bot.main intel        # Run intelligence scan (whales, earnings, insiders)
     python -m bot.main train        # Train the AI model
     python -m bot.main dashboard    # Start dashboard only
     python -m bot.main learn <url>  # Learn strategies from a YouTube video
@@ -77,13 +78,24 @@ def run_setup():
 
     print("\n=== AI Trading Bot Setup ===\n")
 
-    print("1. DISCORD ALERTS")
+    print("1. ALPACA MARKETS (Real-time data + Trading)")
+    print("   Sign up free at https://app.alpaca.markets/signup")
+    alpaca_key = input("   API Key (or Enter to skip): ").strip()
+    alpaca_secret = ""
+    if alpaca_key:
+        alpaca_secret = input("   Secret Key: ").strip()
+
+    print("\n2. UNUSUAL WHALES (Options flow + Dark pool)")
+    print("   Get your API token at https://unusualwhales.com/api")
+    uw_token = input("   API Token (or Enter to skip): ").strip()
+
+    print("\n3. DISCORD ALERTS")
     print("   To get your Discord webhook URL:")
     print("   - Open Discord > Server Settings > Integrations > Webhooks")
     print("   - Click 'New Webhook', pick a channel, copy the URL")
     discord_url = input("   Paste your Discord webhook URL (or press Enter to skip): ").strip()
 
-    print("\n2. TELEGRAM ALERTS")
+    print("\n4. TELEGRAM ALERTS")
     print("   To get your Telegram bot:")
     print("   - Message @BotFather on Telegram, create a bot, get the token")
     print("   - Message your bot, then get your chat_id from the API")
@@ -92,7 +104,7 @@ def run_setup():
     if tg_token:
         tg_chat = input("   Paste your Telegram chat ID: ").strip()
 
-    print("\n3. EMAIL ALERTS")
+    print("\n5. EMAIL ALERTS")
     email_sender = input("   Your Gmail address (or press Enter to skip): ").strip()
     email_pass = ""
     if email_sender:
@@ -101,6 +113,13 @@ def run_setup():
 
     # Write .env file
     lines = []
+    if alpaca_key:
+        lines.append(f"ALPACA_API_KEY={alpaca_key}")
+    if alpaca_secret:
+        lines.append(f"ALPACA_SECRET_KEY={alpaca_secret}")
+        lines.append("ALPACA_PAPER=true")
+    if uw_token:
+        lines.append(f"UNUSUAL_WHALES_TOKEN={uw_token}")
     if discord_url:
         lines.append(f"DISCORD_WEBHOOK_URL={discord_url}")
     if tg_token:
@@ -145,12 +164,31 @@ def run_setup():
     print("\nSetup complete! Run 'python -m bot.main' to start the bot.")
 
 
+def run_intel():
+    """Run the intelligence scanner (Unusual Whales, Earnings, Finviz)."""
+    from bot.engine.intelligence_scanner import run_intelligence_scan
+    alerts = run_intelligence_scan()
+
+    if alerts:
+        print(f"\n--- Intelligence Alerts ({len(alerts)}) ---")
+        for a in alerts:
+            marker = " *" if a.get("in_watchlist") else ""
+            print(f"  [{a['type']}]{marker} {a['message']}")
+    else:
+        print("No intelligence alerts at this time.")
+
+    return alerts
+
+
 def run_scheduler():
     """Run periodic scans in a background thread."""
     interval = CONFIG.get("bot", {}).get("scan_interval_minutes", 15)
     schedule.every(interval).minutes.do(run_scan)
 
-    print(f"Scheduler started - scanning every {interval} minutes")
+    # Run intelligence scan every hour
+    schedule.every(60).minutes.do(run_intel)
+
+    print(f"Scheduler started - strategy scan every {interval}m, intelligence scan every 60m")
     while True:
         schedule.run_pending()
         time.sleep(1)
@@ -165,6 +203,9 @@ def main():
         if command == "scan":
             print("AI Trading Bot - Running scan...")
             run_scan()
+        elif command == "intel":
+            print("AI Trading Bot - Running intelligence scan...")
+            run_intel()
         elif command == "train":
             run_train()
         elif command == "dashboard":
@@ -179,14 +220,15 @@ def main():
             run_setup()
         else:
             print(f"Unknown command: {command}")
-            print("Usage: python -m bot.main [scan|train|dashboard|learn <url>|setup]")
+            print("Usage: python -m bot.main [scan|intel|train|dashboard|learn <url>|setup]")
     else:
         # Full mode: scan + scheduler + dashboard
         print("AI Trading Bot initialized.")
         print("Starting full bot (scan + scheduler + dashboard)...")
 
-        # Run initial scan
+        # Run initial scans
         run_scan()
+        run_intel()
 
         # Start scheduler in background
         scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
