@@ -3,6 +3,17 @@
 {% block content %}
 <h1>Trading Dashboard</h1>
 
+<div class="card">
+    <h2>Live Watchlist Prices</h2>
+    <div id="price-grid" class="grid">
+        <p class="muted" id="price-loading">Loading live prices...</p>
+    </div>
+    <p class="muted" style="margin-top: 0.5rem; font-size: 0.8rem;">
+        Prices via Yahoo Finance (may be 15-20 min delayed during market hours).
+        Auto-refreshes every 60s.
+    </p>
+</div>
+
 <div class="grid">
     <div class="card">
         <h2>Recent Alerts</h2>
@@ -48,8 +59,48 @@
     <h2>Quick Actions</h2>
     <div class="actions">
         <a href="/strategies" class="btn">Manage Strategies</a>
+        <a href="/learn" class="btn">Learn from YouTube</a>
         <a href="/backtest" class="btn btn-secondary">Run Backtest</a>
         <a href="/alerts" class="btn btn-secondary">View All Alerts</a>
     </div>
 </div>
+
+<script>
+function loadPrices() {
+    fetch('/api/prices')
+        .then(r => r.json())
+        .then(data => {
+            const grid = document.getElementById('price-grid');
+            const loading = document.getElementById('price-loading');
+            if (loading) loading.remove();
+
+            grid.innerHTML = '';
+            for (const [symbol, info] of Object.entries(data)) {
+                const prevClose = info.previous_close || info.price;
+                const change = info.price - prevClose;
+                const changePct = (change / prevClose * 100);
+                const isUp = change >= 0;
+                const color = isUp ? 'positive' : 'negative';
+                const arrow = isUp ? '&#9650;' : '&#9660;';
+
+                grid.innerHTML += `
+                    <div class="stat">
+                        <div class="stat-label">${symbol}</div>
+                        <div class="stat-value">$${info.price.toFixed(2)}</div>
+                        <div class="${color}" style="font-size:0.9rem;">
+                            ${arrow} ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePct.toFixed(2)}%)
+                        </div>
+                    </div>
+                `;
+            }
+        })
+        .catch(() => {
+            const loading = document.getElementById('price-loading');
+            if (loading) loading.textContent = 'Could not load prices. Start the bot to fetch data.';
+        });
+}
+
+loadPrices();
+setInterval(loadPrices, 60000);
+</script>
 {% endblock %}
