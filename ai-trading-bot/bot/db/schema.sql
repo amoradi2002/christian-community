@@ -52,3 +52,16 @@ CREATE TABLE IF NOT EXISTS market_cache (
     volume       INTEGER,
     PRIMARY KEY (symbol, timeframe, date)
 );
+
+CREATE TABLE IF NOT EXISTS youtube_lessons (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_url    TEXT NOT NULL,
+    video_id     TEXT UNIQUE NOT NULL,
+    title        TEXT,
+    channel_name TEXT,
+    transcript   TEXT,
+    extracted_strategies TEXT,
+    status       TEXT DEFAULT 'pending',
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP
+);

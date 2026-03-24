@@ -23,7 +23,7 @@ alerts:
     smtp_port: 587
     recipients: []
   discord:
-    enabled: false
+    enabled: true
   telegram:
     enabled: false
 

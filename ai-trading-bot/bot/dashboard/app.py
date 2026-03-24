@@ -15,12 +15,14 @@ def create_app():
     from bot.dashboard.routes.performance import performance_bp
     from bot.dashboard.routes.backtest import backtest_bp
     from bot.dashboard.routes.api import api_bp
+    from bot.dashboard.routes.youtube import youtube_bp
 
     app.register_blueprint(alerts_bp)
     app.register_blueprint(strategies_bp)
     app.register_blueprint(backtest_bp)
     app.register_blueprint(performance_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
+    app.register_blueprint(youtube_bp)
 
     @app.route("/")
     def index():

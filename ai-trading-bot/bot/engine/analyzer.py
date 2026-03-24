@@ -88,5 +88,15 @@ class Analyzer:
             except Exception as e:
                 print(f"  [{symbol}] Error: {e}")
 
+        # Send Discord summary of all signals from this scan
+        all_signals = [s for sigs in results.values() for s in sigs]
+        if all_signals:
+            try:
+                from bot.alerts.discord import DiscordChannel
+                discord = DiscordChannel()
+                discord.send_summary(all_signals)
+            except Exception:
+                pass
+
         print(f"Scan complete. {sum(len(s) for s in results.values())} total signals.\n")
         return results
