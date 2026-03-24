@@ -1,8 +1,11 @@
 """
 Unusual Whales data provider - options flow, dark pool, whale alerts, congress trades.
 
-Requires an Unusual Whales API token (available with paid subscription).
-Get your token at: https://unusualwhales.com/api
+Requires an Unusual Whales API token (paid subscription: Basic $150/mo or Advanced $375/mo).
+Get your token at: https://unusualwhales.com/settings/api-dashboard
+
+Correct API docs: https://api.unusualwhales.com/docs
+OpenAPI spec: https://api.unusualwhales.com/api/openapi
 
 Provides:
 - Real-time options flow (large/unusual trades)
@@ -149,13 +152,13 @@ def get_options_flow(
         limit: Max results to return
     """
     params = {"limit": limit}
-    if ticker:
-        params["ticker"] = ticker.upper()
 
-    data = _api_get("stock/flow", params)
-    if not data:
-        # Try alternative endpoint
-        data = _api_get("options/flow", params)
+    if ticker:
+        # Ticker-specific flow endpoint
+        data = _api_get(f"stock/{ticker.upper()}/flow-recent", params)
+    else:
+        # Market-wide flow alerts
+        data = _api_get("option-trades/flow-alerts", params)
 
     if not data:
         return []
@@ -215,12 +218,11 @@ def get_flow_alerts(
 def get_dark_pool(ticker: str | None = None, limit: int = 50) -> list[DarkPoolTrade]:
     """Get recent dark pool trades."""
     params = {"limit": limit}
-    if ticker:
-        params["ticker"] = ticker.upper()
 
-    data = _api_get("darkpool/recent", params)
-    if not data:
-        data = _api_get("stock/dark-pool", params)
+    if ticker:
+        data = _api_get(f"darkpool/{ticker.upper()}", params)
+    else:
+        data = _api_get("darkpool/recent", params)
 
     if not data:
         return []
@@ -263,9 +265,7 @@ def get_congress_trades(
     if ticker:
         params["ticker"] = ticker.upper()
 
-    data = _api_get("congress/trades", params)
-    if not data:
-        data = _api_get("politician/trades", params)
+    data = _api_get("congress/recent-trades", params)
 
     if not data:
         return []
@@ -301,9 +301,7 @@ def get_flow_sentiment() -> dict:
     Get market-wide options flow sentiment.
     Shows overall put/call ratio and flow direction.
     """
-    data = _api_get("market/sentiment")
-    if not data:
-        data = _api_get("flow/sentiment")
+    data = _api_get("market/market-tide")
 
     if not data:
         return {"error": "Could not fetch sentiment data"}
@@ -322,7 +320,7 @@ def get_flow_sentiment() -> dict:
 
 def get_ticker_sentiment(ticker: str) -> dict:
     """Get options flow sentiment for a specific ticker."""
-    data = _api_get(f"stock/{ticker.upper()}/flow-sentiment")
+    data = _api_get(f"stock/{ticker.upper()}/net-prem-ticks")
     if not data:
         # Compute from recent flow
         flows = get_options_flow(ticker=ticker, min_premium=50000, limit=50)
