@@ -31,7 +31,7 @@ alerts:
     recipients: []
   discord:
     enabled: true
-    webhook_url: ""  # Paste your Discord webhook URL here
+    webhook_url: "https://discord.com/api/webhooks/1481718340736123012/LPBf69PUZPk3Qc41QuC0TI5uSvdmO2I1lRLi5DMszuML7E4GNskS6jzoLUgL09io3PAY"
   telegram:
     enabled: false
 
