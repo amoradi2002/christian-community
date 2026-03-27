@@ -98,6 +98,26 @@ def run_interactive():
                 _show_status()
             elif cmd == "intel":
                 _run_intel()
+            elif cmd in ("sentiment", "news"):
+                _check_sentiment(args)
+            elif cmd == "premarket":
+                _run_premarket()
+            elif cmd in ("portfolio", "positions", "paper"):
+                _show_portfolio()
+            elif cmd in ("pnl", "dailypnl"):
+                _show_daily_pnl()
+            elif cmd in ("correlation", "corr"):
+                _show_correlation()
+            elif cmd in ("calendar", "econ"):
+                _show_calendar()
+            elif cmd in ("knowledge", "kb"):
+                _show_knowledge(args)
+            elif cmd == "ingest":
+                _ingest_knowledge(args)
+            elif cmd in ("search", "find"):
+                _search_knowledge(args)
+            elif cmd in ("strats", "strategies"):
+                _show_strategy_stats()
             else:
                 # Treat as a ticker
                 if cmd.isalpha() and len(cmd) <= 5:
@@ -128,12 +148,23 @@ Commands:
   profile           Show risk profile
   status            Account & position status
   intel             Intelligence scan (whales, earnings)
+  sentiment AAPL    News sentiment analysis
+  premarket         Pre-market scanner (gaps, earnings)
+  portfolio         Paper trading positions & P&L
+  pnl               Today's P&L with lockout check
+  correlation       Portfolio correlation matrix
+  calendar          Economic calendar (FOMC, CPI, NFP)
+  strats            Strategy performance stats
+  knowledge         Knowledge base summary
+  ingest <url>      Ingest YouTube/text into knowledge base
+  search <query>    Search knowledge base
   help              Show this help
   quit              Exit
 
 Tips:
   - Just type a ticker (e.g. AAPL) for quick analysis
   - Your watchlist updates are saved to config.yaml
+  - Feed the bot content with 'ingest' to help it evolve
 """)
 
 
@@ -597,3 +628,257 @@ def _show_status():
             print(f"\n    No open positions")
     except Exception:
         print(f"\n    (Connect Alpaca for live positions — run 'setup')")
+
+
+def _check_sentiment(args):
+    """News sentiment analysis."""
+    if not args:
+        print("Usage: sentiment AAPL")
+        return
+
+    symbol = args[0].upper()
+    print(f"\nNews Sentiment: {symbol}...")
+
+    from bot.engine.news_sentiment import fetch_news_sentiment
+    result = fetch_news_sentiment(symbol)
+
+    label = result.get("overall_label", "N/A")
+    score = result.get("overall_score", 0)
+    print(f"  Overall: {label} (score: {score:+.2f})")
+
+    for h in result.get("headlines", [])[:8]:
+        icon = "+" if h["score"] > 0 else "-" if h["score"] < 0 else " "
+        print(f"  [{icon}] {h['headline'][:75]}")
+
+    rec = result.get("recommendation")
+    if rec:
+        print(f"\n  Recommendation: {rec}")
+
+
+def _run_premarket():
+    """Pre-market scanner."""
+    from bot.engine.premarket_scanner import scan_premarket, get_premarket_report, should_run_premarket
+
+    if not should_run_premarket():
+        print("\n  Note: Not currently in premarket hours (4AM-9:30AM ET)")
+        print("  Running scan anyway with available data...\n")
+
+    movers = scan_premarket()
+    print(get_premarket_report(movers))
+
+
+def _show_portfolio():
+    """Show paper trading portfolio."""
+    from bot.engine.paper_trader import PaperTrader
+    pt = PaperTrader()
+
+    positions = pt.get_open_positions()
+    summary = pt.get_performance_summary()
+
+    if positions:
+        print(f"\n  Open Paper Positions ({len(positions)}):")
+        for p in positions:
+            print(f"    {p['symbol']:6s} {p['quantity']:>4} @ ${p['entry_price']:.2f}  "
+                  f"Stop: ${p.get('stop_loss', 0):.2f}  Target: ${p.get('target_price', 0):.2f}  "
+                  f"({p['strategy_name']})")
+    else:
+        print("\n  No open paper positions")
+
+    print(f"\n  --- Performance ---")
+    print(f"  Total Trades: {summary.get('total_trades', 0)}")
+    print(f"  Win Rate: {summary.get('win_rate', 0):.1f}%")
+    print(f"  Total P&L: ${summary.get('total_pnl', 0):+.2f}")
+    if summary.get('best_trade'):
+        print(f"  Best Trade: ${summary['best_trade']:+.2f}")
+    if summary.get('worst_trade'):
+        print(f"  Worst Trade: ${summary['worst_trade']:+.2f}")
+
+
+def _show_daily_pnl():
+    """Show today's P&L with lockout check."""
+    from bot.engine.daily_pnl import DailyPnLTracker
+    tracker = DailyPnLTracker()
+    today = tracker.get_today_pnl()
+
+    print(f"\n  Today's P&L: ${today['total_pnl']:+.2f}")
+    print(f"  Trades: {today['trade_count']} ({today['winners']}W / {today['losers']}L)")
+
+    if today.get("is_locked_out"):
+        print(f"\n  !! LOCKED OUT — daily loss limit hit")
+        print(f"  {tracker.get_lockout_reason()}")
+    else:
+        print(f"  Status: Can trade")
+
+    by_symbol = today.get("pnl_by_symbol", {})
+    if by_symbol:
+        print(f"\n  By Symbol:")
+        for sym, pnl in sorted(by_symbol.items(), key=lambda x: x[1], reverse=True):
+            print(f"    {sym:6s} ${pnl:+.2f}")
+
+    weekly = tracker.get_weekly_daily_pnl()
+    if weekly:
+        print(f"\n  Last 7 Days:")
+        for day in weekly:
+            bar = "+" * max(0, int(day['total_pnl'] / 10)) if day['total_pnl'] > 0 else "-" * max(0, int(abs(day['total_pnl']) / 10))
+            print(f"    {day['date']}  ${day['total_pnl']:+8.2f}  {bar}")
+
+
+def _show_correlation():
+    """Show portfolio correlation matrix."""
+    watchlist = CONFIG.get("bot", {}).get("watchlist", [])
+    if len(watchlist) < 2:
+        print("Need at least 2 symbols in watchlist for correlation analysis")
+        return
+
+    print(f"\nCalculating correlations for {', '.join(watchlist[:10])}...")
+
+    from bot.engine.correlation import format_correlation_report
+    report = format_correlation_report(watchlist[:10])
+    print(report)
+
+
+def _show_calendar():
+    """Show economic calendar."""
+    from bot.engine.economic_calendar import get_upcoming_events, get_trading_caution
+
+    caution = get_trading_caution()
+    if caution:
+        print(f"\n  !! {caution}")
+
+    events = get_upcoming_events(days_ahead=14)
+    if events:
+        print(f"\n  === Economic Calendar (next 14 days) ===")
+        for e in events:
+            imp = "***" if e.importance == "high" else "** " if e.importance == "medium" else "*  "
+            print(f"  {e.date} {e.time:>8s}  {imp} {e.event}")
+            if e.trading_note:
+                print(f"                    -> {e.trading_note}")
+    else:
+        print("\n  No upcoming economic events")
+
+
+def _show_knowledge(args):
+    """Show knowledge base summary or search."""
+    from bot.learning.knowledge_base import KnowledgeBase
+    kb = KnowledgeBase()
+
+    if args:
+        # Search for indicator insights
+        indicator = args[0]
+        insights = kb.get_indicator_insights(indicator)
+        if insights:
+            print(f"\n  Knowledge about '{indicator}':")
+            for i in insights:
+                print(f"\n  [{i['source_type']}] {i['title']}")
+                for rule in i.get('rules', [])[:3]:
+                    print(f"    Rule: {rule}")
+                for snippet in i.get('snippets', [])[:2]:
+                    print(f"    ...{snippet[:100]}...")
+        else:
+            print(f"  No knowledge found for '{indicator}'")
+        return
+
+    summary = kb.get_evolution_summary()
+    print(f"\n  === Knowledge Base ===")
+    print(f"  Total Entries: {summary['total_entries']}")
+    print(f"  Sources: {summary['sources_breakdown']}")
+    print(f"  Strategies Learned: {summary['unique_strategies']}")
+    print(f"  Indicators Tracked: {summary['unique_indicators']}")
+    print(f"  Rules Accumulated: {summary['total_rules']}")
+
+    if summary['most_referenced']:
+        print(f"\n  Most Referenced:")
+        for m in summary['most_referenced'][:5]:
+            print(f"    [{m['source']}] {m['title']} ({m['references']} refs)")
+
+    if summary['strategies_learned']:
+        print(f"\n  Strategies: {', '.join(summary['strategies_learned'][:10])}")
+
+
+def _ingest_knowledge(args):
+    """Ingest content into knowledge base."""
+    from bot.learning.knowledge_base import KnowledgeBase
+    kb = KnowledgeBase()
+
+    if args and ("youtube.com" in args[0] or "youtu.be" in args[0]):
+        print(f"\n  Ingesting YouTube video...")
+        result = kb.ingest_youtube(args[0])
+    else:
+        print("\n  Paste your trading knowledge/notes (from mentorship, article, etc.)")
+        print("  Type 'END' on a new line when done:\n")
+        lines = []
+        while True:
+            try:
+                line = input()
+                if line.strip() == "END":
+                    break
+                lines.append(line)
+            except (EOFError, KeyboardInterrupt):
+                break
+
+        if not lines:
+            print("  No content provided")
+            return
+
+        content = "\n".join(lines)
+        title = input("  Title for this knowledge: ").strip() or "Manual entry"
+        source = input("  Source type (mentorship/article/manual): ").strip() or "manual"
+        result = kb.ingest_text(title, content, source_type=source)
+
+    if result.get("status") == "success":
+        print(f"\n  Knowledge ingested!")
+        print(f"  Strategies found: {result.get('strategies_found', 0)}")
+        print(f"  Indicators found: {result.get('indicators_found', 0)}")
+        print(f"  Rules extracted: {result.get('rules_extracted', 0)}")
+    else:
+        print(f"  Error: {result.get('message', 'Unknown')}")
+
+
+def _search_knowledge(args):
+    """Search the knowledge base."""
+    if not args:
+        print("Usage: search RSI oversold")
+        return
+
+    query = " ".join(args)
+    from bot.learning.knowledge_base import KnowledgeBase
+    kb = KnowledgeBase()
+
+    results = kb.search_knowledge(query)
+    if results:
+        print(f"\n  Found {len(results)} results for '{query}':")
+        for r in results:
+            print(f"\n  [{r['source_type']}] {r['title']}")
+            if r['key_rules']:
+                for rule in r['key_rules'][:3]:
+                    print(f"    -> {rule}")
+            if r['strategies_extracted']:
+                print(f"    Strategies: {', '.join(r['strategies_extracted'])}")
+    else:
+        print(f"  No results for '{query}'")
+
+
+def _show_strategy_stats():
+    """Show strategy performance stats."""
+    from bot.engine.strategy_tracker import get_strategy_stats, get_best_strategies, get_worst_strategies
+
+    stats = get_strategy_stats()
+    if not stats:
+        print("\n  No strategy performance data yet.")
+        print("  Stats are tracked as signals fire and trades close.")
+        return
+
+    print(f"\n  === Strategy Performance ===")
+    for name, s in sorted(stats.items(), key=lambda x: x[1].get("win_rate", 0), reverse=True):
+        wr = s.get("win_rate", 0)
+        print(f"  {name:30s}  {s['total_signals']:3d} signals  "
+              f"WR: {wr:.0%}  Avg R: {s.get('avg_r', 0):+.2f}  "
+              f"P&L: ${s.get('total_pnl', 0):+.2f}")
+
+    best = get_best_strategies(3)
+    worst = get_worst_strategies(3)
+
+    if best:
+        print(f"\n  Top Strategies: {', '.join(b['strategy_name'] for b in best)}")
+    if worst:
+        print(f"  Worst Strategies: {', '.join(w['strategy_name'] for w in worst)}")

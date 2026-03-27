@@ -13,6 +13,12 @@ Usage:
     python -m bot.main dashboard    # Start dashboard only
     python -m bot.main learn <url>  # Learn strategies from a YouTube video
     python -m bot.main live          # Interactive mode - analyze tickers, manage watchlist, log trades
+    python -m bot.main premarket     # Run pre-market scanner (gaps, volume, earnings)
+    python -m bot.main sentiment <s> # News sentiment analysis for a symbol
+    python -m bot.main portfolio     # Show paper trading portfolio
+    python -m bot.main knowledge     # Show knowledge base evolution summary
+    python -m bot.main ingest <url>  # Ingest YouTube/article into knowledge base
+    python -m bot.main calendar      # Show upcoming economic events
     python -m bot.main profile      # Set up your trading profile (budget, risk, goals)
     python -m bot.main setup        # Interactive setup for Discord/Telegram/Email
 """
@@ -455,6 +461,20 @@ def main():
     except Exception:
         pass
 
+    # Initialize strategy tracker
+    try:
+        from bot.engine.strategy_tracker import init_strategy_tracker_table
+        init_strategy_tracker_table()
+    except Exception:
+        pass
+
+    # Initialize knowledge base
+    try:
+        from bot.learning.knowledge_base import init_knowledge_tables
+        init_knowledge_tables()
+    except Exception:
+        pass
+
     if len(sys.argv) > 1:
         command = sys.argv[1]
         if command == "scan":
@@ -486,6 +506,94 @@ def main():
         elif command == "live":
             from bot.interactive import run_interactive
             run_interactive()
+        elif command == "premarket":
+            print("AI Trading Bot - Pre-market Scanner...")
+            from bot.engine.premarket_scanner import scan_premarket, get_premarket_report, get_earnings_today
+            movers = scan_premarket()
+            print(get_premarket_report(movers))
+            earnings = get_earnings_today()
+            if earnings:
+                print("\nEarnings Today:")
+                for e in earnings:
+                    print(f"  {e}")
+        elif command == "sentiment":
+            if len(sys.argv) < 3:
+                print("Usage: python -m bot.main sentiment AAPL")
+                sys.exit(1)
+            symbol = sys.argv[2].upper()
+            print(f"AI Trading Bot - News Sentiment: {symbol}...")
+            from bot.engine.news_sentiment import fetch_news_sentiment
+            result = fetch_news_sentiment(symbol)
+            print(f"\n  {symbol} Sentiment: {result.get('overall_label', 'N/A')} (score: {result.get('overall_score', 0):+.2f})")
+            for h in result.get("headlines", [])[:10]:
+                icon = "+" if h["score"] > 0 else "-" if h["score"] < 0 else " "
+                print(f"  [{icon}] {h['headline'][:80]}")
+            if result.get("recommendation"):
+                print(f"\n  Recommendation: {result['recommendation']}")
+        elif command == "portfolio":
+            print("AI Trading Bot - Paper Portfolio...")
+            from bot.engine.paper_trader import PaperTrader
+            pt = PaperTrader()
+            positions = pt.get_open_positions()
+            summary = pt.get_performance_summary()
+            if positions:
+                print(f"\n  Open Positions ({len(positions)}):")
+                for p in positions:
+                    print(f"    {p['symbol']:6s} {p['quantity']:>4} @ ${p['entry_price']:.2f}  ({p['strategy_name']})")
+            else:
+                print("\n  No open paper positions")
+            print(f"\n  Total Trades: {summary.get('total_trades', 0)}")
+            print(f"  Win Rate: {summary.get('win_rate', 0):.1f}%")
+            print(f"  Total P&L: ${summary.get('total_pnl', 0):.2f}")
+        elif command == "knowledge":
+            from bot.learning.knowledge_base import KnowledgeBase
+            kb = KnowledgeBase()
+            summary = kb.get_evolution_summary()
+            print(f"\n=== Knowledge Base Evolution ===")
+            print(f"  Total Entries: {summary['total_entries']}")
+            print(f"  Sources: {summary['sources_breakdown']}")
+            print(f"  Unique Strategies: {summary['unique_strategies']}")
+            print(f"  Unique Indicators: {summary['unique_indicators']}")
+            print(f"  Total Rules: {summary['total_rules']}")
+            if summary['most_referenced']:
+                print(f"\n  Most Referenced:")
+                for m in summary['most_referenced']:
+                    print(f"    [{m['source']}] {m['title']} ({m['references']} refs)")
+        elif command == "ingest":
+            if len(sys.argv) < 3:
+                print("Usage: python -m bot.main ingest <youtube-url-or-text>")
+                sys.exit(1)
+            from bot.learning.knowledge_base import KnowledgeBase
+            kb = KnowledgeBase()
+            url_or_text = sys.argv[2]
+            if "youtube.com" in url_or_text or "youtu.be" in url_or_text:
+                print(f"Ingesting YouTube video into knowledge base...")
+                result = kb.ingest_youtube(url_or_text)
+            else:
+                title = input("Title for this knowledge: ").strip() or "Manual entry"
+                print(f"Ingesting text into knowledge base...")
+                result = kb.ingest_text(title, url_or_text, source_type="manual")
+            if result.get("status") == "success":
+                print(f"  Strategies found: {result.get('strategies_found', 0)}")
+                print(f"  Indicators found: {result.get('indicators_found', 0)}")
+                print(f"  Rules extracted: {result.get('rules_extracted', 0)}")
+            else:
+                print(f"  Error: {result.get('message', 'Unknown')}")
+        elif command == "calendar":
+            from bot.engine.economic_calendar import get_upcoming_events, get_trading_caution
+            caution = get_trading_caution()
+            if caution:
+                print(f"\n  !! CAUTION: {caution}")
+            events = get_upcoming_events(days_ahead=14)
+            if events:
+                print(f"\n=== Economic Calendar (next 14 days) ===")
+                for e in events:
+                    imp = "*" * (3 if e.importance == "high" else 2 if e.importance == "medium" else 1)
+                    print(f"  {e.date} {e.time:>8s}  {imp} {e.event}")
+                    if e.trading_note:
+                        print(f"                   Note: {e.trading_note}")
+            else:
+                print("No upcoming economic events found.")
         elif command == "profile":
             run_profile()
         elif command == "setup":
@@ -500,19 +608,53 @@ def main():
             print("  sectors   - Run sector rotation analysis")
             print("  journal   - Weekly trade journal review")
             print("  live      - Interactive mode (real-time analysis)")
+            print("  premarket - Pre-market scanner (gaps, earnings)")
+            print("  sentiment - News sentiment (sentiment AAPL)")
+            print("  portfolio - Paper trading portfolio")
+            print("  calendar  - Economic calendar (FOMC, CPI, NFP)")
+            print("  knowledge - Knowledge base evolution summary")
+            print("  ingest    - Ingest content (ingest <url>)")
             print("  train     - Train AI model")
             print("  dashboard - Start web dashboard")
             print("  learn     - Learn from YouTube <url>")
             print("  profile   - Set up trading profile")
             print("  setup     - Configure API keys")
     else:
-        # Full mode: scan + scheduler + dashboard
+        # Full mode: scan + scheduler + dashboard + services
         print("AI Trading Bot initialized.")
         print("Starting full bot (scan + scheduler + dashboard)...")
 
         # Run initial scans
         run_scan()
         run_intel()
+
+        # Check economic calendar
+        try:
+            from bot.engine.economic_calendar import get_trading_caution
+            caution = get_trading_caution()
+            if caution:
+                print(f"\n  ECONOMIC CAUTION: {caution}\n")
+        except Exception:
+            pass
+
+        # Start Telegram bot if configured
+        try:
+            import os
+            if os.getenv("TELEGRAM_BOT_TOKEN"):
+                from bot.alerts.telegram_bot import start_telegram_bot
+                start_telegram_bot()
+                print("Telegram bot started — send /help to your bot")
+        except Exception:
+            pass
+
+        # Start email digest scheduler if configured
+        try:
+            if os.getenv("SMTP_SENDER"):
+                from bot.alerts.email_digest import schedule_email_digest
+                schedule_email_digest()
+                print("Email digest scheduled — daily 4:30PM, weekly Sunday 6PM")
+        except Exception:
+            pass
 
         # Start scheduler in background
         scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)

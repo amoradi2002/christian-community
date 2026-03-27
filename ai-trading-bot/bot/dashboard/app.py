@@ -49,6 +49,16 @@ def create_app():
         from flask import render_template
         return render_template("scanner.html")
 
+    @app.route("/portfolio")
+    def portfolio():
+        from flask import render_template
+        return render_template("portfolio.html")
+
+    @app.route("/premarket")
+    def premarket():
+        from flask import render_template
+        return render_template("premarket.html")
+
     @app.route("/")
     def index():
         from flask import render_template

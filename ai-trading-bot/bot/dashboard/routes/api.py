@@ -853,6 +853,233 @@ def grade_catalyst():
         return jsonify({"error": str(e)}), 500
 
 
+# --- Portfolio & Paper Trading API ---
+
+@api_bp.route("/portfolio/positions")
+def get_paper_positions():
+    """Get open paper trading positions."""
+    try:
+        from bot.engine.paper_trader import PaperTrader
+        pt = PaperTrader()
+        return jsonify(pt.get_open_positions())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/portfolio/summary")
+def get_portfolio_summary():
+    """Get paper trading performance summary."""
+    try:
+        from bot.engine.paper_trader import PaperTrader
+        pt = PaperTrader()
+        return jsonify(pt.get_performance_summary())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/portfolio/equity-curve")
+def get_equity_curve():
+    """Get equity curve data for charting."""
+    try:
+        from bot.engine.paper_trader import PaperTrader
+        pt = PaperTrader()
+        history = pt.get_trade_history(limit=200)
+        # Build cumulative equity curve
+        starting = CONFIG.get("paper_trading", {}).get("starting_capital", 10000)
+        curve = [{"date": "start", "value": starting}]
+        running = starting
+        for trade in reversed(history):
+            running += trade.get("pnl_dollars", 0)
+            curve.append({"date": trade.get("closed_at", ""), "value": round(running, 2)})
+        return jsonify(curve)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/portfolio/daily-pnl")
+def get_daily_pnl():
+    """Get daily P&L for last 7 days."""
+    try:
+        from bot.engine.daily_pnl import DailyPnLTracker
+        tracker = DailyPnLTracker()
+        return jsonify(tracker.get_weekly_daily_pnl())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/portfolio/exposure")
+def get_sector_exposure():
+    """Get sector exposure of open positions."""
+    try:
+        from bot.engine.paper_trader import PaperTrader
+        from bot.engine.sector_rotation import get_sector_for_stock
+        pt = PaperTrader()
+        positions = pt.get_open_positions()
+        exposure = {}
+        for p in positions:
+            sector = get_sector_for_stock(p["symbol"]) or "Unknown"
+            value = p.get("quantity", 0) * p.get("entry_price", 0)
+            exposure[sector] = exposure.get(sector, 0) + value
+        return jsonify(exposure)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/portfolio/correlation")
+def get_correlation():
+    """Get correlation matrix for watchlist."""
+    try:
+        from bot.engine.correlation import calculate_correlation_matrix, check_portfolio_correlation
+        watchlist = CONFIG.get("bot", {}).get("watchlist", [])
+        if len(watchlist) < 2:
+            return jsonify({"error": "Need 2+ symbols"}), 400
+        matrix = calculate_correlation_matrix(watchlist[:10])
+        alerts = check_portfolio_correlation(watchlist[:10])
+        return jsonify({
+            "matrix": matrix,
+            "alerts": [{"symbol_a": a.symbol_a, "symbol_b": a.symbol_b,
+                        "correlation": a.correlation, "risk_level": a.risk_level,
+                        "message": a.message} for a in alerts],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/portfolio/strategy-stats")
+def get_strategy_performance():
+    """Get strategy performance stats."""
+    try:
+        from bot.engine.strategy_tracker import get_strategy_stats
+        return jsonify(get_strategy_stats())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Pre-Market & Calendar API ---
+
+@api_bp.route("/premarket")
+def get_premarket():
+    """Run pre-market scan."""
+    try:
+        from bot.engine.premarket_scanner import scan_premarket, should_run_premarket
+        movers = scan_premarket()
+        return jsonify({
+            "is_premarket": should_run_premarket(),
+            "movers": [{"symbol": m.symbol, "gap_pct": m.gap_pct, "volume_ratio": m.volume_ratio,
+                        "catalyst": m.catalyst, "price": m.price, "prev_close": m.prev_close,
+                        "direction": m.direction, "meets_5_pillars": m.meets_5_pillars,
+                        "notes": m.notes} for m in movers],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/premarket/earnings")
+def get_earnings():
+    """Get stocks reporting earnings today."""
+    try:
+        from bot.engine.premarket_scanner import get_earnings_today
+        return jsonify(get_earnings_today())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/calendar")
+def get_econ_calendar():
+    """Get economic calendar."""
+    try:
+        from bot.engine.economic_calendar import get_upcoming_events, get_trading_caution
+        days = int(request.args.get("days", 14))
+        events = get_upcoming_events(days_ahead=days)
+        caution = get_trading_caution()
+        return jsonify({
+            "caution": caution,
+            "events": [{"date": e.date, "time": e.time, "event": e.event,
+                        "importance": e.importance, "impact": e.impact,
+                        "trading_note": e.trading_note} for e in events],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- News Sentiment API ---
+
+@api_bp.route("/sentiment/<symbol>")
+def get_sentiment(symbol):
+    """Get news sentiment for a symbol."""
+    try:
+        from bot.engine.news_sentiment import fetch_news_sentiment
+        return jsonify(fetch_news_sentiment(symbol.upper()))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Knowledge Base API ---
+
+@api_bp.route("/knowledge")
+def get_knowledge():
+    """Get knowledge base evolution summary."""
+    try:
+        from bot.learning.knowledge_base import KnowledgeBase
+        kb = KnowledgeBase()
+        return jsonify(kb.get_evolution_summary())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/knowledge/search")
+def search_knowledge():
+    """Search the knowledge base. ?q=RSI+oversold"""
+    try:
+        from bot.learning.knowledge_base import KnowledgeBase
+        kb = KnowledgeBase()
+        query = request.args.get("q", "")
+        if not query:
+            return jsonify({"error": "q parameter required"}), 400
+        return jsonify(kb.search_knowledge(query))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/knowledge/ingest", methods=["POST"])
+def ingest_knowledge():
+    """Ingest content into knowledge base. JSON: {"url": "..."} or {"title": "...", "content": "..."}"""
+    try:
+        from bot.learning.knowledge_base import KnowledgeBase
+        kb = KnowledgeBase()
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "JSON body required"}), 400
+
+        if "url" in data:
+            result = kb.ingest_youtube(data["url"])
+        elif "content" in data:
+            result = kb.ingest_text(
+                title=data.get("title", "API entry"),
+                content=data["content"],
+                source_type=data.get("source_type", "manual"),
+                source_url=data.get("source_url", ""),
+                confidence=float(data.get("confidence", 0.8)),
+            )
+        else:
+            return jsonify({"error": "Need 'url' or 'content' field"}), 400
+
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/knowledge/rules/<setup>")
+def get_rules_for_setup(setup):
+    """Get learned rules for a setup type."""
+    try:
+        from bot.learning.knowledge_base import KnowledgeBase
+        kb = KnowledgeBase()
+        return jsonify(kb.get_rules_for_setup(setup))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @api_bp.route("/health")
 def health():
     provider = CONFIG.get("data", {}).get("provider", "yfinance")
@@ -877,5 +1104,10 @@ def health():
             "day_trading", "swing_trading", "options",
             "candle_patterns", "sector_rotation", "trade_journal",
             "5_pillars_scanner", "catalyst_grading", "risk_management",
+            "paper_trading", "strategy_tracker", "alert_cooldowns",
+            "daily_pnl_tracker", "premarket_scanner", "economic_calendar",
+            "news_sentiment", "correlation_matrix", "portfolio_dashboard",
+            "telegram_bot", "email_digest", "websocket_streaming",
+            "knowledge_base", "interactive_cli",
         ],
     })
