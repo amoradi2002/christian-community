@@ -15,9 +15,11 @@ import os
 import smtplib
 import threading
 import time
+import tempfile
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 
 from bot.config.settings import CONFIG
 
@@ -65,7 +67,7 @@ class EmailDigest:
     # ------------------------------------------------------------------
 
     def send_weekly_digest(self):
-        """Compile and send the weekly trading digest email.
+        """Compile and send the weekly trading digest email with PDF attachment.
 
         Includes: journal review, strategy performance, P&L summary,
         sector rotation, best/worst trades, upcoming events.
@@ -73,10 +75,12 @@ class EmailDigest:
         data = self._gather_weekly_data()
         subject = f"Weekly Trading Digest \u2014 {data['week_label']}"
         html = self._build_weekly_html(data)
-        return self._send_email(subject, html)
+        pdf = self._generate_pdf(data, report_type="weekly")
+        filename = f"weekly_digest_{datetime.now().strftime('%Y-%m-%d')}.pdf"
+        return self._send_email(subject, html, pdf_bytes=pdf, pdf_filename=filename)
 
     def send_daily_summary(self):
-        """Send the end-of-day summary email.
+        """Send the end-of-day summary email with PDF attachment.
 
         Includes: today's signals, trades taken, P&L, tomorrow's watchlist.
         """
@@ -84,7 +88,9 @@ class EmailDigest:
         today_str = datetime.now().strftime("%A %b %d, %Y")
         subject = f"Daily Trading Summary \u2014 {today_str}"
         html = self._build_daily_html(data)
-        return self._send_email(subject, html)
+        pdf = self._generate_pdf(data, report_type="daily")
+        filename = f"daily_summary_{datetime.now().strftime('%Y-%m-%d')}.pdf"
+        return self._send_email(subject, html, pdf_bytes=pdf, pdf_filename=filename)
 
     # ------------------------------------------------------------------
     # Data gathering
@@ -479,30 +485,277 @@ class EmailDigest:
         </tr>"""
 
     # ------------------------------------------------------------------
+    # PDF generation
+    # ------------------------------------------------------------------
+
+    def _generate_pdf(self, data: dict, report_type: str = "daily") -> bytes:
+        """Generate a clean, organized PDF report.
+
+        Returns PDF bytes or None if generation fails.
+        Uses only stdlib (no external PDF lib) by building a minimal PDF.
+        """
+        try:
+            lines = []
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+            if report_type == "weekly":
+                lines.append("=" * 60)
+                lines.append(f"  WEEKLY TRADING DIGEST")
+                lines.append(f"  {data.get('week_label', '')}")
+                lines.append(f"  Generated: {now_str}")
+                lines.append("=" * 60)
+                lines.append("")
+
+                review = data.get("journal_review", {})
+                lines.append("PERFORMANCE SUMMARY")
+                lines.append("-" * 40)
+                lines.append(f"  Net P&L:         ${review.get('total_pnl', 0):+,.2f}")
+                lines.append(f"  Total Trades:    {review.get('total_trades', 0)}")
+                lines.append(f"  Win Rate:        {review.get('win_rate', 0):.1f}%")
+                lines.append(f"  Winners:         {review.get('winners', 0)}")
+                lines.append(f"  Losers:          {review.get('losers', 0)}")
+                lines.append(f"  Avg R (Winners): {review.get('avg_r_winner', 0):+.2f}R")
+                lines.append(f"  Avg R (Losers):  {review.get('avg_r_loser', 0):+.2f}R")
+                lines.append(f"  Process Score:   {review.get('avg_process_score', 0):.1f}/5")
+                lines.append("")
+
+                best = review.get("best_trade")
+                worst = review.get("worst_trade")
+                if best or worst:
+                    lines.append("NOTABLE TRADES")
+                    lines.append("-" * 40)
+                    if best:
+                        lines.append(f"  Best:  {best.get('symbol', '?')} ${best.get('pnl_dollars', 0):+,.2f} ({best.get('setup', '')})")
+                    if worst:
+                        lines.append(f"  Worst: {worst.get('symbol', '?')} ${worst.get('pnl_dollars', 0):+,.2f} ({worst.get('setup', '')})")
+                    lines.append("")
+
+                stats = data.get("strategy_stats", {})
+                if stats and not isinstance(stats, dict) or (isinstance(stats, dict) and "error" not in stats):
+                    lines.append("STRATEGY PERFORMANCE")
+                    lines.append("-" * 60)
+                    lines.append(f"  {'Strategy':<25s} {'Signals':>8s} {'WR':>6s} {'Avg R':>7s} {'P&L':>10s}")
+                    lines.append(f"  {'-'*25} {'-'*8} {'-'*6} {'-'*7} {'-'*10}")
+                    if isinstance(stats, dict):
+                        for name, s in sorted(stats.items(), key=lambda x: x[1].get("win_rate", 0), reverse=True):
+                            lines.append(f"  {name:<25s} {s.get('total_signals', 0):>8d} {s.get('win_rate', 0):>5.0f}% {s.get('avg_r', 0):>+6.2f} ${s.get('total_pnl', 0):>+9.2f}")
+                    lines.append("")
+
+                rules = review.get("rules_broken", [])
+                if rules:
+                    lines.append("RULES BROKEN")
+                    lines.append("-" * 40)
+                    for r in rules:
+                        lines.append(f"  ! {r}")
+                    lines.append("")
+
+                by_style = review.get("by_style", {})
+                if by_style:
+                    lines.append("TRADES BY STYLE")
+                    lines.append("-" * 40)
+                    lines.append(f"  Day:     {by_style.get('day', 0)}")
+                    lines.append(f"  Swing:   {by_style.get('swing', 0)}")
+                    lines.append(f"  Options: {by_style.get('options', 0)}")
+                    lines.append("")
+
+            else:  # daily
+                lines.append("=" * 60)
+                lines.append(f"  DAILY TRADING SUMMARY")
+                lines.append(f"  {data.get('date_label', '')}")
+                lines.append(f"  Generated: {now_str}")
+                lines.append("=" * 60)
+                lines.append("")
+
+                pnl = data.get("pnl", {})
+                lines.append("TODAY'S P&L")
+                lines.append("-" * 40)
+                lines.append(f"  Net P&L:  ${pnl.get('total_pnl', 0):+,.2f}")
+                lines.append(f"  Trades:   {pnl.get('trade_count', 0)} ({pnl.get('winners', 0)}W / {pnl.get('losers', 0)}L)")
+                if pnl.get("is_locked_out"):
+                    lines.append(f"  STATUS:   LOCKED OUT (daily loss limit hit)")
+                lines.append("")
+
+                by_symbol = pnl.get("pnl_by_symbol", {})
+                if by_symbol:
+                    lines.append("P&L BY SYMBOL")
+                    lines.append("-" * 40)
+                    for sym, amt in sorted(by_symbol.items(), key=lambda x: x[1], reverse=True):
+                        lines.append(f"  {sym:<8s} ${amt:+,.2f}")
+                    lines.append("")
+
+                positions = data.get("open_positions", [])
+                if positions:
+                    lines.append("OPEN POSITIONS")
+                    lines.append("-" * 60)
+                    lines.append(f"  {'Symbol':<8s} {'Qty':>5s} {'Entry':>10s} {'Stop':>10s} {'Target':>10s}")
+                    lines.append(f"  {'-'*8} {'-'*5} {'-'*10} {'-'*10} {'-'*10}")
+                    for p in positions:
+                        sl = f"${p.get('stop_loss', 0):.2f}" if p.get('stop_loss') else "---"
+                        tp = f"${p.get('target_price', 0):.2f}" if p.get('target_price') else "---"
+                        lines.append(f"  {p.get('symbol', '?'):<8s} {p.get('quantity', 0):>5d} ${p.get('entry_price', 0):>9.2f} {sl:>10s} {tp:>10s}")
+                    lines.append("")
+
+            # Watchlist
+            watchlist = data.get("watchlist", [])
+            if watchlist:
+                lines.append("WATCHLIST")
+                lines.append("-" * 40)
+                lines.append(f"  {', '.join(watchlist)}")
+                lines.append("")
+
+            lines.append("=" * 60)
+            lines.append("  AI Trading Bot - Not financial advice")
+            lines.append("=" * 60)
+
+            text_content = "\n".join(lines)
+
+            # Build a minimal PDF from the text
+            return self._text_to_pdf(text_content)
+
+        except Exception as exc:
+            print(f"PDF generation error: {exc}")
+            return None
+
+    def _text_to_pdf(self, text: str) -> bytes:
+        """Convert plain text to a basic PDF using only stdlib.
+
+        Creates a valid PDF 1.4 document with monospace font.
+        """
+        # Escape special PDF characters
+        def _esc(s):
+            return s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+        page_width = 612   # US Letter
+        page_height = 792
+        margin = 50
+        font_size = 9
+        line_height = 12
+        usable_height = page_height - 2 * margin
+        lines_per_page = int(usable_height / line_height)
+
+        all_lines = text.split("\n")
+
+        # Split into pages
+        pages_text = []
+        for i in range(0, len(all_lines), lines_per_page):
+            pages_text.append(all_lines[i:i + lines_per_page])
+
+        objects = []
+        obj_offsets = []
+
+        def add_obj(content):
+            objects.append(content)
+            return len(objects)
+
+        # Object 1: Catalog
+        add_obj("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj")
+
+        # Object 2: Pages (placeholder, updated later)
+        pages_obj_idx = add_obj("")  # will be replaced
+
+        # Object 3: Font
+        add_obj("3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>\nendobj")
+
+        # Build page objects
+        page_refs = []
+        for page_lines in pages_text:
+            # Build text stream
+            stream_lines = [
+                f"BT",
+                f"/F1 {font_size} Tf",
+                f"{margin} {page_height - margin} Td",
+                f"{line_height} TL",
+            ]
+            for line in page_lines:
+                stream_lines.append(f"({_esc(line)}) Tj T*")
+            stream_lines.append("ET")
+            stream = "\n".join(stream_lines)
+
+            # Content stream object
+            stream_obj = add_obj(
+                f"{len(objects)} 0 obj\n<< /Length {len(stream)} >>\nstream\n{stream}\nendstream\nendobj"
+            )
+            # Fix the object number in the content
+            objects[-1] = f"{stream_obj} 0 obj\n<< /Length {len(stream)} >>\nstream\n{stream}\nendstream\nendobj"
+
+            # Page object
+            page_obj = add_obj("")
+            objects[-1] = (
+                f"{page_obj} 0 obj\n"
+                f"<< /Type /Page /Parent 2 0 R "
+                f"/MediaBox [0 0 {page_width} {page_height}] "
+                f"/Contents {stream_obj} 0 R "
+                f"/Resources << /Font << /F1 3 0 R >> >> >>\n"
+                f"endobj"
+            )
+            page_refs.append(f"{page_obj} 0 R")
+
+        # Update Pages object
+        kids = " ".join(page_refs)
+        objects[pages_obj_idx - 1] = (
+            f"2 0 obj\n<< /Type /Pages /Kids [{kids}] /Count {len(pages_text)} >>\nendobj"
+        )
+
+        # Build PDF bytes
+        pdf_parts = ["%PDF-1.4\n"]
+        for i, obj in enumerate(objects):
+            obj_offsets.append(len("".join(pdf_parts)))
+            pdf_parts.append(obj + "\n")
+
+        # Cross-reference table
+        xref_offset = len("".join(pdf_parts))
+        pdf_parts.append("xref\n")
+        pdf_parts.append(f"0 {len(objects) + 1}\n")
+        pdf_parts.append("0000000000 65535 f \n")
+        for offset in obj_offsets:
+            pdf_parts.append(f"{offset:010d} 00000 n \n")
+
+        # Trailer
+        pdf_parts.append("trailer\n")
+        pdf_parts.append(f"<< /Size {len(objects) + 1} /Root 1 0 R >>\n")
+        pdf_parts.append("startxref\n")
+        pdf_parts.append(f"{xref_offset}\n")
+        pdf_parts.append("%%EOF\n")
+
+        return "".join(pdf_parts).encode("latin-1")
+
+    # ------------------------------------------------------------------
     # Email sending
     # ------------------------------------------------------------------
 
-    def _send_email(self, subject: str, html_body: str) -> bool:
-        """Send an HTML email via SMTP (Gmail)."""
+    def _send_email(self, subject: str, html_body: str,
+                    pdf_bytes: bytes = None, pdf_filename: str = None) -> bool:
+        """Send an HTML email via SMTP (Gmail) with optional PDF attachment."""
         if not self.sender or not self.password:
             print("Email digest: SMTP credentials not configured.")
             return False
 
         recipient = self.recipient or self.sender
 
-        msg = MIMEMultipart("alternative")
+        msg = MIMEMultipart("mixed")
         msg["Subject"] = subject
         msg["From"] = f"AI Trading Bot <{self.sender}>"
         msg["To"] = recipient
 
-        # Plain-text fallback
+        # HTML + plain text alternative part
+        alt_part = MIMEMultipart("alternative")
         plain = (
             f"{subject}\n\n"
-            "This email is best viewed in an HTML-capable email client.\n\n"
+            "This email is best viewed in an HTML-capable email client.\n"
+            "A PDF report is attached for your records.\n\n"
             "AI Trading Bot \u2014 Not financial advice."
         )
-        msg.attach(MIMEText(plain, "plain"))
-        msg.attach(MIMEText(html_body, "html"))
+        alt_part.attach(MIMEText(plain, "plain"))
+        alt_part.attach(MIMEText(html_body, "html"))
+        msg.attach(alt_part)
+
+        # Attach PDF if generated
+        if pdf_bytes and pdf_filename:
+            pdf_attachment = MIMEApplication(pdf_bytes, _subtype="pdf")
+            pdf_attachment.add_header(
+                "Content-Disposition", "attachment", filename=pdf_filename
+            )
+            msg.attach(pdf_attachment)
 
         try:
             with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=30) as server:
@@ -511,7 +764,7 @@ class EmailDigest:
                 server.ehlo()
                 server.login(self.sender, self.password)
                 server.sendmail(self.sender, [recipient], msg.as_string())
-            print(f"Email digest sent: {subject}")
+            print(f"Email digest sent: {subject} (PDF: {pdf_filename or 'none'})")
             return True
         except Exception as exc:
             print(f"Email digest failed: {exc}")
