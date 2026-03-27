@@ -178,10 +178,12 @@ from bot.db.database import init_db
 from bot.engine.trade_journal import init_journal_table
 from bot.engine.strategy_tracker import init_strategy_tracker_table
 from bot.learning.knowledge_base import init_knowledge_tables
+from bot.learning.crawler import init_crawler_tables
 init_db()
 init_journal_table()
 init_strategy_tracker_table()
 init_knowledge_tables()
+init_crawler_tables()
 print('✓ Database initialized')
 "
 
@@ -298,6 +300,15 @@ echo "    python -m bot.main scan          # Run a scan now"
 echo "    python -m bot.main premarket     # Pre-market scanner"
 echo "    python -m bot.main sentiment AAPL  # News sentiment"
 echo "    python -m bot.main backtest      # Backtest strategies"
+echo ""
+echo "  Knowledge Crawler (24/7 learning):"
+echo "    python -m bot.main crawl         # Start continuous learning"
+echo "    python -m bot.main crawl once    # Run one crawl cycle"
+echo "    python -m bot.main crawl-status  # See what it's learned"
+echo "    python -m bot.main add-channel <url>  # Add YouTube channel"
+echo ""
+echo "  The bot auto-crawls when running in full mode (python -m bot.main)"
+echo "  It monitors 17+ YouTube trading channels, news RSS feeds, and Reddit."
 echo ""
 echo "  Or just text your Telegram bot — it handles everything."
 echo ""

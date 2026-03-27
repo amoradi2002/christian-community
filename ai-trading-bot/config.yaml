@@ -208,6 +208,17 @@ backtest:
     train_months: 12
     test_months: 3
 
+# ─── Knowledge Crawler (24/7 Learning) ────────────────────────
+knowledge_crawler:
+  enabled: true
+  youtube_interval_hours: 6          # Check YouTube channels every N hours
+  news_interval_minutes: 30          # Check news sources every N minutes
+  reddit_interval_hours: 2           # Check Reddit every N hours
+  max_articles_per_run: 20           # Max articles to ingest per crawl
+  max_videos_per_channel: 5          # Max recent videos per channel to check
+  request_timeout: 15
+  rate_limit_seconds: 2              # Delay between requests (be polite)
+
 # ─── Knowledge Base ─────────────────────────────────────────
 knowledge:
   min_relevance_score: 0.3        # Min score for a sentence to be extracted

@@ -24,9 +24,13 @@ Usage:
     python -m bot.main backtest     # Backtest strategies against historical data
     python -m bot.main regime       # Show current market regime
     python -m bot.main brokers      # Show broker connection status
+    python -m bot.main crawl        # Start knowledge crawler (YouTube, news, Reddit)
+    python -m bot.main crawl-status # Show crawler stats and monitored channels
+    python -m bot.main add-channel <url> # Add a YouTube channel to monitor
 """
 
 import sys
+import json
 import logging
 import threading
 import schedule
@@ -670,6 +674,68 @@ def main():
             except Exception as e:
                 logger.error("Broker status error: %s", e)
                 print(f"  Error: {e}")
+        elif command == "crawl":
+            print("AI Trading Bot - Knowledge Crawler...")
+            from bot.learning.crawler import KnowledgeCrawler
+            crawler = KnowledgeCrawler()
+            if len(sys.argv) > 2 and sys.argv[2] == "once":
+                # Run once and exit
+                crawler.crawl_now()
+            else:
+                # Run continuously
+                print("\nStarting 24/7 knowledge crawler...")
+                print("Monitoring:")
+                channels = crawler.get_monitored_channels()
+                print(f"  YouTube channels: {len(channels)}")
+                print(f"  News sources: RSS feeds (Yahoo, MarketWatch, Bloomberg, etc.)")
+                print(f"  Reddit: r/options, r/daytrading, r/stocks, r/swingtrading, r/thetagang")
+                print(f"\nSchedule:")
+                print(f"  YouTube: every {CONFIG.get('knowledge_crawler', {}).get('youtube_interval_hours', 6)} hours")
+                print(f"  News: every {CONFIG.get('knowledge_crawler', {}).get('news_interval_minutes', 30)} minutes")
+                print(f"  Reddit: every {CONFIG.get('knowledge_crawler', {}).get('reddit_interval_hours', 2)} hours")
+                print(f"\nPress Ctrl+C to stop.\n")
+                crawler.start()
+                try:
+                    while True:
+                        time.sleep(60)
+                except KeyboardInterrupt:
+                    crawler.stop()
+                    print("\nCrawler stopped.")
+        elif command == "crawl-status":
+            print("AI Trading Bot - Crawler Status...")
+            from bot.learning.crawler import KnowledgeCrawler
+            crawler = KnowledgeCrawler()
+            stats = crawler.get_stats()
+            print(f"\n=== Knowledge Crawler Stats ===")
+            print(f"  Total content crawled: {stats['total_crawled']}")
+            print(f"  By source: {stats['by_source']}")
+            print(f"  Total rules extracted: {stats['total_rules_extracted']}")
+            print(f"  Channels monitored: {stats['channels_monitored']}")
+            print(f"\n  Monitored YouTube Channels:")
+            for ch in crawler.get_monitored_channels():
+                topics = json.loads(ch.get("topics", "[]")) if isinstance(ch.get("topics"), str) else ch.get("topics", [])
+                print(f"    {ch['channel_name']:40s} | {ch['videos_processed']:3d} videos | {ch['rules_extracted']:3d} rules")
+            print(f"\n  Recent Crawls:")
+            for item in crawler.get_crawl_history(limit=10):
+                print(f"    [{item['source_type']:8s}] {item['title'][:60]:60s} | {item['rules_extracted']} rules")
+            if stats.get("last_7_days"):
+                print(f"\n  Last 7 Days:")
+                for day in stats["last_7_days"]:
+                    print(f"    {day['date']}: {day['youtube_videos']}yt + {day['articles']}news + {day['reddit_posts']}reddit = {day['total_rules']} rules")
+        elif command == "add-channel":
+            if len(sys.argv) < 3:
+                print("Usage: python -m bot.main add-channel <youtube-channel-url> [name]")
+                sys.exit(1)
+            from bot.learning.crawler import KnowledgeCrawler
+            crawler = KnowledgeCrawler()
+            url = sys.argv[2]
+            name = sys.argv[3] if len(sys.argv) > 3 else ""
+            result = crawler.add_youtube_channel(url, name=name)
+            if result["status"] == "success":
+                print(f"Added channel: {result.get('name', url)}")
+                print("It will be checked on the next YouTube crawl cycle.")
+            else:
+                print(f"Error: {result['message']}")
         else:
             print(f"Unknown command: {command}")
             print("Commands:")
@@ -690,6 +756,10 @@ def main():
             print("  backtest  - Backtest strategies (backtest [symbol])")
             print("  regime    - Market regime detection")
             print("  brokers   - Broker connection status")
+            print("  crawl     - Start 24/7 knowledge crawler")
+            print("  crawl once - Run crawler once and exit")
+            print("  crawl-status - Show crawler stats")
+            print("  add-channel - Add YouTube channel to monitor")
             print("  dashboard - Start web dashboard")
             print("  learn     - Learn from YouTube <url>")
             print("  profile   - Set up trading profile")
@@ -739,6 +809,18 @@ def main():
                 print("Email digest scheduled — daily 4:30PM, weekly Sunday 6PM")
         except Exception:
             pass
+
+        # Start knowledge crawler if enabled
+        try:
+            if CONFIG.get("knowledge_crawler", {}).get("enabled", True):
+                from bot.learning.crawler import KnowledgeCrawler
+                crawler = KnowledgeCrawler()
+                crawler.start()
+                channels = crawler.get_monitored_channels()
+                print(f"Knowledge Crawler started — monitoring {len(channels)} YouTube channels, "
+                      f"news feeds, and Reddit")
+        except Exception as e:
+            logger.debug("Knowledge crawler skipped: %s", e)
 
         # Start scheduler in background
         scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
