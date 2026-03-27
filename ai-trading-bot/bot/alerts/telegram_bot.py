@@ -223,31 +223,75 @@ class TelegramBot:
                 time.sleep(5)
 
     def _dispatch(self, update: dict):
-        """Parse an incoming update and route to the appropriate handler."""
+        """Parse an incoming update and route to the appropriate handler.
+
+        Smart routing:
+        - /command args  → runs the command handler
+        - YouTube link   → auto-ingests into knowledge base
+        - Ticker (1-5 letters) → auto-analyzes
+        - Any other text → auto-ingests as knowledge/notes
+        """
         message = update.get("message", {})
         text = message.get("text", "").strip()
         chat_id = str(message.get("chat", {}).get("id", ""))
 
-        if not text or not text.startswith("/"):
+        if not text:
             return
 
-        # Strip bot username suffix (e.g. /scan@MyBotName)
-        parts = text.split()
-        command_raw = parts[0].lstrip("/").split("@")[0].lower()
-        args = parts[1:]
+        # --- Slash commands ---
+        if text.startswith("/"):
+            parts = text.split()
+            command_raw = parts[0].lstrip("/").split("@")[0].lower()
+            args = parts[1:]
 
-        handler = self.commands.get(command_raw)
-        if handler is None:
-            self.send_message(f"Unknown command: /{command_raw}\nType /help for available commands.", chat_id=chat_id)
+            handler = self.commands.get(command_raw)
+            if handler is None:
+                self.send_message(f"Unknown command: /{command_raw}\nType /help for available commands.", chat_id=chat_id)
+                return
+
+            try:
+                self._commands_processed += 1
+                handler(*args, _chat_id=chat_id)
+            except Exception as exc:
+                tb = traceback.format_exc()
+                print(f"Telegram handler error for /{command_raw}: {tb}")
+                self.send_message(f"\u26a0\ufe0f Error running /{command_raw}: {exc}", chat_id=chat_id)
             return
 
+        # --- Smart auto-routing for non-command messages ---
         try:
             self._commands_processed += 1
-            handler(*args, _chat_id=chat_id)
+
+            # YouTube link → auto-ingest
+            if "youtube.com" in text or "youtu.be" in text:
+                self.send_message("\U0001f3ac Got a YouTube link! Ingesting into knowledge base...", chat_id=chat_id)
+                self._handle_learn(text, _chat_id=chat_id)
+                return
+
+            # Single word, 1-5 letters → treat as ticker
+            if text.isalpha() and len(text) <= 5:
+                self._handle_analyze(text.upper(), _chat_id=chat_id)
+                return
+
+            # Anything else → auto-ingest as knowledge/notes
+            if len(text) > 20:
+                self.send_message("\U0001f4dd Got it! Ingesting your notes into the knowledge base...", chat_id=chat_id)
+                self._handle_learn(text, _chat_id=chat_id)
+                return
+
+            # Short non-command text
+            self.send_message(
+                "Tip: Just send me:\n"
+                "\u2022 A ticker like `AAPL` for analysis\n"
+                "\u2022 A YouTube link to learn from\n"
+                "\u2022 Trading notes/rules to remember\n"
+                "\u2022 /help for all commands",
+                chat_id=chat_id,
+            )
+
         except Exception as exc:
-            tb = traceback.format_exc()
-            print(f"Telegram handler error for /{command_raw}: {tb}")
-            self.send_message(f"\u26a0\ufe0f Error running /{command_raw}: {exc}", chat_id=chat_id)
+            print(f"Telegram auto-route error: {exc}")
+            self.send_message(f"\u26a0\ufe0f Error: {exc}", chat_id=chat_id)
 
     # ------------------------------------------------------------------
     # Command handlers
