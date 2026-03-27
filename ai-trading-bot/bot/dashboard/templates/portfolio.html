@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+{% block title %}Portfolio Dashboard{% endblock %}
+{% block content %}
+<h1>Portfolio Dashboard</h1>
+
+<!-- Portfolio Overview Cards -->
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Overview</h2>
+    <div id="overview-cards" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+        <div class="stat">
+            <span class="stat-label">Total Value</span>
+            <div class="stat-value" id="ov-total-value">--</div>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Today's P&amp;L</span>
+            <div class="stat-value" id="ov-today-pnl">--</div>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Open Positions</span>
+            <div class="stat-value" id="ov-open-count">--</div>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Win Rate</span>
+            <div class="stat-value" id="ov-win-rate">--</div>
+        </div>
+    </div>
+</div>
+
+<!-- Open Positions Table -->
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Open Positions</h2>
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Symbol</th><th>Side</th><th>Qty</th><th>Entry Price</th>
+                    <th>Current Price</th><th>Unrealized P&amp;L</th><th>Stop</th>
+                    <th>Target</th><th>Strategy</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="positions-body"></tbody>
+        </table>
+    </div>
+    <p id="positions-empty" style="display:none; color:#8b949e; padding: 1rem 0;">No open positions.</p>
+</div>
+
+<!-- Charts Row: Equity Curve + Sector Exposure -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 20px;">
+    <div class="card">
+        <h2>Equity Curve</h2>
+        <canvas id="equity-chart" height="260"></canvas>
+    </div>
+    <div class="card">
+        <h2>Sector Exposure</h2>
+        <canvas id="sector-chart" height="260"></canvas>
+        <p id="sector-empty" style="display:none; color:#8b949e; text-align:center; padding-top:1rem;">No exposure data.</p>
+    </div>
+</div>
+
+<!-- Correlation Matrix -->
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Position Correlation Matrix</h2>
+    <div style="overflow-x: auto;">
+        <table id="corr-table" class="data-table">
+            <thead id="corr-head"></thead>
+            <tbody id="corr-body"></tbody>
+        </table>
+    </div>
+    <p id="corr-empty" style="display:none; color:#8b949e; padding: 1rem 0;">Need 2+ positions for correlation data.</p>
+</div>
+
+<!-- Daily P&L Bar Chart -->
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Daily P&amp;L (Last 7 Days)</h2>
+    <canvas id="daily-pnl-chart" height="220"></canvas>
+</div>
+
+<!-- Performance Stats by Strategy -->
+<div class="card">
+    <h2>Strategy Performance</h2>
+    <div style="overflow-x: auto;">
+        <table class="data-table" id="strategy-table">
+            <thead>
+                <tr>
+                    <th style="cursor:pointer;" onclick="sortStrategyTable(0)">Strategy Name &#x25B4;&#x25BE;</th>
+                    <th style="cursor:pointer;" onclick="sortStrategyTable(1)">Trades &#x25B4;&#x25BE;</th>
+                    <th style="cursor:pointer;" onclick="sortStrategyTable(2)">Win Rate &#x25B4;&#x25BE;</th>
+                    <th style="cursor:pointer;" onclick="sortStrategyTable(3)">Avg R &#x25B4;&#x25BE;</th>
+                    <th style="cursor:pointer;" onclick="sortStrategyTable(4)">Total P&amp;L &#x25B4;&#x25BE;</th>
+                </tr>
+            </thead>
+            <tbody id="strategy-body"></tbody>
+        </table>
+    </div>
+    <p id="strategy-empty" style="display:none; color:#8b949e; padding: 1rem 0;">No strategy data available.</p>
+</div>
+
+<script>
+/* ------------------------------------------------------------------ */
+/*  Chart instances                                                    */
+/* ------------------------------------------------------------------ */
+let equityChart = null;
+let sectorChart = null;
+let dailyPnlChart = null;
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+function fmt$(v) {
+    const n = parseFloat(v);
+    if (isNaN(n)) return '--';
+    return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function pnlColor(v) {
+    return parseFloat(v) >= 0 ? '#3fb950' : '#f85149';
+}
+
+/* ------------------------------------------------------------------ */
+/*  1. Overview + Positions                                            */
+/* ------------------------------------------------------------------ */
+async function loadOverview() {
+    try {
+        const [perfResp, acctResp] = await Promise.all([
+            fetch('/api/performance'),
+            fetch('/api/account').catch(() => null)
+        ]);
+        const perf = await perfResp.json();
+        const acct = acctResp && acctResp.ok ? await acctResp.json() : null;
+
+        const positions = perf.open_positions || [];
+        const stats = perf.stats || {};
+
+        // Total value
+        let totalValue = 0;
+        if (acct && acct.portfolio_value) {
+            totalValue = parseFloat(acct.portfolio_value);
+        } else if (acct && acct.equity) {
+            totalValue = parseFloat(acct.equity);
+        }
+        document.getElementById('ov-total-value').textContent = totalValue ? fmt$(totalValue) : '--';
+
+        // Today P&L
+        let todayPnl = 0;
+        if (acct && acct.pnl_today !== undefined) {
+            todayPnl = parseFloat(acct.pnl_today);
+        } else {
+            positions.forEach(p => { todayPnl += parseFloat(p.unrealized_pl || p.unrealized_pnl || 0); });
+        }
+        const pnlEl = document.getElementById('ov-today-pnl');
+        pnlEl.textContent = fmt$(todayPnl);
+        pnlEl.style.color = pnlColor(todayPnl);
+
+        // Open count
+        document.getElementById('ov-open-count').textContent = positions.length;
+
+        // Win rate
+        const wr = stats.win_rate !== undefined ? stats.win_rate : (stats.win_rate_pct !== undefined ? stats.win_rate_pct : null);
+        document.getElementById('ov-win-rate').textContent = wr !== null ? wr + '%' : '--';
+
+        // Positions table
+        const tbody = document.getElementById('positions-body');
+        if (positions.length === 0) {
+            tbody.innerHTML = '';
+            document.getElementById('positions-empty').style.display = 'block';
+        } else {
+            document.getElementById('positions-empty').style.display = 'none';
+            tbody.innerHTML = positions.map(p => {
+                const upl = parseFloat(p.unrealized_pl || p.unrealized_pnl || 0);
+                return `<tr>
+                    <td><strong>${p.symbol || ''}</strong></td>
+                    <td><span class="badge ${(p.side||'long').toLowerCase()==='long'||p.side==='buy'?'badge-buy':'badge-sell'}">${p.side || 'long'}</span></td>
+                    <td>${p.qty || p.quantity || ''}</td>
+                    <td>${p.entry_price ? '$'+parseFloat(p.entry_price).toFixed(2) : p.avg_entry_price ? '$'+parseFloat(p.avg_entry_price).toFixed(2) : '--'}</td>
+                    <td>${p.current_price ? '$'+parseFloat(p.current_price).toFixed(2) : '--'}</td>
+                    <td style="color:${pnlColor(upl)}; font-weight:600;">${fmt$(upl)}</td>
+                    <td>${p.stop_loss ? '$'+parseFloat(p.stop_loss).toFixed(2) : '--'}</td>
+                    <td>${p.target ? '$'+parseFloat(p.target).toFixed(2) : '--'}</td>
+                    <td>${p.strategy || '--'}</td>
+                    <td><span class="badge badge-hold">${p.status || 'open'}</span></td>
+                </tr>`;
+            }).join('');
+        }
+    } catch (e) {
+        console.error('loadOverview error:', e);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  2. Equity Curve                                                    */
+/* ------------------------------------------------------------------ */
+async function loadEquityCurve() {
+    try {
+        const resp = await fetch('/api/portfolio/equity-curve');
+        const data = await resp.json();
+
+        const labels = (data.dates || data.labels || []);
+        const values = (data.values || data.equity || []);
+        if (!labels.length) return;
+
+        const ctx = document.getElementById('equity-chart').getContext('2d');
+        if (equityChart) equityChart.destroy();
+
+        equityChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Portfolio Value',
+                    data: values,
+                    borderColor: '#58a6ff',
+                    backgroundColor: 'rgba(88,166,255,0.08)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#c9d1d9' } },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: { ticks: { color: '#8b949e', maxTicksLimit: 10 }, grid: { color: '#21262d' } },
+                    y: { ticks: { color: '#8b949e', callback: v => '$' + v.toLocaleString() }, grid: { color: '#21262d' } }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('loadEquityCurve error:', e);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  3. Sector Exposure                                                 */
+/* ------------------------------------------------------------------ */
+async function loadSectorExposure() {
+    try {
+        const resp = await fetch('/api/portfolio/exposure');
+        const data = await resp.json();
+
+        const sectors = data.sectors || data;
+        const labels = Object.keys(sectors);
+        const values = Object.values(sectors).map(v => typeof v === 'object' ? (v.value || v.pct || 0) : v);
+
+        if (!labels.length) {
+            document.getElementById('sector-empty').style.display = 'block';
+            return;
+        }
+
+        const palette = ['#58a6ff','#3fb950','#d29922','#f85149','#bc8cff','#39d2c0','#ff7b72','#79c0ff','#e3b341','#a5d6ff'];
+        const ctx = document.getElementById('sector-chart').getContext('2d');
+        if (sectorChart) sectorChart.destroy();
+
+        sectorChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: palette.slice(0, labels.length),
+                    borderColor: '#161b22',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#c9d1d9', padding: 12, boxWidth: 12, font: { size: 11 } } }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('loadSectorExposure error:', e);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  4. Correlation Matrix                                              */
+/* ------------------------------------------------------------------ */
+async function loadCorrelation() {
+    try {
+        const resp = await fetch('/api/portfolio/correlation');
+        const data = await resp.json();
+
+        const symbols = data.symbols || [];
+        const matrix = data.matrix || [];
+
+        if (symbols.length < 2) {
+            document.getElementById('corr-empty').style.display = 'block';
+            return;
+        }
+
+        // Header row
+        const thead = document.getElementById('corr-head');
+        thead.innerHTML = '<tr><th></th>' + symbols.map(s => `<th>${s}</th>`).join('') + '</tr>';
+
+        // Body with heatmap colours
+        const tbody = document.getElementById('corr-body');
+        tbody.innerHTML = matrix.map((row, i) => {
+            return '<tr><td style="font-weight:600;">' + symbols[i] + '</td>' +
+                row.map((val, j) => {
+                    const v = parseFloat(val);
+                    let bg;
+                    if (i === j) bg = '#30363d';
+                    else if (Math.abs(v) >= 0.7) bg = 'rgba(248,81,73,0.3)';   // red = high
+                    else if (Math.abs(v) >= 0.4) bg = 'rgba(210,153,34,0.3)';  // yellow = moderate
+                    else bg = 'rgba(63,185,80,0.15)';                           // green = low
+                    return `<td style="background:${bg}; text-align:center; font-weight:500;">${v.toFixed(2)}</td>`;
+                }).join('') +
+            '</tr>';
+        }).join('');
+    } catch (e) {
+        console.error('loadCorrelation error:', e);
+        document.getElementById('corr-empty').style.display = 'block';
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  5. Daily P&L Bar Chart                                             */
+/* ------------------------------------------------------------------ */
+async function loadDailyPnl() {
+    try {
+        const resp = await fetch('/api/portfolio/daily-pnl');
+        const data = await resp.json();
+
+        const labels = data.dates || data.labels || [];
+        const values = data.values || data.pnl || [];
+        const dailyLimit = data.daily_limit || null;
+
+        if (!labels.length) return;
+
+        const barColors = values.map(v => parseFloat(v) >= 0 ? '#3fb950' : '#f85149');
+        const datasets = [{
+            label: 'Daily P&L',
+            data: values,
+            backgroundColor: barColors,
+            borderRadius: 4,
+        }];
+
+        // 3% daily limit line
+        if (dailyLimit) {
+            datasets.push({
+                label: '3% Daily Limit',
+                data: labels.map(() => -Math.abs(dailyLimit)),
+                type: 'line',
+                borderColor: '#d29922',
+                borderDash: [6, 4],
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false,
+            });
+        }
+
+        const ctx = document.getElementById('daily-pnl-chart').getContext('2d');
+        if (dailyPnlChart) dailyPnlChart.destroy();
+
+        dailyPnlChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#c9d1d9' } },
+                    tooltip: { callbacks: { label: ctx => fmt$(ctx.raw) } }
+                },
+                scales: {
+                    x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } },
+                    y: { ticks: { color: '#8b949e', callback: v => fmt$(v) }, grid: { color: '#21262d' } }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('loadDailyPnl error:', e);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  6. Strategy Performance Table                                      */
+/* ------------------------------------------------------------------ */
+let strategyData = [];
+let sortCol = -1;
+let sortAsc = true;
+
+async function loadStrategyStats() {
+    try {
+        const resp = await fetch('/api/portfolio/strategy-stats');
+        const data = await resp.json();
+
+        strategyData = data.strategies || data || [];
+        if (!Array.isArray(strategyData) || !strategyData.length) {
+            document.getElementById('strategy-empty').style.display = 'block';
+            return;
+        }
+        renderStrategyTable();
+    } catch (e) {
+        console.error('loadStrategyStats error:', e);
+        document.getElementById('strategy-empty').style.display = 'block';
+    }
+}
+
+function renderStrategyTable() {
+    const tbody = document.getElementById('strategy-body');
+    tbody.innerHTML = strategyData.map(s => {
+        const pnl = parseFloat(s.total_pnl || s.pnl || 0);
+        return `<tr>
+            <td><strong>${s.name || s.strategy || '--'}</strong></td>
+            <td>${s.trades || s.total_trades || 0}</td>
+            <td>${s.win_rate !== undefined ? s.win_rate + '%' : '--'}</td>
+            <td>${s.avg_r !== undefined ? s.avg_r.toFixed(2) + 'R' : '--'}</td>
+            <td style="color:${pnlColor(pnl)}; font-weight:600;">${fmt$(pnl)}</td>
+        </tr>`;
+    }).join('');
+}
+
+function sortStrategyTable(colIdx) {
+    if (sortCol === colIdx) { sortAsc = !sortAsc; } else { sortCol = colIdx; sortAsc = true; }
+
+    const keys = ['name', 'trades', 'win_rate', 'avg_r', 'total_pnl'];
+    const altKeys = ['strategy', 'total_trades', 'win_rate', 'avg_r', 'pnl'];
+    const key = keys[colIdx];
+    const alt = altKeys[colIdx];
+
+    strategyData.sort((a, b) => {
+        let va = a[key] !== undefined ? a[key] : a[alt];
+        let vb = b[key] !== undefined ? b[key] : b[alt];
+        if (va === undefined) va = 0;
+        if (vb === undefined) vb = 0;
+        if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+        return sortAsc ? va - vb : vb - va;
+    });
+    renderStrategyTable();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Load everything on page load                                       */
+/* ------------------------------------------------------------------ */
+loadOverview();
+loadEquityCurve();
+loadSectorExposure();
+loadCorrelation();
+loadDailyPnl();
+loadStrategyStats();
+</script>
+{% endblock %}
