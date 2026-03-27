@@ -28,13 +28,17 @@ class UserProfile:
     # --- You set these ---
     starting_capital: float = 500.0          # How much you're starting with
     current_capital: float = 500.0           # Updated as you trade
-    risk_per_trade_pct: float = 2.0          # Max % to risk per trade (1-5% recommended)
+    risk_per_trade_pct: float = 2.0          # Max % to risk per trade (skill says 1-2%)
     max_portfolio_pct: float = 10.0          # Max % of portfolio in one stock
+    max_day_trades: int = 3                  # Max simultaneous day trades
+    max_swing_trades: int = 5               # Max simultaneous swing trades
     max_open_positions: int = 5              # Don't spread too thin
     risk_level: str = "conservative"         # "conservative", "moderate", "aggressive"
     preferred_strategies: list = field(default_factory=list)  # e.g. ["swing", "options"]
-    daily_loss_limit_pct: float = 5.0        # Stop trading if down this % in a day
+    daily_loss_limit_pct: float = 3.0        # Skill says 3% — stop trading if hit
     weekly_loss_limit_pct: float = 10.0      # Stop trading if down this % in a week
+    options_max_pct: float = 5.0             # Max 5% per options trade
+    min_risk_reward: float = 2.0             # Minimum R:R ratio (skill says 2:1)
 
     # --- Bot tracks these ---
     total_trades: int = 0
@@ -128,23 +132,35 @@ RISK_PRESETS = {
     "conservative": {
         "risk_per_trade_pct": 1.0,
         "max_portfolio_pct": 5.0,
+        "max_day_trades": 2,
+        "max_swing_trades": 3,
         "max_open_positions": 3,
         "daily_loss_limit_pct": 3.0,
         "weekly_loss_limit_pct": 6.0,
+        "options_max_pct": 3.0,
+        "min_risk_reward": 2.0,
     },
     "moderate": {
         "risk_per_trade_pct": 2.0,
         "max_portfolio_pct": 10.0,
+        "max_day_trades": 3,
+        "max_swing_trades": 5,
         "max_open_positions": 5,
-        "daily_loss_limit_pct": 5.0,
+        "daily_loss_limit_pct": 3.0,
         "weekly_loss_limit_pct": 10.0,
+        "options_max_pct": 5.0,
+        "min_risk_reward": 2.0,
     },
     "aggressive": {
-        "risk_per_trade_pct": 4.0,
-        "max_portfolio_pct": 20.0,
+        "risk_per_trade_pct": 3.0,
+        "max_portfolio_pct": 15.0,
+        "max_day_trades": 3,
+        "max_swing_trades": 5,
         "max_open_positions": 8,
-        "daily_loss_limit_pct": 8.0,
+        "daily_loss_limit_pct": 5.0,
         "weekly_loss_limit_pct": 15.0,
+        "options_max_pct": 5.0,
+        "min_risk_reward": 2.0,
     },
 }
 

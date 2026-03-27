@@ -3,12 +3,16 @@ AI Trading Bot - Main Entry Point
 
 Usage:
     python -m bot.main              # Start bot (scan + dashboard)
-    python -m bot.main scan         # Run a single scan
+    python -m bot.main scan         # Run a single scan (all strategies)
+    python -m bot.main day          # Run day trade scan (intraday strategies)
+    python -m bot.main swing        # Run swing trade scan (daily strategies)
     python -m bot.main intel        # Run intelligence scan (whales, earnings, insiders)
+    python -m bot.main sectors      # Run sector rotation analysis
+    python -m bot.main journal      # View weekly trade journal review
     python -m bot.main train        # Train the AI model
     python -m bot.main dashboard    # Start dashboard only
     python -m bot.main learn <url>  # Learn strategies from a YouTube video
-    python -m bot.main profile       # Set up your trading profile (budget, risk, goals)
+    python -m bot.main profile      # Set up your trading profile (budget, risk, goals)
     python -m bot.main setup        # Interactive setup for Discord/Telegram/Email
 """
 
@@ -25,6 +29,21 @@ def run_scan():
     from bot.engine.analyzer import Analyzer
     analyzer = Analyzer()
     return analyzer.run_scan()
+
+
+def run_day_scan():
+    """Run day-trade-specific scan with intraday data."""
+    from bot.engine.analyzer import Analyzer
+    analyzer = Analyzer()
+    interval = CONFIG.get("data", {}).get("intraday_interval", "5m")
+    return analyzer.run_day_scan(interval=interval)
+
+
+def run_swing_scan():
+    """Run swing-trade-specific scan with daily data."""
+    from bot.engine.analyzer import Analyzer
+    analyzer = Analyzer()
+    return analyzer.run_swing_scan()
 
 
 def run_train():
@@ -95,11 +114,11 @@ def run_profile():
 
     # Risk level
     print(f"\nRisk levels:")
-    print("  1. Conservative - Risk 1% per trade, max 3 positions, tight stops")
+    print("  1. Conservative - Risk 1% per trade, 3% daily max, max 3 positions")
     print("     Best for: Small accounts, learning, preserving capital")
-    print("  2. Moderate     - Risk 2% per trade, max 5 positions, balanced")
+    print("  2. Moderate     - Risk 2% per trade, 3% daily max, max 5 positions")
     print("     Best for: Most traders, steady growth")
-    print("  3. Aggressive   - Risk 4% per trade, max 8 positions, wider stops")
+    print("  3. Aggressive   - Risk 3% per trade, 5% daily max, max 8 positions")
     print("     Best for: Experienced traders, larger accounts")
 
     risk_choice = input(f"\nYour risk level (1/2/3, current: {current.risk_level}): ").strip()
@@ -109,7 +128,9 @@ def run_profile():
         update_profile(risk_level=level)
         preset = RISK_PRESETS[level]
         print(f"  Set to {level}: {preset['risk_per_trade_pct']}% per trade, "
-              f"max {preset['max_open_positions']} positions")
+              f"{preset['daily_loss_limit_pct']}% daily max, "
+              f"max {preset['max_open_positions']} positions, "
+              f"min R:R {preset['min_risk_reward']}:1")
 
     # Custom risk per trade
     custom = input("\nWant to customize risk per trade %? (Enter to skip, or type 1-10): ").strip()
@@ -141,6 +162,22 @@ def run_profile():
         except ValueError:
             pass
 
+    # Trading style preference
+    print("\nPreferred trading styles:")
+    print("  1. Day trading only")
+    print("  2. Swing trading only")
+    print("  3. Both day and swing")
+    print("  4. Options focused")
+    print("  5. All styles")
+    style_choice = input("Your preference (1-5, Enter to skip): ").strip()
+    style_map = {
+        "1": ["day"], "2": ["swing"], "3": ["day", "swing"],
+        "4": ["options"], "5": ["day", "swing", "options"],
+    }
+    if style_choice in style_map:
+        update_profile(preferred_strategies=style_map[style_choice])
+        print(f"  Set to: {', '.join(style_map[style_choice])}")
+
     # Show summary
     rm = RiskManager()
     profile = rm.profile
@@ -150,9 +187,12 @@ def run_profile():
     print(f"  Capital:          ${profile.current_capital:,.2f}")
     print(f"  Risk Level:       {profile.risk_level.capitalize()}")
     print(f"  Risk Per Trade:   {profile.risk_per_trade_pct}% (${profile.risk_per_trade_dollars():.2f})")
-    print(f"  Max Positions:    {profile.max_open_positions}")
-    print(f"  Daily Loss Limit: {profile.daily_loss_limit_pct}%")
+    print(f"  Daily Loss Max:   {profile.daily_loss_limit_pct}%")
+    print(f"  Max Day Trades:   {profile.max_day_trades}")
+    print(f"  Max Swing Trades: {profile.max_swing_trades}")
     print(f"  Max Per Stock:    {profile.max_portfolio_pct}% of portfolio")
+    print(f"  Min R:R Ratio:    {profile.min_risk_reward}:1")
+    print(f"  Options Max:      {profile.options_max_pct}% per trade")
 
     if profile.total_trades > 0:
         print(f"\n  --- Performance ---")
@@ -164,6 +204,112 @@ def run_profile():
 
     print(f"\nProfile saved! The bot will size all trades based on these settings.")
     print(f"Run 'python -m bot.main' to start trading with your profile.\n")
+
+
+def run_sectors():
+    """Run sector rotation analysis."""
+    from bot.engine.sector_rotation import SECTOR_ETFS, analyze_sector_rotation
+
+    print("\nRunning sector rotation analysis...")
+
+    # Fetch sector ETF data
+    sector_data = {}
+    all_symbols = list(SECTOR_ETFS.keys()) + ["SPY"]
+
+    provider = CONFIG.get("data", {}).get("provider", "yfinance")
+
+    for symbol in all_symbols:
+        try:
+            if provider == "alpaca":
+                from bot.data.alpaca_provider import fetch_alpaca_bars
+                candles = fetch_alpaca_bars(symbol, interval="1d", days=5)
+            else:
+                from bot.data.fetcher import fetch_market_data
+                candles = fetch_market_data(symbol, period="5d", interval="1d")
+
+            if len(candles) >= 2:
+                change = ((candles[-1].close - candles[-2].close) / candles[-2].close) * 100
+                vol_ratio = candles[-1].volume / candles[-2].volume if candles[-2].volume > 0 else 1.0
+                sector_data[symbol] = {"change_pct": round(change, 2), "volume_ratio": round(vol_ratio, 2)}
+        except Exception as e:
+            print(f"  [{symbol}] Error: {e}")
+
+    if not sector_data:
+        print("Could not fetch sector data.")
+        return
+
+    report = analyze_sector_rotation(sector_data)
+
+    print(f"\n=== Sector Rotation Report ===")
+    print(f"Market Regime: {report.market_regime.upper()}")
+    print(f"SPY: {report.spy_change_pct:+.2f}%\n")
+
+    print("Leading Sectors:")
+    for s in report.top_sectors:
+        print(f"  {s.symbol:5s} ({s.name:25s}) {s.change_pct:+.2f}%  ({s.relative_to_spy:+.2f}% vs SPY)")
+
+    print("\nLagging Sectors:")
+    for s in report.bottom_sectors:
+        print(f"  {s.symbol:5s} ({s.name:25s}) {s.change_pct:+.2f}%  ({s.relative_to_spy:+.2f}% vs SPY)")
+
+    print(f"\nRecommendation: {report.recommendation}")
+
+    # Send to Discord
+    try:
+        from bot.alerts.discord import DiscordChannel
+        discord = DiscordChannel()
+        discord.send_sector_report(report.to_dict())
+    except Exception:
+        pass
+
+    return report
+
+
+def run_journal():
+    """Show weekly trade journal review."""
+    from bot.engine.trade_journal import weekly_review
+
+    print("\n=== Weekly Trade Journal Review ===\n")
+    review = weekly_review(weeks_ago=0)
+
+    if review.get("total_trades", 0) == 0:
+        print(review.get("message", "No trades this week."))
+        print("Log trades via the dashboard or API at /api/journal/log")
+        return
+
+    print(f"Week: {review['week']}")
+    print(f"Total Trades: {review['total_trades']} ({review['winners']}W / {review['losers']}L)")
+    print(f"Win Rate: {review['win_rate']:.1f}%")
+    print(f"Total P&L: ${review['total_pnl']:.2f}")
+    print(f"Avg R Winner: {review['avg_r_winner']:+.2f}R")
+    print(f"Avg R Loser: {review['avg_r_loser']:+.2f}R")
+    print(f"Avg Process Score: {review['avg_process_score']:.1f}/5")
+
+    best = review.get("best_trade")
+    worst = review.get("worst_trade")
+    if best:
+        print(f"\nBest Trade: {best['symbol']} ${best['pnl_dollars']:+.2f} ({best.get('setup', '')})")
+    if worst:
+        print(f"Worst Trade: {worst['symbol']} ${worst['pnl_dollars']:+.2f} ({worst.get('setup', '')})")
+
+    rules = review.get("rules_broken", [])
+    if rules:
+        print("\nRules Broken:")
+        for r in rules:
+            print(f"  ! {r}")
+
+    by_style = review.get("by_style", {})
+    print(f"\nBy Style: {by_style.get('day', 0)} day | {by_style.get('swing', 0)} swing | {by_style.get('options', 0)} options")
+
+    # Send to Discord
+    try:
+        from bot.alerts.discord import DiscordChannel
+        discord = DiscordChannel()
+        discord.send_journal_review(review)
+    except Exception:
+        pass
+
+    return review
 
 
 def run_setup():
@@ -288,7 +434,10 @@ def run_scheduler():
     # Run intelligence scan every hour
     schedule.every(60).minutes.do(run_intel)
 
-    print(f"Scheduler started - strategy scan every {interval}m, intelligence scan every 60m")
+    # Run sector analysis every 4 hours
+    schedule.every(4).hours.do(run_sectors)
+
+    print(f"Scheduler started - strategy scan every {interval}m, intel every 60m, sectors every 4h")
     while True:
         schedule.run_pending()
         time.sleep(1)
@@ -298,14 +447,31 @@ def main():
     # Initialize database
     init_db()
 
+    # Initialize trade journal table
+    try:
+        from bot.engine.trade_journal import init_journal_table
+        init_journal_table()
+    except Exception:
+        pass
+
     if len(sys.argv) > 1:
         command = sys.argv[1]
         if command == "scan":
-            print("AI Trading Bot - Running scan...")
+            print("AI Trading Bot - Running full scan...")
             run_scan()
+        elif command == "day":
+            print("AI Trading Bot - Running day trade scan...")
+            run_day_scan()
+        elif command == "swing":
+            print("AI Trading Bot - Running swing trade scan...")
+            run_swing_scan()
         elif command == "intel":
             print("AI Trading Bot - Running intelligence scan...")
             run_intel()
+        elif command == "sectors":
+            run_sectors()
+        elif command == "journal":
+            run_journal()
         elif command == "train":
             run_train()
         elif command == "dashboard":
@@ -322,7 +488,18 @@ def main():
             run_setup()
         else:
             print(f"Unknown command: {command}")
-            print("Usage: python -m bot.main [scan|intel|train|dashboard|learn <url>|profile|setup]")
+            print("Commands:")
+            print("  scan      - Run full scan (all strategies)")
+            print("  day       - Run day trade scan (intraday)")
+            print("  swing     - Run swing trade scan (daily)")
+            print("  intel     - Run intelligence scan")
+            print("  sectors   - Run sector rotation analysis")
+            print("  journal   - Weekly trade journal review")
+            print("  train     - Train AI model")
+            print("  dashboard - Start web dashboard")
+            print("  learn     - Learn from YouTube <url>")
+            print("  profile   - Set up trading profile")
+            print("  setup     - Configure API keys")
     else:
         # Full mode: scan + scheduler + dashboard
         print("AI Trading Bot initialized.")

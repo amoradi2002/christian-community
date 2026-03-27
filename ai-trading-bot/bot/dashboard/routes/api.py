@@ -520,7 +520,9 @@ def update_user_profile():
         allowed = {
             "starting_capital", "current_capital", "risk_per_trade_pct",
             "max_portfolio_pct", "max_open_positions", "risk_level",
+            "max_day_trades", "max_swing_trades",
             "daily_loss_limit_pct", "weekly_loss_limit_pct",
+            "options_max_pct", "min_risk_reward",
             "preferred_strategies",
         }
         filtered = {k: v for k, v in data.items() if k in allowed}
@@ -575,12 +577,305 @@ def calculate_risk():
         return jsonify({"error": str(e)}), 500
 
 
+# --- Day Trade Scanner API ---
+
+@api_bp.route("/scan/day")
+def run_day_scan():
+    """Run day trade scan with intraday data."""
+    try:
+        from bot.engine.analyzer import Analyzer
+        analyzer = Analyzer()
+        interval = request.args.get("interval", CONFIG.get("data", {}).get("intraday_interval", "5m"))
+        results = analyzer.run_day_scan(interval=interval)
+        return jsonify({
+            "signals": {sym: [s.to_dict() for s in sigs] for sym, sigs in results.items()},
+            "total": sum(len(s) for s in results.values()),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/scan/swing")
+def run_swing_scan():
+    """Run swing trade scan with daily data."""
+    try:
+        from bot.engine.analyzer import Analyzer
+        analyzer = Analyzer()
+        results = analyzer.run_swing_scan()
+        return jsonify({
+            "signals": {sym: [s.to_dict() for s in sigs] for sym, sigs in results.items()},
+            "total": sum(len(s) for s in results.values()),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/scan/pillars")
+def check_pillars():
+    """
+    Check a stock against the 5 Pillars of day trade selection.
+    ?symbol=XYZ&price=8.50&change=12.5&rvol=6.2&catalyst=FDA+approval&float=3.5
+    """
+    try:
+        from bot.engine.day_scanner import check_five_pillars
+        symbol = request.args.get("symbol", "").upper()
+        if not symbol:
+            return jsonify({"error": "symbol required"}), 400
+
+        candidate = check_five_pillars(
+            symbol=symbol,
+            price=float(request.args.get("price", 0)),
+            day_change_pct=float(request.args.get("change", 0)),
+            relative_volume=float(request.args.get("rvol", 0)),
+            catalyst=request.args.get("catalyst", ""),
+            float_shares_m=float(request.args.get("float", 0)),
+        )
+        return jsonify(candidate.to_dict())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Candlestick Patterns API ---
+
+@api_bp.route("/candles/<symbol>")
+def get_candle_patterns(symbol):
+    """Detect candlestick patterns for a symbol. ?interval=1d"""
+    try:
+        from bot.data.candle_patterns import detect_patterns
+        from bot.engine.analyzer import _fetch_candles
+
+        interval = request.args.get("interval", "1d")
+        candles = _fetch_candles(symbol.upper(), interval=interval)
+        if len(candles) < 5:
+            return jsonify({"error": "Not enough data"}), 400
+
+        patterns = detect_patterns(candles[-5:])
+        return jsonify({
+            "symbol": symbol.upper(),
+            "interval": interval,
+            "patterns": [{"name": p.name, "direction": p.direction,
+                          "strength": p.strength, "description": p.description}
+                         for p in patterns],
+            "latest_candle": {
+                "open": candles[-1].open, "high": candles[-1].high,
+                "low": candles[-1].low, "close": candles[-1].close,
+                "volume": candles[-1].volume,
+            },
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Sector Rotation API ---
+
+@api_bp.route("/sectors")
+def get_sectors():
+    """Get sector rotation analysis."""
+    try:
+        from bot.engine.sector_rotation import SECTOR_ETFS, analyze_sector_rotation
+        from bot.engine.analyzer import _fetch_candles
+
+        sector_data = {}
+        all_symbols = list(SECTOR_ETFS.keys()) + ["SPY"]
+
+        for symbol in all_symbols:
+            try:
+                candles = _fetch_candles(symbol, interval="1d", days=5)
+                if len(candles) >= 2:
+                    change = ((candles[-1].close - candles[-2].close) / candles[-2].close) * 100
+                    sector_data[symbol] = {"change_pct": round(change, 2)}
+            except Exception:
+                pass
+
+        if not sector_data:
+            return jsonify({"error": "Could not fetch sector data"}), 500
+
+        report = analyze_sector_rotation(sector_data)
+        return jsonify(report.to_dict())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/sectors/check/<symbol>")
+def check_sector_alignment(symbol):
+    """Check if a trade aligns with sector rotation. ?action=BUY"""
+    try:
+        from bot.engine.sector_rotation import check_sector_alignment as _check
+        from bot.engine.analyzer import _fetch_candles
+        from bot.engine.sector_rotation import SECTOR_ETFS
+
+        action = request.args.get("action", "BUY")
+        sector_data = {}
+        for sym in list(SECTOR_ETFS.keys()) + ["SPY"]:
+            try:
+                candles = _fetch_candles(sym, interval="1d", days=5)
+                if len(candles) >= 2:
+                    change = ((candles[-1].close - candles[-2].close) / candles[-2].close) * 100
+                    sector_data[sym] = {"change_pct": round(change, 2)}
+            except Exception:
+                pass
+
+        result = _check(symbol.upper(), action, sector_data)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Trade Journal API ---
+
+@api_bp.route("/journal", methods=["GET"])
+def get_journal():
+    """Get trade journal entries. ?status=closed&style=day&limit=50"""
+    try:
+        from bot.engine.trade_journal import get_trades
+        entries = get_trades(
+            status=request.args.get("status"),
+            symbol=request.args.get("symbol"),
+            style=request.args.get("style"),
+            limit=int(request.args.get("limit", 50)),
+        )
+        return jsonify([e.to_dict() for e in entries])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/journal/log", methods=["POST"])
+def log_journal_trade():
+    """
+    Log a new trade to the journal. JSON body:
+    {"symbol": "AAPL", "style": "day", "direction": "long", "setup": "Pullback",
+     "entry_price": 175.50, "shares": 10, "stop_loss": 173.00, "target": 180.00,
+     "catalyst": "Earnings beat", "why_entered": "Clean pullback to VWAP"}
+    """
+    try:
+        from bot.engine.trade_journal import log_trade, JournalEntry
+
+        data = request.get_json()
+        if not data or "symbol" not in data:
+            return jsonify({"error": "JSON body with symbol required"}), 400
+
+        entry = JournalEntry(
+            symbol=data["symbol"].upper(),
+            style=data.get("style", ""),
+            direction=data.get("direction", "long"),
+            setup=data.get("setup", ""),
+            catalyst=data.get("catalyst", ""),
+            catalyst_tier=data.get("catalyst_tier", ""),
+            entry_price=float(data.get("entry_price", 0)),
+            entry_time=data.get("entry_time", ""),
+            shares=float(data.get("shares", 0)),
+            stop_loss=float(data.get("stop_loss", 0)),
+            target=float(data.get("target", 0)),
+            risk_reward_planned=float(data.get("risk_reward", 0)),
+            why_entered=data.get("why_entered", ""),
+            candle_pattern=data.get("candle_pattern", ""),
+            sector=data.get("sector", ""),
+        )
+
+        # Calculate R:R if not provided
+        if entry.risk_reward_planned == 0 and entry.stop_loss > 0 and entry.target > 0:
+            risk = abs(entry.entry_price - entry.stop_loss)
+            reward = abs(entry.target - entry.entry_price)
+            entry.risk_reward_planned = round(reward / risk, 1) if risk > 0 else 0
+
+        entry_id = log_trade(entry)
+        return jsonify({"id": entry_id, "status": "logged"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/journal/<int:entry_id>/close", methods=["POST"])
+def close_journal_trade(entry_id):
+    """
+    Close an open trade. JSON body:
+    {"exit_price": 180.00, "why_exited": "Hit target", "lesson": "Patience pays",
+     "emotion": "Calm", "process_score": 4, "result_score": 5}
+    """
+    try:
+        from bot.engine.trade_journal import close_trade
+
+        data = request.get_json()
+        if not data or "exit_price" not in data:
+            return jsonify({"error": "Need exit_price"}), 400
+
+        entry = close_trade(
+            entry_id=entry_id,
+            exit_price=float(data["exit_price"]),
+            exit_time=data.get("exit_time", ""),
+            why_exited=data.get("why_exited", ""),
+            what_did_right=data.get("what_did_right", ""),
+            what_id_change=data.get("what_id_change", ""),
+            lesson=data.get("lesson", ""),
+            emotion=data.get("emotion", ""),
+            process_score=int(data.get("process_score", 0)),
+            result_score=int(data.get("result_score", 0)),
+        )
+        return jsonify(entry.to_dict())
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/journal/review")
+def journal_review():
+    """Get weekly trade journal review. ?weeks_ago=0"""
+    try:
+        from bot.engine.trade_journal import weekly_review
+        weeks = int(request.args.get("weeks_ago", 0))
+        review = weekly_review(weeks_ago=weeks)
+        return jsonify(review)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Catalyst Grading API ---
+
+@api_bp.route("/catalyst/grade", methods=["POST"])
+def grade_catalyst():
+    """Grade a catalyst. JSON body: {"text": "FDA approved new drug for..."}"""
+    try:
+        from bot.engine.day_scanner import grade_catalyst as _grade, CATALYST_TIERS
+        data = request.get_json()
+        if not data or "text" not in data:
+            return jsonify({"error": "Need text field"}), 400
+
+        tier = _grade(data["text"])
+        info = CATALYST_TIERS.get(tier, {})
+        return jsonify({
+            "tier": tier,
+            "name": info.get("name", "Skip"),
+            "description": info.get("description", "No catalyst or unrecognized"),
+            "reliability": info.get("reliability", "Do not trade"),
+            "tradeable": tier in ("S", "A"),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @api_bp.route("/health")
 def health():
     provider = CONFIG.get("data", {}).get("provider", "yfinance")
     trading_enabled = CONFIG.get("trading", {}).get("enabled", False)
+
+    # Count available strategies
+    from bot.strategies.registry import StrategyRegistry
+    reg = StrategyRegistry()
+    reg.load_builtins()
+
     return jsonify({
         "status": "ok",
         "data_provider": provider,
         "trading_enabled": trading_enabled,
+        "strategies": {
+            "total": len(reg.get_all()),
+            "day": len(reg.get_by_style("day")),
+            "swing": len(reg.get_by_style("swing")),
+            "general": len(reg.get_by_style("general")),
+        },
+        "features": [
+            "day_trading", "swing_trading", "options",
+            "candle_patterns", "sector_rotation", "trade_journal",
+            "5_pillars_scanner", "catalyst_grading", "risk_management",
+        ],
     })

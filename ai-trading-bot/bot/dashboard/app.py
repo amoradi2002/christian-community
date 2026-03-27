@@ -34,6 +34,21 @@ def create_app():
         from flask import render_template
         return render_template("profile.html")
 
+    @app.route("/journal")
+    def journal():
+        from flask import render_template
+        return render_template("journal.html")
+
+    @app.route("/sectors")
+    def sectors():
+        from flask import render_template
+        return render_template("sectors.html")
+
+    @app.route("/scanner")
+    def scanner():
+        from flask import render_template
+        return render_template("scanner.html")
+
     @app.route("/")
     def index():
         from flask import render_template

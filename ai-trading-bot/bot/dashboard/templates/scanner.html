@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Trade Scanner{% endblock %}
+{% block content %}
+<h1>Trade Scanner</h1>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Scan Controls</h2>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="runScan('day')" class="btn btn-primary">Day Trade Scan</button>
+        <button onclick="runScan('swing')" class="btn btn-primary">Swing Trade Scan</button>
+        <button onclick="runScan('full')" class="btn">Full Scan (All Strategies)</button>
+    </div>
+    <div id="scan-status" style="margin-top: 10px;"></div>
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>5 Pillars Check (Day Trade)</h2>
+    <p>Every day trade must meet ALL 5: 10%+ move, 5x RVOL, S/A catalyst, $2-$20 price, &lt;10M float</p>
+    <form id="pillars-form" class="form-grid">
+        <div class="form-row">
+            <label>Symbol: <input type="text" id="p-symbol" placeholder="XYZ" required></label>
+            <label>Price: <input type="number" id="p-price" step="0.01" required></label>
+            <label>Day Change %: <input type="number" id="p-change" step="0.1" required></label>
+        </div>
+        <div class="form-row">
+            <label>Relative Volume (x): <input type="number" id="p-rvol" step="0.1" required></label>
+            <label>Float (M shares): <input type="number" id="p-float" step="0.1"></label>
+            <label>Catalyst: <input type="text" id="p-catalyst" placeholder="FDA approval, earnings beat..."></label>
+        </div>
+        <button type="submit" class="btn btn-primary">Check 5 Pillars</button>
+    </form>
+    <div id="pillars-result" style="margin-top: 15px;"></div>
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Catalyst Grader</h2>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="catalyst-text" placeholder="Paste news headline..." style="flex: 1;">
+        <button onclick="gradeCatalyst()" class="btn btn-primary">Grade</button>
+    </div>
+    <div id="catalyst-result" style="margin-top: 10px;"></div>
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Candle Pattern Detection</h2>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="candle-symbol" placeholder="Symbol" style="width: 100px;">
+        <select id="candle-interval">
+            <option value="1d">Daily</option>
+            <option value="1h">1 Hour</option>
+            <option value="5m">5 Min</option>
+        </select>
+        <button onclick="detectCandles()" class="btn btn-primary">Detect Patterns</button>
+    </div>
+    <div id="candle-result" style="margin-top: 10px;"></div>
+</div>
+
+<div class="card">
+    <h2>Scan Results</h2>
+    <table class="data-table">
+        <thead>
+            <tr><th>Symbol</th><th>Action</th><th>Style</th><th>Setup</th><th>Price</th>
+                <th>Stop</th><th>Target</th><th>R:R</th><th>Confidence</th><th>Candle</th></tr>
+        </thead>
+        <tbody id="scan-results"></tbody>
+    </table>
+</div>
+
+<script>
+async function runScan(type) {
+    document.getElementById('scan-status').innerHTML = '<em>Scanning...</em>';
+    const url = type === 'full' ? '/api/scan' : `/api/scan/${type}`;
+    try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        document.getElementById('scan-status').innerHTML = `Found ${data.total || 0} signals`;
+        displaySignals(data.signals || {});
+    } catch (e) {
+        document.getElementById('scan-status').innerHTML = `<span style="color:#ff4444">Error: ${e}</span>`;
+    }
+}
+
+function displaySignals(signals) {
+    const tbody = document.getElementById('scan-results');
+    let rows = [];
+    for (const [sym, sigs] of Object.entries(signals)) {
+        for (const s of sigs) {
+            const color = s.action === 'BUY' ? '#00ff00' : '#ff4444';
+            rows.push(`<tr>
+                <td><strong>${s.symbol}</strong></td>
+                <td style="color:${color}">${s.action}</td>
+                <td>${s.style || '-'}</td>
+                <td>${s.setup || s.strategy_name}</td>
+                <td>$${s.price.toFixed(2)}</td>
+                <td>${s.stop_loss ? '$' + s.stop_loss.toFixed(2) : '-'}</td>
+                <td>${s.target ? '$' + s.target.toFixed(2) : '-'}</td>
+                <td>${s.risk_reward ? s.risk_reward.toFixed(1) + ':1' : '-'}</td>
+                <td>${(s.confidence * 100).toFixed(0)}%</td>
+                <td>${s.candle_pattern || '-'}</td>
+            </tr>`);
+        }
+    }
+    tbody.innerHTML = rows.join('') || '<tr><td colspan="10">No signals found</td></tr>';
+}
+
+document.getElementById('pillars-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const params = new URLSearchParams({
+        symbol: document.getElementById('p-symbol').value,
+        price: document.getElementById('p-price').value,
+        change: document.getElementById('p-change').value,
+        rvol: document.getElementById('p-rvol').value,
+        float: document.getElementById('p-float').value || 0,
+        catalyst: document.getElementById('p-catalyst').value,
+    });
+    const resp = await fetch(`/api/scan/pillars?${params}`);
+    const data = await resp.json();
+    let html = `<h3>${data.symbol} — ${data.pillars_met}/5 Pillars ${data.passed ? '✅ PASS' : '❌ FAIL'}</h3><ul>`;
+    for (const [key, info] of Object.entries(data.pillar_details || {})) {
+        const icon = info.met ? '✅' : '❌';
+        html += `<li>${icon} <strong>${key}</strong>: ${info.value}${info.need ? ' (need: ' + info.need + ')' : ''}</li>`;
+    }
+    html += '</ul>';
+    if (data.catalyst_tier) html += `<p>Catalyst Tier: <strong>${data.catalyst_tier}</strong></p>`;
+    document.getElementById('pillars-result').innerHTML = html;
+});
+
+async function gradeCatalyst() {
+    const text = document.getElementById('catalyst-text').value;
+    const resp = await fetch('/api/catalyst/grade', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text})
+    });
+    const data = await resp.json();
+    const color = data.tradeable ? '#00ff00' : '#ff4444';
+    document.getElementById('catalyst-result').innerHTML = `
+        <strong style="color:${color}">Tier ${data.tier}: ${data.name}</strong><br>
+        ${data.description}<br>
+        <em>${data.reliability}</em><br>
+        ${data.tradeable ? '✅ Tradeable' : '❌ Skip or wait'}
+    `;
+}
+
+async function detectCandles() {
+    const symbol = document.getElementById('candle-symbol').value;
+    const interval = document.getElementById('candle-interval').value;
+    const resp = await fetch(`/api/candles/${symbol}?interval=${interval}`);
+    const data = await resp.json();
+    if (data.error) {
+        document.getElementById('candle-result').innerHTML = `<span style="color:#ff4444">${data.error}</span>`;
+        return;
+    }
+    let html = `<p>Latest: O:${data.latest_candle.open.toFixed(2)} H:${data.latest_candle.high.toFixed(2)} L:${data.latest_candle.low.toFixed(2)} C:${data.latest_candle.close.toFixed(2)}</p>`;
+    if (data.patterns.length === 0) {
+        html += '<p>No significant patterns detected</p>';
+    } else {
+        html += '<ul>';
+        for (const p of data.patterns) {
+            const color = p.direction === 'bullish' ? '#00ff00' : p.direction === 'bearish' ? '#ff4444' : '#888';
+            html += `<li style="color:${color}"><strong>${p.name}</strong> (${p.direction}, strength: ${(p.strength*100).toFixed(0)}%) — ${p.description}</li>`;
+        }
+        html += '</ul>';
+    }
+    document.getElementById('candle-result').innerHTML = html;
+}
+</script>
+{% endblock %}

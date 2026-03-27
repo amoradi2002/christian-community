@@ -24,10 +24,16 @@ class IndicatorSet:
     sma_20: float = 0.0
     sma_50: float = 0.0
     sma_200: float = 0.0
+    ema_8: float = 0.0
     ema_12: float = 0.0
     ema_26: float = 0.0
     atr_14: float = 0.0
     volume_sma_20: float = 0.0
+    volume_sma_50: float = 0.0
+    vwap: float = 0.0
+    relative_volume: float = 0.0
+    day_change_pct: float = 0.0
+    prev_close: float = 0.0
 
 
 @dataclass

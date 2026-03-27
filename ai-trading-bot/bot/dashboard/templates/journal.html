@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Trade Journal{% endblock %}
+{% block content %}
+<h1>Trade Journal</h1>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Weekly Review</h2>
+    <div id="weekly-review">Loading...</div>
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Log New Trade</h2>
+    <form id="log-trade-form" class="form-grid">
+        <div class="form-row">
+            <label>Symbol: <input type="text" id="j-symbol" placeholder="AAPL" required></label>
+            <label>Style:
+                <select id="j-style">
+                    <option value="day">Day Trade</option>
+                    <option value="swing">Swing Trade</option>
+                    <option value="options">Options</option>
+                </select>
+            </label>
+            <label>Direction:
+                <select id="j-direction">
+                    <option value="long">Long</option>
+                    <option value="short">Short</option>
+                </select>
+            </label>
+        </div>
+        <div class="form-row">
+            <label>Setup: <input type="text" id="j-setup" placeholder="Pullback, Gap and Go, etc."></label>
+            <label>Entry Price: <input type="number" id="j-entry" step="0.01" required></label>
+            <label>Shares: <input type="number" id="j-shares" step="0.01"></label>
+        </div>
+        <div class="form-row">
+            <label>Stop Loss: <input type="number" id="j-stop" step="0.01"></label>
+            <label>Target: <input type="number" id="j-target" step="0.01"></label>
+            <label>Catalyst: <input type="text" id="j-catalyst" placeholder="Earnings beat, FDA..."></label>
+        </div>
+        <div class="form-row">
+            <label style="flex: 1;">Why I entered: <input type="text" id="j-why" placeholder="Clean pullback to 8 EMA on volume..."></label>
+        </div>
+        <button type="submit" class="btn btn-primary">Log Trade</button>
+    </form>
+    <div id="log-result" style="margin-top: 10px;"></div>
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Close Trade</h2>
+    <form id="close-trade-form" class="form-grid">
+        <div class="form-row">
+            <label>Trade ID: <input type="number" id="c-id" required></label>
+            <label>Exit Price: <input type="number" id="c-exit" step="0.01" required></label>
+            <label>Emotion:
+                <select id="c-emotion">
+                    <option value="Calm">Calm</option>
+                    <option value="Confident">Confident</option>
+                    <option value="FOMO">FOMO</option>
+                    <option value="Revenge">Revenge</option>
+                    <option value="Anxious">Anxious</option>
+                </select>
+            </label>
+        </div>
+        <div class="form-row">
+            <label>Why I exited: <input type="text" id="c-why-exit"></label>
+            <label>Lesson: <input type="text" id="c-lesson" placeholder="One sentence lesson..."></label>
+        </div>
+        <div class="form-row">
+            <label>Process Score (1-5): <input type="number" id="c-process" min="1" max="5" value="3"></label>
+            <label>Result Score (1-5): <input type="number" id="c-result" min="1" max="5" value="3"></label>
+        </div>
+        <button type="submit" class="btn btn-primary">Close Trade</button>
+    </form>
+    <div id="close-result" style="margin-top: 10px;"></div>
+</div>
+
+<div class="card">
+    <h2>Recent Trades</h2>
+    <div class="filter-row" style="margin-bottom: 10px;">
+        <button onclick="loadTrades('')" class="btn">All</button>
+        <button onclick="loadTrades('open')" class="btn">Open</button>
+        <button onclick="loadTrades('closed')" class="btn">Closed</button>
+    </div>
+    <table id="trades-table" class="data-table">
+        <thead>
+            <tr><th>ID</th><th>Date</th><th>Symbol</th><th>Style</th><th>Setup</th>
+                <th>Entry</th><th>Exit</th><th>P&L</th><th>R</th><th>Score</th><th>Status</th></tr>
+        </thead>
+        <tbody id="trades-body"></tbody>
+    </table>
+</div>
+
+<script>
+async function loadReview() {
+    const resp = await fetch('/api/journal/review');
+    const data = await resp.json();
+    const div = document.getElementById('weekly-review');
+    if (data.total_trades === 0) {
+        div.innerHTML = '<p>' + (data.message || 'No trades this week') + '</p>';
+        return;
+    }
+    div.innerHTML = `
+        <div class="stats-grid">
+            <div class="stat"><span class="stat-value">${data.total_trades}</span><span class="stat-label">Trades</span></div>
+            <div class="stat"><span class="stat-value">${data.win_rate}%</span><span class="stat-label">Win Rate</span></div>
+            <div class="stat"><span class="stat-value" style="color:${data.total_pnl>=0?'#00ff00':'#ff4444'}">$${data.total_pnl.toFixed(2)}</span><span class="stat-label">P&L</span></div>
+            <div class="stat"><span class="stat-value">${data.avg_r_winner.toFixed(2)}R</span><span class="stat-label">Avg Winner</span></div>
+            <div class="stat"><span class="stat-value">${data.avg_r_loser.toFixed(2)}R</span><span class="stat-label">Avg Loser</span></div>
+            <div class="stat"><span class="stat-value">${data.avg_process_score.toFixed(1)}/5</span><span class="stat-label">Process</span></div>
+        </div>
+        ${data.rules_broken.length ? '<p style="color:#ff4444">Rules broken: ' + data.rules_broken.join(', ') + '</p>' : ''}
+    `;
+}
+
+async function loadTrades(status) {
+    const url = status ? `/api/journal?status=${status}` : '/api/journal';
+    const resp = await fetch(url);
+    const trades = await resp.json();
+    const tbody = document.getElementById('trades-body');
+    tbody.innerHTML = trades.map(t => `
+        <tr>
+            <td>${t.id}</td><td>${t.date}</td><td><strong>${t.symbol}</strong></td>
+            <td>${t.style}</td><td>${t.setup}</td>
+            <td>$${t.entry_price.toFixed(2)}</td>
+            <td>${t.exit_price ? '$' + t.exit_price.toFixed(2) : '-'}</td>
+            <td style="color:${t.pnl_dollars>=0?'#00ff00':'#ff4444'}">${t.status==='closed' ? '$'+t.pnl_dollars.toFixed(2) : '-'}</td>
+            <td>${t.status==='closed' ? t.r_multiple.toFixed(2)+'R' : '-'}</td>
+            <td>${t.status==='closed' ? t.total_score+'/10' : '-'}</td>
+            <td><span class="badge badge-${t.status==='open'?'warning':'success'}">${t.status}</span></td>
+        </tr>
+    `).join('');
+}
+
+document.getElementById('log-trade-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const resp = await fetch('/api/journal/log', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            symbol: document.getElementById('j-symbol').value,
+            style: document.getElementById('j-style').value,
+            direction: document.getElementById('j-direction').value,
+            setup: document.getElementById('j-setup').value,
+            entry_price: parseFloat(document.getElementById('j-entry').value),
+            shares: parseFloat(document.getElementById('j-shares').value) || 0,
+            stop_loss: parseFloat(document.getElementById('j-stop').value) || 0,
+            target: parseFloat(document.getElementById('j-target').value) || 0,
+            catalyst: document.getElementById('j-catalyst').value,
+            why_entered: document.getElementById('j-why').value,
+        })
+    });
+    const data = await resp.json();
+    document.getElementById('log-result').innerHTML = data.id
+        ? `<span style="color:#00ff00">Trade logged! ID: ${data.id}</span>`
+        : `<span style="color:#ff4444">${data.error}</span>`;
+    loadTrades('');
+});
+
+document.getElementById('close-trade-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('c-id').value;
+    const resp = await fetch(`/api/journal/${id}/close`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            exit_price: parseFloat(document.getElementById('c-exit').value),
+            why_exited: document.getElementById('c-why-exit').value,
+            lesson: document.getElementById('c-lesson').value,
+            emotion: document.getElementById('c-emotion').value,
+            process_score: parseInt(document.getElementById('c-process').value),
+            result_score: parseInt(document.getElementById('c-result').value),
+        })
+    });
+    const data = await resp.json();
+    document.getElementById('close-result').innerHTML = data.pnl_dollars !== undefined
+        ? `<span style="color:${data.pnl_dollars>=0?'#00ff00':'#ff4444'}">Closed! P&L: $${data.pnl_dollars.toFixed(2)} (${data.r_multiple.toFixed(2)}R) Score: ${data.total_score}/10</span>`
+        : `<span style="color:#ff4444">${data.error}</span>`;
+    loadTrades('');
+    loadReview();
+});
+
+loadReview();
+loadTrades('');
+</script>
+{% endblock %}
