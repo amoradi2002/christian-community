@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+{% block title %}Pre-Market Scanner{% endblock %}
+{% block content %}
+<h1>Pre-Market Scanner</h1>
+
+<!-- Status Banner -->
+<div class="card" id="status-banner" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <span id="market-status-dot" style="width: 12px; height: 12px; border-radius: 50%; display: inline-block;"></span>
+        <span id="market-status-text" style="font-size: 1.1rem; font-weight: 600;"></span>
+        <span id="countdown" style="color: #8b949e;"></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <span id="auto-refresh-label" style="color: #8b949e; font-size: 0.85rem;"></span>
+        <button class="btn" onclick="runManualScan()">Scan Now</button>
+    </div>
+</div>
+
+<!-- Overview Stats -->
+<div id="scan-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 20px;">
+    <div class="stat">
+        <span class="stat-label">Gappers Found</span>
+        <div class="stat-value" id="st-gappers">--</div>
+    </div>
+    <div class="stat">
+        <span class="stat-label">Avg Gap %</span>
+        <div class="stat-value" id="st-avg-gap">--</div>
+    </div>
+    <div class="stat">
+        <span class="stat-label">With Catalyst</span>
+        <div class="stat-value" id="st-catalyst-count">--</div>
+    </div>
+    <div class="stat">
+        <span class="stat-label">5-Pillar Pass</span>
+        <div class="stat-value" id="st-pillar-pass">--</div>
+    </div>
+</div>
+
+<!-- Premarket Movers Table -->
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Pre-Market Movers</h2>
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Symbol</th><th>Gap %</th><th>Vol Ratio</th><th>Catalyst</th>
+                    <th>Price</th><th>Prev Close</th><th>5 Pillars</th>
+                </tr>
+            </thead>
+            <tbody id="movers-body"></tbody>
+        </table>
+    </div>
+    <p id="movers-empty" style="display:none; color:#8b949e; padding: 1rem 0;">No premarket movers detected. Scan may not have run yet.</p>
+    <div id="movers-loading" style="color:#8b949e; padding: 1rem 0;">Loading scan results...</div>
+</div>
+
+<!-- Two-column: Earnings Today + Economic Calendar -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 20px;">
+    <!-- Earnings Today -->
+    <div class="card">
+        <h2>Earnings Today</h2>
+        <table class="data-table">
+            <thead>
+                <tr><th>Symbol</th><th>Time</th><th>Est EPS</th><th>Whisper</th></tr>
+            </thead>
+            <tbody id="earnings-body"></tbody>
+        </table>
+        <p id="earnings-empty" style="display:none; color:#8b949e; padding: 1rem 0;">No earnings reports today.</p>
+        <div id="earnings-loading" style="color:#8b949e; padding: 1rem 0;">Loading...</div>
+    </div>
+
+    <!-- Economic Calendar -->
+    <div class="card">
+        <h2>Economic Calendar</h2>
+        <div id="econ-list"></div>
+        <p id="econ-empty" style="display:none; color:#8b949e; padding: 1rem 0;">No high-impact events upcoming.</p>
+        <div id="econ-loading" style="color:#8b949e; padding: 1rem 0;">Loading...</div>
+    </div>
+</div>
+
+<!-- Gap Distribution Chart -->
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Gap Distribution</h2>
+    <canvas id="gap-chart" height="180"></canvas>
+</div>
+
+<script>
+/* ------------------------------------------------------------------ */
+/*  Market status helpers                                              */
+/* ------------------------------------------------------------------ */
+let autoRefreshTimer = null;
+let gapChart = null;
+
+function getMarketPhase() {
+    const now = new Date();
+    // Convert to ET (approximate: UTC-5 standard, UTC-4 DST)
+    const utcH = now.getUTCHours();
+    const utcM = now.getUTCMinutes();
+    // Determine if DST (March second Sunday - November first Sunday, rough)
+    const month = now.getUTCMonth(); // 0-based
+    const isDST = month >= 2 && month <= 10; // rough approximation
+    const offset = isDST ? 4 : 5;
+    let etH = utcH - offset;
+    let etM = utcM;
+    if (etH < 0) etH += 24;
+    const etMinutes = etH * 60 + etM;
+
+    // Pre-market: 4:00 AM - 9:30 AM ET
+    const preOpen = 4 * 60;       // 240
+    const marketOpen = 9 * 60 + 30; // 570
+    const marketClose = 16 * 60;    // 960
+
+    if (etMinutes >= preOpen && etMinutes < marketOpen) {
+        return { phase: 'premarket', etH, etM, minutesToOpen: marketOpen - etMinutes };
+    } else if (etMinutes >= marketOpen && etMinutes < marketClose) {
+        return { phase: 'market_open', etH, etM, minutesToOpen: 0 };
+    } else {
+        return { phase: 'closed', etH, etM, minutesToOpen: null };
+    }
+}
+
+function updateStatusBanner() {
+    const info = getMarketPhase();
+    const dot = document.getElementById('market-status-dot');
+    const text = document.getElementById('market-status-text');
+    const cd = document.getElementById('countdown');
+    const refreshLabel = document.getElementById('auto-refresh-label');
+
+    if (info.phase === 'premarket') {
+        dot.style.background = '#d29922';
+        text.textContent = 'Pre-Market Active';
+        text.style.color = '#d29922';
+        const hrs = Math.floor(info.minutesToOpen / 60);
+        const mins = info.minutesToOpen % 60;
+        cd.textContent = `Market opens in ${hrs}h ${mins}m`;
+        refreshLabel.textContent = 'Auto-refresh: every 60s';
+        startAutoRefresh();
+    } else if (info.phase === 'market_open') {
+        dot.style.background = '#3fb950';
+        text.textContent = 'Market Open';
+        text.style.color = '#3fb950';
+        cd.textContent = '';
+        refreshLabel.textContent = 'Auto-refresh: paused (market open)';
+        stopAutoRefresh();
+    } else {
+        dot.style.background = '#8b949e';
+        text.textContent = 'Market Closed';
+        text.style.color = '#8b949e';
+        cd.textContent = 'Pre-market starts at 4:00 AM ET';
+        refreshLabel.textContent = 'Auto-refresh: off';
+        stopAutoRefresh();
+    }
+}
+
+function startAutoRefresh() {
+    if (autoRefreshTimer) return;
+    autoRefreshTimer = setInterval(() => {
+        const info = getMarketPhase();
+        if (info.phase === 'premarket') {
+            loadAllData();
+            updateStatusBanner();
+        } else {
+            stopAutoRefresh();
+            updateStatusBanner();
+        }
+    }, 60000);
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Manual scan                                                        */
+/* ------------------------------------------------------------------ */
+async function runManualScan() {
+    const btn = document.querySelector('#status-banner .btn');
+    btn.textContent = 'Scanning...';
+    btn.disabled = true;
+    try {
+        await loadAllData();
+    } finally {
+        btn.textContent = 'Scan Now';
+        btn.disabled = false;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Premarket Movers                                                   */
+/* ------------------------------------------------------------------ */
+async function loadMovers() {
+    try {
+        const resp = await fetch('/api/screener?signal=top_gainers');
+        const data = await resp.json();
+
+        const movers = Array.isArray(data) ? data : (data.results || data.stocks || []);
+        const loading = document.getElementById('movers-loading');
+        loading.style.display = 'none';
+
+        if (!movers.length) {
+            document.getElementById('movers-empty').style.display = 'block';
+            updateScanStats([]);
+            return;
+        }
+        document.getElementById('movers-empty').style.display = 'none';
+
+        const tbody = document.getElementById('movers-body');
+        tbody.innerHTML = movers.map(m => {
+            const gap = parseFloat(m.gap_pct || m.change_pct || m.Change || 0);
+            const volRatio = parseFloat(m.volume_ratio || m.relative_volume || m.rvol || 0);
+            const price = parseFloat(m.price || m.Price || m.last || 0);
+            const prevClose = parseFloat(m.prev_close || m.previous_close || 0);
+            const catalyst = m.catalyst || m.Catalyst || '--';
+            const symbol = m.symbol || m.Symbol || m.Ticker || '';
+            const pillars = m.pillars_passed || m.pillars || null;
+
+            let pillarHtml;
+            if (pillars !== null && pillars !== undefined) {
+                const count = typeof pillars === 'number' ? pillars : (pillars.passed || 0);
+                const color = count >= 4 ? '#3fb950' : count >= 3 ? '#d29922' : '#f85149';
+                pillarHtml = `<span style="color:${color}; font-weight:600;">${count}/5</span>`;
+            } else {
+                pillarHtml = '<span style="color:#8b949e;">--</span>';
+            }
+
+            return `<tr>
+                <td><strong>${symbol}</strong></td>
+                <td style="color:${gap >= 0 ? '#3fb950' : '#f85149'}; font-weight:600;">${gap >= 0 ? '+' : ''}${gap.toFixed(1)}%</td>
+                <td>${volRatio ? volRatio.toFixed(1) + 'x' : '--'}</td>
+                <td>${catalyst}</td>
+                <td>$${price.toFixed(2)}</td>
+                <td>${prevClose ? '$' + prevClose.toFixed(2) : '--'}</td>
+                <td>${pillarHtml}</td>
+            </tr>`;
+        }).join('');
+
+        updateScanStats(movers);
+        renderGapChart(movers);
+    } catch (e) {
+        console.error('loadMovers error:', e);
+        document.getElementById('movers-loading').textContent = 'Error loading scan data.';
+    }
+}
+
+function updateScanStats(movers) {
+    document.getElementById('st-gappers').textContent = movers.length;
+
+    if (movers.length) {
+        const gaps = movers.map(m => Math.abs(parseFloat(m.gap_pct || m.change_pct || m.Change || 0)));
+        const avg = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+        document.getElementById('st-avg-gap').textContent = avg.toFixed(1) + '%';
+
+        const withCatalyst = movers.filter(m => m.catalyst || m.Catalyst).length;
+        document.getElementById('st-catalyst-count').textContent = withCatalyst;
+
+        const pillarPass = movers.filter(m => {
+            const p = m.pillars_passed || m.pillars;
+            return p !== null && p !== undefined && (typeof p === 'number' ? p : (p.passed || 0)) >= 4;
+        }).length;
+        document.getElementById('st-pillar-pass').textContent = pillarPass;
+    } else {
+        document.getElementById('st-avg-gap').textContent = '--';
+        document.getElementById('st-catalyst-count').textContent = '--';
+        document.getElementById('st-pillar-pass').textContent = '--';
+    }
+}
+
+function renderGapChart(movers) {
+    const gaps = movers.map(m => parseFloat(m.gap_pct || m.change_pct || m.Change || 0));
+    const symbols = movers.map(m => m.symbol || m.Symbol || m.Ticker || '');
+    const colors = gaps.map(g => g >= 0 ? '#3fb950' : '#f85149');
+
+    const ctx = document.getElementById('gap-chart').getContext('2d');
+    if (gapChart) gapChart.destroy();
+
+    gapChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: symbols,
+            datasets: [{
+                label: 'Gap %',
+                data: gaps,
+                backgroundColor: colors,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => (ctx.raw >= 0 ? '+' : '') + ctx.raw.toFixed(1) + '%' } }
+            },
+            scales: {
+                x: { ticks: { color: '#c9d1d9', font: { weight: 'bold' } }, grid: { color: '#21262d' } },
+                y: { ticks: { color: '#8b949e', callback: v => v + '%' }, grid: { color: '#21262d' } }
+            }
+        }
+    });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Earnings Today                                                     */
+/* ------------------------------------------------------------------ */
+async function loadEarnings() {
+    try {
+        const resp = await fetch('/api/earnings/calendar?days=1');
+        const data = await resp.json();
+
+        const events = Array.isArray(data) ? data : (data.events || []);
+        const loading = document.getElementById('earnings-loading');
+        loading.style.display = 'none';
+
+        if (!events.length) {
+            document.getElementById('earnings-empty').style.display = 'block';
+            return;
+        }
+        document.getElementById('earnings-empty').style.display = 'none';
+
+        const tbody = document.getElementById('earnings-body');
+        tbody.innerHTML = events.map(e => {
+            const timing = e.timing || e.time || e.when || '--';
+            const estEps = e.eps_estimate !== undefined ? '$' + parseFloat(e.eps_estimate).toFixed(2) : (e.est_eps || '--');
+            const whisper = e.whisper_number !== undefined ? '$' + parseFloat(e.whisper_number).toFixed(2) : (e.whisper || '--');
+            return `<tr>
+                <td><strong>${e.symbol || e.ticker || ''}</strong></td>
+                <td><span class="badge badge-hold">${timing}</span></td>
+                <td>${estEps}</td>
+                <td>${whisper}</td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        console.error('loadEarnings error:', e);
+        document.getElementById('earnings-loading').textContent = 'Error loading earnings.';
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Economic Calendar                                                  */
+/* ------------------------------------------------------------------ */
+async function loadEconCalendar() {
+    try {
+        // Try to load from a generic news/events endpoint
+        const resp = await fetch('/api/news');
+        const data = await resp.json();
+
+        const loading = document.getElementById('econ-loading');
+        loading.style.display = 'none';
+
+        const events = Array.isArray(data) ? data : (data.events || data.economic || []);
+
+        // Filter for high-impact economic items if available
+        const econEvents = events.filter(e =>
+            e.type === 'economic' || e.impact === 'high' || e.category === 'economic'
+        );
+
+        const displayEvents = econEvents.length ? econEvents : events.slice(0, 8);
+
+        if (!displayEvents.length) {
+            document.getElementById('econ-empty').style.display = 'block';
+            return;
+        }
+        document.getElementById('econ-empty').style.display = 'none';
+
+        const listDiv = document.getElementById('econ-list');
+        listDiv.innerHTML = displayEvents.map(ev => {
+            const title = ev.title || ev.headline || ev.event || ev.name || 'Event';
+            const time = ev.time || ev.date || '';
+            const impact = ev.impact || '';
+            const isHighImpact = impact === 'high' || (title && /fed|fomc|cpi|ppi|jobs|nonfarm|gdp|rate/i.test(title));
+
+            return `<div style="padding: 0.6rem 0; border-bottom: 1px solid #21262d; display: flex; align-items: center; gap: 0.8rem;">
+                ${isHighImpact ?
+                    '<span style="background: rgba(248,81,73,0.2); color: #f85149; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; white-space: nowrap;">CAUTION</span>' :
+                    '<span style="background: rgba(210,153,34,0.2); color: #d29922; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">EVENT</span>'
+                }
+                <div style="flex: 1;">
+                    <div style="font-weight: 500; color: #e6edf3;">${title}</div>
+                    ${time ? '<div style="font-size: 0.8rem; color: #8b949e;">' + time + '</div>' : ''}
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        console.error('loadEconCalendar error:', e);
+        document.getElementById('econ-loading').textContent = 'Unable to load events.';
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Load all data                                                      */
+/* ------------------------------------------------------------------ */
+async function loadAllData() {
+    await Promise.all([
+        loadMovers(),
+        loadEarnings(),
+        loadEconCalendar(),
+    ]);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Init                                                               */
+/* ------------------------------------------------------------------ */
+updateStatusBanner();
+loadAllData();
+
+// Update status banner every minute
+setInterval(updateStatusBanner, 60000);
+</script>
+{% endblock %}
