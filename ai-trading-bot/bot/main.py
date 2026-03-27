@@ -12,6 +12,7 @@ Usage:
     python -m bot.main train        # Train the AI model
     python -m bot.main dashboard    # Start dashboard only
     python -m bot.main learn <url>  # Learn strategies from a YouTube video
+    python -m bot.main live          # Interactive mode - analyze tickers, manage watchlist, log trades
     python -m bot.main profile      # Set up your trading profile (budget, risk, goals)
     python -m bot.main setup        # Interactive setup for Discord/Telegram/Email
 """
@@ -482,6 +483,9 @@ def main():
                 print("Usage: python -m bot.main learn <youtube-url>")
                 sys.exit(1)
             run_learn(sys.argv[2])
+        elif command == "live":
+            from bot.interactive import run_interactive
+            run_interactive()
         elif command == "profile":
             run_profile()
         elif command == "setup":
@@ -495,6 +499,7 @@ def main():
             print("  intel     - Run intelligence scan")
             print("  sectors   - Run sector rotation analysis")
             print("  journal   - Weekly trade journal review")
+            print("  live      - Interactive mode (real-time analysis)")
             print("  train     - Train AI model")
             print("  dashboard - Start web dashboard")
             print("  learn     - Learn from YouTube <url>")
