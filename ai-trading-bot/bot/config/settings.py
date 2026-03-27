@@ -39,6 +39,12 @@ def load_config(config_path=None):
     if not os.path.isabs(db_path):
         config["database"]["path"] = str(BASE_DIR / db_path)
 
+    # Auto-fallback: if provider is alpaca but no keys, switch to yfinance
+    data_cfg = config.get("data", {})
+    if data_cfg.get("provider") == "alpaca":
+        if not os.getenv("ALPACA_API_KEY"):
+            data_cfg["provider"] = "yfinance"
+
     return config
 
 
