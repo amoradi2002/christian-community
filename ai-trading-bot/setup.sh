@@ -36,7 +36,11 @@ pip install -q --upgrade pip
 pip install -q -r requirements.txt
 echo "✓ Dependencies installed"
 
-# 4. Create .env file if it doesn't exist
+# 4. Create logs directory
+mkdir -p logs data
+echo "✓ Directories created"
+
+# 5. Create .env file if it doesn't exist
 if [ ! -f ".env" ]; then
     echo ""
     echo "========================================="
@@ -95,6 +99,32 @@ if [ ! -f ".env" ]; then
         read -p "   App Password: " EMAIL_PASS
     fi
 
+    echo ""
+
+    # Robinhood
+    echo "7. ROBINHOOD (options trading)"
+    echo "   Your Robinhood login credentials"
+    read -p "   Username/Email (Enter to skip): " RH_USER
+    if [ -n "$RH_USER" ]; then
+        read -sp "   Password: " RH_PASS
+        echo ""
+    fi
+
+    echo ""
+
+    # Interactive Brokers
+    echo "8. INTERACTIVE BROKERS (day trading)"
+    echo "   Download TWS: https://www.interactivebrokers.com/en/trading/tws.php"
+    echo "   Enable API in TWS: Edit > Global Config > API > Settings"
+    read -p "   Account ID (Enter to skip): " IB_ACCT
+
+    echo ""
+
+    # TradingView
+    echo "9. TRADINGVIEW WEBHOOKS"
+    echo "   Set up alerts in TradingView pointing to your bot"
+    read -p "   Webhook Secret (Enter to skip): " TV_SECRET
+
     # Write .env
     cat > .env << EOF
 # Alpaca Markets (FREE — real-time data + paper trading)
@@ -119,6 +149,20 @@ TELEGRAM_CHAT_ID=${TG_CHAT}
 SMTP_SENDER=${EMAIL}
 SMTP_PASSWORD=${EMAIL_PASS}
 SMTP_RECIPIENT=${EMAIL}
+
+# Robinhood (Options Trading)
+ROBINHOOD_USERNAME=${RH_USER}
+ROBINHOOD_PASSWORD=${RH_PASS}
+ROBINHOOD_MFA_CODE=
+
+# Interactive Brokers (Day Trading)
+IB_HOST=127.0.0.1
+IB_PORT=7497
+IB_CLIENT_ID=1
+IB_ACCOUNT=${IB_ACCT}
+
+# TradingView Webhooks
+TRADINGVIEW_WEBHOOK_SECRET=${TV_SECRET}
 EOF
 
     echo "✓ API keys saved to .env"
@@ -126,7 +170,7 @@ else
     echo "✓ .env file exists (edit manually to update keys)"
 fi
 
-# 5. Initialize database
+# 6. Initialize database
 echo ""
 echo "Initializing database..."
 python3 -c "
@@ -141,14 +185,22 @@ init_knowledge_tables()
 print('✓ Database initialized')
 "
 
-# 6. Set up trading profile
+# 7. Set up logging
+echo ""
+python3 -c "
+from bot.utils.logging_config import setup_logging
+setup_logging()
+print('✓ Logging configured (logs/ directory)')
+"
+
+# 8. Set up trading profile
 echo ""
 read -p "Set up your trading profile now? (y/n): " SETUP_PROFILE
 if [ "$SETUP_PROFILE" = "y" ]; then
     python3 -m bot.main profile
 fi
 
-# 7. Test connections
+# 9. Test connections
 echo ""
 echo "Testing connections..."
 python3 -c "
@@ -198,16 +250,42 @@ if tg and tg != 'None':
 else:
     checks.append(('Telegram', False, 'No token'))
 
+# Robinhood
+rh = os.getenv('ROBINHOOD_USERNAME', '')
+if rh and rh != 'None':
+    checks.append(('Robinhood (options)', True, 'Credentials configured'))
+else:
+    checks.append(('Robinhood', False, 'No credentials'))
+
+# Interactive Brokers
+ib = os.getenv('IB_ACCOUNT', '')
+if ib and ib != 'None':
+    checks.append(('Interactive Brokers (day trading)', True, f'Account: {ib}'))
+else:
+    checks.append(('Interactive Brokers', False, 'No account — configure TWS'))
+
 for name, ok, detail in checks:
     icon = '✓' if ok else '✗'
     print(f'  {icon} {name}: {detail}')
 "
 
-# 8. Done!
+# 10. Run quick tests
+echo ""
+echo "Running tests..."
+python3 -m pytest tests/ -q --no-header 2>/dev/null || echo "  (Some tests may need API keys to pass)"
+
+# 11. Done!
 echo ""
 echo "========================================="
 echo "  Setup Complete!"
 echo "========================================="
+echo ""
+echo "  Brokers configured:"
+echo "    Alpaca     — Paper trading + real-time data"
+echo "    Robinhood  — Options trading"
+echo "    Fidelity   — Swing trades (CSV import)"
+echo "    IB/TWS     — Day trading"
+echo "    TradingView — Webhook alerts"
 echo ""
 echo "  Start the bot:"
 echo "    source venv/bin/activate"
@@ -219,6 +297,7 @@ echo "  Quick commands:"
 echo "    python -m bot.main scan          # Run a scan now"
 echo "    python -m bot.main premarket     # Pre-market scanner"
 echo "    python -m bot.main sentiment AAPL  # News sentiment"
+echo "    python -m bot.main backtest      # Backtest strategies"
 echo ""
 echo "  Or just text your Telegram bot — it handles everything."
 echo ""

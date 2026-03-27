@@ -23,10 +23,11 @@ def backtest_page():
             flash(f"Strategy '{strategy_name}' not found.", "error")
             return redirect(url_for("backtest.backtest_page"))
 
-        report = run_backtest(strategy, symbol, period=period)
-        if report and "equity_curve" in report:
+        result = run_backtest(strategy, symbol, period=period)
+        if result is not None:
+            report = result.to_dict()
             # Limit equity curve for JSON rendering
-            curve = report["equity_curve"]
+            curve = report.get("equity_curve", [])
             if len(curve) > 200:
                 step = len(curve) // 200
                 report["equity_curve_chart"] = curve[::step]

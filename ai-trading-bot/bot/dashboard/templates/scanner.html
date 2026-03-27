@@ -1,167 +1,260 @@
 {% extends "base.html" %}
-{% block title %}Trade Scanner{% endblock %}
+{% block title %}Scanner - TradeBot{% endblock %}
+{% block extra_css %}
+<style>
+    .scan-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .filter-bar {
+        display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+        padding: 12px 16px; background: var(--bg); border-radius: var(--radius);
+        border: 1px solid var(--border); margin-bottom: 16px;
+    }
+    .filter-bar label { font-size: 12px; color: var(--text-muted); }
+    .filter-bar select, .filter-bar input { padding: 6px 10px; font-size: 12px; }
+    .signal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .signal-card {
+        background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 16px; position: relative;
+        transition: border-color 0.15s, transform 0.15s;
+    }
+    .signal-card:hover { border-color: var(--accent-light); transform: translateY(-2px); }
+    .signal-card-header {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        margin-bottom: 12px;
+    }
+    .signal-symbol { font-size: 18px; font-weight: 700; color: var(--text-heading); }
+    .signal-action {
+        padding: 4px 12px; border-radius: 12px; font-size: 12px;
+        font-weight: 700; text-transform: uppercase;
+    }
+    .signal-action-buy { background: var(--green-dim); color: var(--green); }
+    .signal-action-sell { background: var(--red-dim); color: var(--red); }
+    .signal-strategy { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    .signal-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .signal-meta-item { }
+    .signal-meta-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .signal-meta-value { font-size: 14px; font-weight: 600; color: var(--text-heading); }
+    .signal-conf-bar {
+        height: 8px; background: var(--bg); border-radius: 4px;
+        overflow: hidden; margin-top: 8px;
+    }
+    .signal-conf-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+    .signal-conf-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .signal-pattern {
+        margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
+        font-size: 12px; color: var(--text-muted);
+    }
+    .signal-pattern span { color: var(--yellow); font-weight: 500; }
+    .watchlist-input { display: flex; gap: 8px; }
+    .watchlist-input input { flex: 1; }
+    .watchlist-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .watchlist-tag {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 4px 10px; background: var(--accent); border-radius: 12px;
+        font-size: 12px; font-weight: 500; color: var(--text);
+    }
+    .watchlist-tag button {
+        background: none; border: none; color: var(--red);
+        cursor: pointer; font-size: 14px; padding: 0; line-height: 1;
+    }
+    #scanStatus { font-size: 13px; margin-top: 8px; min-height: 20px; }
+</style>
+{% endblock %}
+
 {% block content %}
-<h1>Trade Scanner</h1>
-
-<div class="card" style="margin-bottom: 20px;">
-    <h2>Scan Controls</h2>
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="runScan('day')" class="btn btn-primary">Day Trade Scan</button>
-        <button onclick="runScan('swing')" class="btn btn-primary">Swing Trade Scan</button>
-        <button onclick="runScan('full')" class="btn">Full Scan (All Strategies)</button>
+<div class="page-header">
+    <h1 class="page-title">Scanner</h1>
+    <div class="scan-controls">
+        <button class="btn btn-success" onclick="runScan('full')" id="btnFullScan">Full Scan</button>
+        <button class="btn btn-primary" onclick="runScan('day')">Day Scan</button>
+        <button class="btn btn-primary" onclick="runScan('swing')">Swing Scan</button>
     </div>
-    <div id="scan-status" style="margin-top: 10px;"></div>
 </div>
+<div id="scanStatus"></div>
 
-<div class="card" style="margin-bottom: 20px;">
-    <h2>5 Pillars Check (Day Trade)</h2>
-    <p>Every day trade must meet ALL 5: 10%+ move, 5x RVOL, S/A catalyst, $2-$20 price, &lt;10M float</p>
-    <form id="pillars-form" class="form-grid">
-        <div class="form-row">
-            <label>Symbol: <input type="text" id="p-symbol" placeholder="XYZ" required></label>
-            <label>Price: <input type="number" id="p-price" step="0.01" required></label>
-            <label>Day Change %: <input type="number" id="p-change" step="0.1" required></label>
-        </div>
-        <div class="form-row">
-            <label>Relative Volume (x): <input type="number" id="p-rvol" step="0.1" required></label>
-            <label>Float (M shares): <input type="number" id="p-float" step="0.1"></label>
-            <label>Catalyst: <input type="text" id="p-catalyst" placeholder="FDA approval, earnings beat..."></label>
-        </div>
-        <button type="submit" class="btn btn-primary">Check 5 Pillars</button>
-    </form>
-    <div id="pillars-result" style="margin-top: 15px;"></div>
-</div>
-
-<div class="card" style="margin-bottom: 20px;">
-    <h2>Catalyst Grader</h2>
-    <div style="display: flex; gap: 10px;">
-        <input type="text" id="catalyst-text" placeholder="Paste news headline..." style="flex: 1;">
-        <button onclick="gradeCatalyst()" class="btn btn-primary">Grade</button>
+<!-- Watchlist Manager -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+        <span class="card-title">Watchlist</span>
     </div>
-    <div id="catalyst-result" style="margin-top: 10px;"></div>
+    <div class="watchlist-input">
+        <input type="text" id="watchlistInput" placeholder="Add symbol (e.g. AAPL)" onkeypress="if(event.key==='Enter')addWatchlist()">
+        <button class="btn btn-primary btn-sm" onclick="addWatchlist()">Add</button>
+    </div>
+    <div class="watchlist-tags" id="watchlistTags"></div>
 </div>
 
-<div class="card" style="margin-bottom: 20px;">
-    <h2>Candle Pattern Detection</h2>
-    <div style="display: flex; gap: 10px;">
-        <input type="text" id="candle-symbol" placeholder="Symbol" style="width: 100px;">
-        <select id="candle-interval">
-            <option value="1d">Daily</option>
-            <option value="1h">1 Hour</option>
-            <option value="5m">5 Min</option>
+<!-- Filters -->
+<div class="filter-bar">
+    <div>
+        <label>Action</label><br>
+        <select id="filterAction" onchange="applyFilters()">
+            <option value="all">All</option>
+            <option value="buy">BUY</option>
+            <option value="sell">SELL</option>
         </select>
-        <button onclick="detectCandles()" class="btn btn-primary">Detect Patterns</button>
     </div>
-    <div id="candle-result" style="margin-top: 10px;"></div>
+    <div>
+        <label>Style</label><br>
+        <select id="filterStyle" onchange="applyFilters()">
+            <option value="all">All</option>
+            <option value="day">Day Trade</option>
+            <option value="swing">Swing Trade</option>
+        </select>
+    </div>
+    <div>
+        <label>Min Confidence</label><br>
+        <input type="range" id="filterConfidence" min="0" max="100" value="0" oninput="document.getElementById('confLabel').textContent=this.value+'%';applyFilters();" style="width:120px;">
+        <span id="confLabel" style="font-size:12px;color:var(--text-muted);">0%</span>
+    </div>
+    <div>
+        <label>Sort By</label><br>
+        <select id="sortBy" onchange="applyFilters()">
+            <option value="confidence">Confidence</option>
+            <option value="symbol">Symbol</option>
+            <option value="time">Time</option>
+        </select>
+    </div>
+    <div style="margin-left:auto;">
+        <span class="text-muted" style="font-size:12px;" id="signalCountLabel">0 signals</span>
+    </div>
 </div>
 
-<div class="card">
-    <h2>Scan Results</h2>
-    <table class="data-table">
-        <thead>
-            <tr><th>Symbol</th><th>Action</th><th>Style</th><th>Setup</th><th>Price</th>
-                <th>Stop</th><th>Target</th><th>R:R</th><th>Confidence</th><th>Candle</th></tr>
-        </thead>
-        <tbody id="scan-results"></tbody>
-    </table>
+<!-- Signal Cards Grid -->
+<div class="signal-grid" id="signalGrid">
+    <div class="empty-state" style="grid-column:1/-1;">Loading signals...</div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-async function runScan(type) {
-    document.getElementById('scan-status').innerHTML = '<em>Scanning...</em>';
-    const url = type === 'full' ? '/api/scan' : `/api/scan/${type}`;
-    try {
-        const resp = await fetch(url);
-        const data = await resp.json();
-        document.getElementById('scan-status').innerHTML = `Found ${data.total || 0} signals`;
-        displaySignals(data.signals || {});
-    } catch (e) {
-        document.getElementById('scan-status').innerHTML = `<span style="color:#ff4444">Error: ${e}</span>`;
-    }
-}
+    let allSignals = [];
+    let watchlist = JSON.parse(localStorage.getItem('watchlist') || '["SPY","AAPL","TSLA","NVDA","AMZN","META"]');
 
-function displaySignals(signals) {
-    const tbody = document.getElementById('scan-results');
-    let rows = [];
-    for (const [sym, sigs] of Object.entries(signals)) {
-        for (const s of sigs) {
-            const color = s.action === 'BUY' ? '#00ff00' : '#ff4444';
-            rows.push(`<tr>
-                <td><strong>${s.symbol}</strong></td>
-                <td style="color:${color}">${s.action}</td>
-                <td>${s.style || '-'}</td>
-                <td>${s.setup || s.strategy_name}</td>
-                <td>$${s.price.toFixed(2)}</td>
-                <td>${s.stop_loss ? '$' + s.stop_loss.toFixed(2) : '-'}</td>
-                <td>${s.target ? '$' + s.target.toFixed(2) : '-'}</td>
-                <td>${s.risk_reward ? s.risk_reward.toFixed(1) + ':1' : '-'}</td>
-                <td>${(s.confidence * 100).toFixed(0)}%</td>
-                <td>${s.candle_pattern || '-'}</td>
-            </tr>`);
+    function renderWatchlist() {
+        document.getElementById('watchlistTags').innerHTML = watchlist.map(s =>
+            '<span class="watchlist-tag">' + s + ' <button onclick="removeWatchlist(\'' + s + '\')">&times;</button></span>'
+        ).join('');
+    }
+
+    function addWatchlist() {
+        const input = document.getElementById('watchlistInput');
+        const sym = input.value.trim().toUpperCase();
+        if (sym && !watchlist.includes(sym)) {
+            watchlist.push(sym);
+            localStorage.setItem('watchlist', JSON.stringify(watchlist));
+            renderWatchlist();
         }
+        input.value = '';
     }
-    tbody.innerHTML = rows.join('') || '<tr><td colspan="10">No signals found</td></tr>';
-}
 
-document.getElementById('pillars-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const params = new URLSearchParams({
-        symbol: document.getElementById('p-symbol').value,
-        price: document.getElementById('p-price').value,
-        change: document.getElementById('p-change').value,
-        rvol: document.getElementById('p-rvol').value,
-        float: document.getElementById('p-float').value || 0,
-        catalyst: document.getElementById('p-catalyst').value,
-    });
-    const resp = await fetch(`/api/scan/pillars?${params}`);
-    const data = await resp.json();
-    let html = `<h3>${data.symbol} — ${data.pillars_met}/5 Pillars ${data.passed ? '✅ PASS' : '❌ FAIL'}</h3><ul>`;
-    for (const [key, info] of Object.entries(data.pillar_details || {})) {
-        const icon = info.met ? '✅' : '❌';
-        html += `<li>${icon} <strong>${key}</strong>: ${info.value}${info.need ? ' (need: ' + info.need + ')' : ''}</li>`;
+    function removeWatchlist(sym) {
+        watchlist = watchlist.filter(s => s !== sym);
+        localStorage.setItem('watchlist', JSON.stringify(watchlist));
+        renderWatchlist();
     }
-    html += '</ul>';
-    if (data.catalyst_tier) html += `<p>Catalyst Tier: <strong>${data.catalyst_tier}</strong></p>`;
-    document.getElementById('pillars-result').innerHTML = html;
-});
 
-async function gradeCatalyst() {
-    const text = document.getElementById('catalyst-text').value;
-    const resp = await fetch('/api/catalyst/grade', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({text})
-    });
-    const data = await resp.json();
-    const color = data.tradeable ? '#00ff00' : '#ff4444';
-    document.getElementById('catalyst-result').innerHTML = `
-        <strong style="color:${color}">Tier ${data.tier}: ${data.name}</strong><br>
-        ${data.description}<br>
-        <em>${data.reliability}</em><br>
-        ${data.tradeable ? '✅ Tradeable' : '❌ Skip or wait'}
-    `;
-}
-
-async function detectCandles() {
-    const symbol = document.getElementById('candle-symbol').value;
-    const interval = document.getElementById('candle-interval').value;
-    const resp = await fetch(`/api/candles/${symbol}?interval=${interval}`);
-    const data = await resp.json();
-    if (data.error) {
-        document.getElementById('candle-result').innerHTML = `<span style="color:#ff4444">${data.error}</span>`;
-        return;
-    }
-    let html = `<p>Latest: O:${data.latest_candle.open.toFixed(2)} H:${data.latest_candle.high.toFixed(2)} L:${data.latest_candle.low.toFixed(2)} C:${data.latest_candle.close.toFixed(2)}</p>`;
-    if (data.patterns.length === 0) {
-        html += '<p>No significant patterns detected</p>';
-    } else {
-        html += '<ul>';
-        for (const p of data.patterns) {
-            const color = p.direction === 'bullish' ? '#00ff00' : p.direction === 'bearish' ? '#ff4444' : '#888';
-            html += `<li style="color:${color}"><strong>${p.name}</strong> (${p.direction}, strength: ${(p.strength*100).toFixed(0)}%) — ${p.description}</li>`;
+    async function refreshData() {
+        const data = await apiFetch('/api/signals');
+        if (data && Array.isArray(data)) {
+            allSignals = data;
+        } else {
+            allSignals = [];
         }
-        html += '</ul>';
+        applyFilters();
+        document.getElementById('lastScan').textContent = 'Last refresh: ' + fmtTime(new Date());
     }
-    document.getElementById('candle-result').innerHTML = html;
-}
+
+    function applyFilters() {
+        let filtered = [...allSignals];
+        const action = document.getElementById('filterAction').value;
+        const style = document.getElementById('filterStyle').value;
+        const minConf = parseInt(document.getElementById('filterConfidence').value) / 100;
+        const sortBy = document.getElementById('sortBy').value;
+
+        if (action !== 'all') {
+            filtered = filtered.filter(s => {
+                const a = (s.signal || s.action || s.side || '').toLowerCase();
+                if (action === 'buy') return a === 'buy' || a === 'long';
+                return a === 'sell' || a === 'short';
+            });
+        }
+        if (style !== 'all') {
+            filtered = filtered.filter(s => {
+                const st = (s.style || s.trade_type || s.timeframe || '').toLowerCase();
+                return st.includes(style);
+            });
+        }
+        filtered = filtered.filter(s => (s.confidence || s.score || 0) >= minConf);
+
+        if (sortBy === 'confidence') {
+            filtered.sort((a, b) => (b.confidence || b.score || 0) - (a.confidence || a.score || 0));
+        } else if (sortBy === 'symbol') {
+            filtered.sort((a, b) => (a.symbol || '').localeCompare(b.symbol || ''));
+        } else if (sortBy === 'time') {
+            filtered.sort((a, b) => new Date(b.timestamp || b.time || 0) - new Date(a.timestamp || a.time || 0));
+        }
+
+        document.getElementById('signalCountLabel').textContent = filtered.length + ' signal' + (filtered.length !== 1 ? 's' : '');
+        renderSignalCards(filtered);
+    }
+
+    function renderSignalCards(signals) {
+        const grid = document.getElementById('signalGrid');
+        if (signals.length === 0) {
+            grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">No signals match your filters. Try running a scan.</div>';
+            return;
+        }
+        grid.innerHTML = signals.map(s => {
+            const action = (s.signal || s.action || s.side || 'BUY').toUpperCase();
+            const isBuy = action === 'BUY' || action === 'LONG';
+            const conf = (s.confidence || s.score || 0);
+            const confPct = (conf * 100).toFixed(0);
+            const entry = s.price || s.entry_price || 0;
+            const stop = s.stop_loss || s.stop || 0;
+            const target = s.target || s.target_price || 0;
+            const rr = stop > 0 && entry > 0 && target > 0
+                ? Math.abs((target - entry) / (entry - stop)).toFixed(1)
+                : '--';
+            const pattern = s.pattern || s.candle_pattern || '';
+            const strategy = s.strategy || s.strategy_name || '--';
+            const confColor = conf > 0.7 ? 'var(--green)' : conf > 0.4 ? 'var(--yellow)' : 'var(--red)';
+
+            return '<div class="signal-card">' +
+                '<div class="signal-card-header">' +
+                    '<div>' +
+                        '<div class="signal-symbol">' + (s.symbol || s.ticker || '--') + '</div>' +
+                        '<div class="signal-strategy">' + strategy + '</div>' +
+                    '</div>' +
+                    '<span class="signal-action ' + (isBuy ? 'signal-action-buy' : 'signal-action-sell') + '">' + action + '</span>' +
+                '</div>' +
+                '<div class="signal-meta">' +
+                    '<div class="signal-meta-item"><div class="signal-meta-label">Entry</div><div class="signal-meta-value">' + fmtMoney(entry) + '</div></div>' +
+                    '<div class="signal-meta-item"><div class="signal-meta-label">Stop Loss</div><div class="signal-meta-value">' + (stop ? fmtMoney(stop) : '--') + '</div></div>' +
+                    '<div class="signal-meta-item"><div class="signal-meta-label">Target</div><div class="signal-meta-value">' + (target ? fmtMoney(target) : '--') + '</div></div>' +
+                    '<div class="signal-meta-item"><div class="signal-meta-label">R:R</div><div class="signal-meta-value">' + rr + (rr !== '--' ? ':1' : '') + '</div></div>' +
+                '</div>' +
+                '<div class="signal-conf-label"><span>Confidence</span><span>' + confPct + '%</span></div>' +
+                '<div class="signal-conf-bar"><div class="signal-conf-fill" style="width:' + confPct + '%;background:' + confColor + ';"></div></div>' +
+                (pattern ? '<div class="signal-pattern">Pattern: <span>' + pattern + '</span></div>' : '') +
+            '</div>';
+        }).join('');
+    }
+
+    async function runScan(type) {
+        const status = document.getElementById('scanStatus');
+        status.innerHTML = '<span class="loading-spinner"></span> Running ' + type + ' scan...';
+
+        const data = await apiFetch('/api/signals');
+        if (data && Array.isArray(data)) {
+            allSignals = data;
+            status.innerHTML = '<span class="text-green">Scan complete. Found ' + data.length + ' signals.</span>';
+        } else {
+            status.innerHTML = '<span class="text-yellow">Scan returned no new signals.</span>';
+        }
+        applyFilters();
+        setTimeout(() => { status.textContent = ''; }, 8000);
+    }
+
+    renderWatchlist();
 </script>
 {% endblock %}

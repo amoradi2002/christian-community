@@ -21,15 +21,21 @@ Usage:
     python -m bot.main calendar      # Show upcoming economic events
     python -m bot.main profile      # Set up your trading profile (budget, risk, goals)
     python -m bot.main setup        # Interactive setup for Discord/Telegram/Email
+    python -m bot.main backtest     # Backtest strategies against historical data
+    python -m bot.main regime       # Show current market regime
+    python -m bot.main brokers      # Show broker connection status
 """
 
 import sys
+import logging
 import threading
 import schedule
 import time
 
 from bot.db.database import init_db
 from bot.config.settings import CONFIG
+
+logger = logging.getLogger(__name__)
 
 
 def run_scan():
@@ -451,6 +457,14 @@ def run_scheduler():
 
 
 def main():
+    # Set up logging
+    try:
+        from bot.utils.logging_config import setup_logging
+        log_level = CONFIG.get("bot", {}).get("log_level", "INFO")
+        setup_logging(log_level=log_level)
+    except Exception:
+        pass  # Logging setup is optional
+
     # Initialize database
     init_db()
 
@@ -598,6 +612,64 @@ def main():
             run_profile()
         elif command == "setup":
             run_setup()
+        elif command == "backtest":
+            print("AI Trading Bot - Backtesting...")
+            from bot.backtest.engine import run_backtest
+            from bot.strategies.registry import StrategyRegistry
+            registry = StrategyRegistry()
+            registry.load_all()
+            symbol = sys.argv[2] if len(sys.argv) > 2 else "SPY"
+            strategies = registry.get_all()
+            for strategy in strategies:
+                print(f"\n  Testing: {strategy.name} on {symbol}...")
+                try:
+                    result = run_backtest(strategy, symbol)
+                    if result and result.get("total_trades", 0) > 0:
+                        print(f"    Trades: {result['total_trades']} | Win Rate: {result['win_rate']}%")
+                        print(f"    Return: {result['total_return_pct']:+.2f}% | Sharpe: {result['sharpe_ratio']:.2f}")
+                        print(f"    Max DD: {result['max_drawdown_pct']:.2f}%")
+                    else:
+                        print(f"    No trades generated")
+                except Exception as e:
+                    logger.error("Backtest error for %s: %s", strategy.name, e)
+                    print(f"    Error: {e}")
+        elif command == "regime":
+            print("AI Trading Bot - Market Regime Detection...")
+            try:
+                from bot.engine.regime import detect_market_regime
+                analysis = detect_market_regime()
+                print(f"\n  Market Regime: {analysis.regime.value.upper()}")
+                print(f"  Confidence: {analysis.confidence:.0%}")
+                print(f"  Trend Strength: {analysis.trend_strength:.2f}")
+                print(f"  Volatility: {analysis.volatility_percentile:.0f}th percentile")
+                print(f"  Risk Adjustment: {analysis.risk_adjustment:.2f}x")
+                print(f"\n  {analysis.description}")
+                print(f"\n  Recommended Strategies:")
+                for s in analysis.recommended_strategies:
+                    print(f"    - {s}")
+            except Exception as e:
+                logger.error("Regime detection error: %s", e)
+                print(f"  Error: {e}")
+        elif command == "brokers":
+            print("AI Trading Bot - Broker Status...")
+            try:
+                from bot.brokers.manager import BrokerManager
+                bm = BrokerManager()
+                print(f"\n  Default Broker: {CONFIG.get('brokers', {}).get('default', 'alpaca')}")
+                routing = CONFIG.get("brokers", {}).get("routing", {})
+                print(f"  Options    -> {routing.get('options', 'alpaca')}")
+                print(f"  Day Trades -> {routing.get('day_trade', 'alpaca')}")
+                print(f"  Swing      -> {routing.get('swing_trade', 'alpaca')}")
+                print(f"\n  Connected Brokers:")
+                for name, broker in bm.brokers.items():
+                    status = "Connected" if broker.is_connected() else "Not connected"
+                    print(f"    {name:20s} {status}")
+                total = bm.get_total_equity()
+                if total > 0:
+                    print(f"\n  Total Equity (all brokers): ${total:,.2f}")
+            except Exception as e:
+                logger.error("Broker status error: %s", e)
+                print(f"  Error: {e}")
         else:
             print(f"Unknown command: {command}")
             print("Commands:")
@@ -615,6 +687,9 @@ def main():
             print("  knowledge - Knowledge base evolution summary")
             print("  ingest    - Ingest content (ingest <url>)")
             print("  train     - Train AI model")
+            print("  backtest  - Backtest strategies (backtest [symbol])")
+            print("  regime    - Market regime detection")
+            print("  brokers   - Broker connection status")
             print("  dashboard - Start web dashboard")
             print("  learn     - Learn from YouTube <url>")
             print("  profile   - Set up trading profile")
@@ -627,6 +702,15 @@ def main():
         # Run initial scans
         run_scan()
         run_intel()
+
+        # Check market regime
+        try:
+            from bot.engine.regime import detect_market_regime
+            regime = detect_market_regime()
+            print(f"\n  Market Regime: {regime.regime.value.upper()} (confidence: {regime.confidence:.0%})")
+            print(f"  Risk Adjustment: {regime.risk_adjustment:.2f}x | {regime.description}")
+        except Exception as e:
+            logger.debug("Regime check skipped: %s", e)
 
         # Check economic calendar
         try:

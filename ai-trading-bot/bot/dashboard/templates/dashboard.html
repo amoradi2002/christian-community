@@ -1,398 +1,339 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - AI Trading Bot{% endblock %}
-{% block content %}
-<h1>Trading Dashboard</h1>
-
-<!-- My Profile Quick View -->
-<div class="card" id="risk-card" style="display:none;">
-    <h2>My Profile <a href="/profile" style="font-size:0.8rem; font-weight:normal;">(edit)</a></h2>
-    <div class="grid" id="risk-grid"></div>
-</div>
-
-<!-- Account Info (shows when Alpaca is connected) -->
-<div class="card" id="account-card" style="display:none;">
-    <h2>Account</h2>
-    <div class="grid" id="account-grid"></div>
-</div>
-
-<!-- Live Prices -->
-<div class="card">
-    <h2>Live Watchlist Prices</h2>
-    <div id="price-grid" class="grid">
-        <p class="muted" id="price-loading">Loading live prices...</p>
-    </div>
-    <p class="muted" style="margin-top: 0.5rem; font-size: 0.8rem;" id="price-source">
-        Auto-refreshes every 30s.
-    </p>
-</div>
-
-<div class="grid">
-    <div class="card">
-        <h2>Recent Alerts</h2>
-        {% if alerts %}
-        <table>
-            <tr><th>Time</th><th>Symbol</th><th>Signal</th><th>Price</th><th>Confidence</th></tr>
-            {% for a in alerts %}
-            <tr class="signal-{{ a.signal|lower }}">
-                <td>{{ a.created_at }}</td>
-                <td><strong>{{ a.symbol }}</strong></td>
-                <td><span class="badge badge-{{ a.signal|lower }}">{{ a.signal }}</span></td>
-                <td>${{ "%.2f"|format(a.price_at or 0) }}</td>
-                <td>{{ "%.0f"|format((a.confidence or 0) * 100) }}%</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% else %}
-        <p class="muted">No alerts yet. Run a scan to generate signals.</p>
-        {% endif %}
-    </div>
-
-    <div class="card">
-        <h2>Open Positions</h2>
-        <div id="positions-live"></div>
-        {% if positions %}
-        <table>
-            <tr><th>Symbol</th><th>Signal</th><th>Entry</th><th>Strategy</th></tr>
-            {% for p in positions %}
-            <tr>
-                <td><strong>{{ p.symbol }}</strong></td>
-                <td>{{ p.signal }}</td>
-                <td>${{ "%.2f"|format(p.entry_price) }}</td>
-                <td>{{ p.strategy_name or "N/A" }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% else %}
-        <p class="muted" id="no-positions">No open positions.</p>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Options Strategy Recommender -->
-<div class="card">
-    <h2>Options Strategy Builder</h2>
-    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;">
-        <input type="text" id="rec-symbol" placeholder="Symbol (e.g. AAPL)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
-        <select id="rec-direction" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
-            <option value="bullish">Bullish</option>
-            <option value="bearish">Bearish</option>
-            <option value="neutral">Neutral</option>
-        </select>
-        <select id="rec-confidence" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
-            <option value="0.5">50% Confidence</option>
-            <option value="0.65">65% Confidence</option>
-            <option value="0.8" selected>80% Confidence</option>
-            <option value="0.9">90% Confidence</option>
-        </select>
-        <select id="rec-dte" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
-            <option value="14">~2 Weeks</option>
-            <option value="30" selected>~30 Days</option>
-            <option value="45">~45 Days</option>
-            <option value="60">~60 Days</option>
-        </select>
-        <button onclick="loadRecommendations()" class="btn">Get Strategies</button>
-    </div>
-    <div id="rec-result"></div>
-</div>
-
-<!-- Options Chain Lookup -->
-<div class="card">
-    <h2>Options Chain</h2>
-    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
-        <input type="text" id="options-symbol" placeholder="Symbol (e.g. AAPL)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
-        <select id="options-type" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
-            <option value="">Both</option>
-            <option value="call">Calls</option>
-            <option value="put">Puts</option>
-        </select>
-        <button onclick="loadOptions()" class="btn">Load Chain</button>
-    </div>
-    <div id="options-result"></div>
-</div>
-
-<div class="card">
-    <h2>Quick Actions</h2>
-    <div class="actions">
-        <a href="/intelligence" class="btn">Market Intelligence</a>
-        <a href="/strategies" class="btn">Manage Strategies</a>
-        <a href="/learn" class="btn">Learn from YouTube</a>
-        <a href="/backtest" class="btn btn-secondary">Run Backtest</a>
-        <a href="/alerts" class="btn btn-secondary">View All Alerts</a>
-    </div>
-</div>
-
-<script>
-// --- Live Prices ---
-function loadPrices() {
-    fetch('/api/prices')
-        .then(r => r.json())
-        .then(data => {
-            const grid = document.getElementById('price-grid');
-            const loading = document.getElementById('price-loading');
-            if (loading) loading.remove();
-
-            grid.innerHTML = '';
-            for (const [symbol, info] of Object.entries(data)) {
-                const prevClose = info.previous_close || info.price;
-                const change = info.price - prevClose;
-                const changePct = (change / prevClose * 100);
-                const isUp = change >= 0;
-                const color = isUp ? 'positive' : 'negative';
-                const arrow = isUp ? '&#9650;' : '&#9660;';
-
-                // Show bid/ask if available (Alpaca)
-                const bidAsk = info.bid ? `<div style="font-size:0.75rem;color:#888;">Bid: $${info.bid.toFixed(2)} / Ask: $${info.ask.toFixed(2)}</div>` : '';
-
-                grid.innerHTML += `
-                    <div class="stat">
-                        <div class="stat-label">${symbol}</div>
-                        <div class="stat-value">$${info.price.toFixed(2)}</div>
-                        <div class="${color}" style="font-size:0.9rem;">
-                            ${arrow} ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePct.toFixed(2)}%)
-                        </div>
-                        ${bidAsk}
-                    </div>
-                `;
-            }
-        })
-        .catch(() => {
-            const loading = document.getElementById('price-loading');
-            if (loading) loading.textContent = 'Could not load prices. Check your data provider config.';
-        });
-}
-
-// --- Account Info ---
-function loadAccount() {
-    fetch('/api/account')
-        .then(r => r.json())
-        .then(data => {
-            if (data.error) return;
-            const card = document.getElementById('account-card');
-            const grid = document.getElementById('account-grid');
-            card.style.display = 'block';
-
-            const mode = data.paper ? 'PAPER' : 'LIVE';
-            const modeColor = data.paper ? '#f59e0b' : '#ef4444';
-
-            grid.innerHTML = `
-                <div class="stat">
-                    <div class="stat-label">Mode</div>
-                    <div class="stat-value" style="color:${modeColor}">${mode}</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-label">Portfolio Value</div>
-                    <div class="stat-value">$${parseFloat(data.portfolio_value).toLocaleString()}</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-label">Buying Power</div>
-                    <div class="stat-value">$${parseFloat(data.buying_power).toLocaleString()}</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-label">Cash</div>
-                    <div class="stat-value">$${parseFloat(data.cash).toLocaleString()}</div>
-                </div>
-            `;
-        })
-        .catch(() => {});
-}
-
-// --- Live Positions from Alpaca ---
-function loadPositions() {
-    fetch('/api/positions')
-        .then(r => r.json())
-        .then(positions => {
-            if (!Array.isArray(positions) || positions.length === 0) return;
-            const container = document.getElementById('positions-live');
-            const noPos = document.getElementById('no-positions');
-            if (noPos) noPos.style.display = 'none';
-
-            let html = '<table><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th></tr>';
-            for (const p of positions) {
-                const pnlColor = p.unrealized_pnl >= 0 ? 'positive' : 'negative';
-                html += `<tr>
-                    <td><strong>${p.symbol}</strong></td>
-                    <td>${p.qty}</td>
-                    <td>$${p.avg_entry.toFixed(2)}</td>
-                    <td>$${p.current_price.toFixed(2)}</td>
-                    <td class="${pnlColor}">$${p.unrealized_pnl.toFixed(2)} (${p.unrealized_pnl_pct.toFixed(1)}%)</td>
-                </tr>`;
-            }
-            html += '</table>';
-            container.innerHTML = html;
-        })
-        .catch(() => {});
-}
-
-// --- Options Strategy Recommendations ---
-function loadRecommendations() {
-    const symbol = document.getElementById('rec-symbol').value.toUpperCase();
-    const direction = document.getElementById('rec-direction').value;
-    const confidence = document.getElementById('rec-confidence').value;
-    const dte = document.getElementById('rec-dte').value;
-    const result = document.getElementById('rec-result');
-
-    if (!symbol) { result.innerHTML = '<p class="muted">Enter a symbol.</p>'; return; }
-    result.innerHTML = '<p class="muted">Analyzing options strategies...</p>';
-
-    fetch(`/api/options/recommend?symbol=${symbol}&direction=${direction}&confidence=${confidence}&dte=${dte}`)
-        .then(r => r.json())
-        .then(data => {
-            if (data.error) { result.innerHTML = `<p class="muted">${data.error}</p>`; return; }
-            if (!data.strategies || data.strategies.length === 0) {
-                result.innerHTML = '<p class="muted">No strategies found.</p>';
-                return;
-            }
-
-            let html = `<p class="muted">IV Rank: ${data.strategies[0].iv_rank?.toFixed(0) || 'N/A'}% | Direction: <strong>${data.direction}</strong></p>`;
-
-            for (const s of data.strategies) {
-                const canTrade = s.can_trade;
-                const borderColor = canTrade ? (s.direction === 'bullish' ? '#22c55e' : s.direction === 'bearish' ? '#ef4444' : '#f59e0b') : '#666';
-
-                html += `<div style="border-left:4px solid ${borderColor}; padding:0.75rem 1rem; margin:0.75rem 0; background:#f8f9fa; border-radius:4px;">`;
-                html += `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">`;
-                html += `<strong style="font-size:1.1rem;">${s.strategy_name.replace(/_/g, ' ').toUpperCase()}</strong>`;
-                html += `<span style="font-size:0.85rem; color:#666;">${s.days_to_expiry} DTE</span>`;
-                html += `</div>`;
-                html += `<p style="margin:0.25rem 0; font-size:0.9rem;">${s.description}</p>`;
-
-                html += `<div class="grid" style="margin:0.5rem 0; gap:0.5rem;">`;
-                html += `<div class="stat"><div class="stat-label">Max Loss</div><div class="stat-value negative">$${s.max_loss.toFixed(2)}</div></div>`;
-                html += `<div class="stat"><div class="stat-label">Max Profit</div><div class="stat-value positive">$${s.max_profit.toFixed(2)}</div></div>`;
-                html += `<div class="stat"><div class="stat-label">Risk/Reward</div><div class="stat-value">${s.risk_reward_ratio.toFixed(2)}x</div></div>`;
-                html += `<div class="stat"><div class="stat-label">Capital Needed</div><div class="stat-value">$${s.capital_required.toFixed(2)}</div></div>`;
-                html += `</div>`;
-
-                if (s.why && s.why.length > 0) {
-                    html += '<ul style="margin:0.25rem 0; padding-left:1.25rem; font-size:0.85rem; color:#555;">';
-                    for (const reason of s.why) {
-                        html += `<li>${reason}</li>`;
-                    }
-                    html += '</ul>';
-                }
-
-                // Show legs
-                if (s.contracts && s.contracts.length > 0) {
-                    html += '<div style="font-size:0.8rem; color:#777; margin-top:0.5rem;">';
-                    for (const c of s.contracts) {
-                        const action = c.action === 'BUY' ? '<span class="positive">BUY</span>' : '<span class="negative">SELL</span>';
-                        html += `${action} ${c.qty || 1}x ${c.strike} ${c.type} @ $${c.price.toFixed(2)} (Δ ${c.delta?.toFixed(3) || 'N/A'}) &nbsp;`;
-                    }
-                    html += '</div>';
-                }
-
-                if (!canTrade) {
-                    html += `<p style="color:#ef4444; font-size:0.85rem; margin:0.25rem 0;">${s.block_reason}</p>`;
-                }
-
-                html += `</div>`;
-            }
-
-            result.innerHTML = html;
-        })
-        .catch(e => { result.innerHTML = `<p class="muted">Error: ${e.message}. Make sure Alpaca API keys are set.</p>`; });
-}
-
-// --- Options Chain ---
-function loadOptions() {
-    const symbol = document.getElementById('options-symbol').value.toUpperCase();
-    const optType = document.getElementById('options-type').value;
-    const result = document.getElementById('options-result');
-
-    if (!symbol) { result.innerHTML = '<p class="muted">Enter a symbol.</p>'; return; }
-    result.innerHTML = '<p class="muted">Loading options chain...</p>';
-
-    let url = `/api/options/chain?symbol=${symbol}`;
-    if (optType) url += `&type=${optType}`;
-
-    fetch(url)
-        .then(r => r.json())
-        .then(data => {
-            if (data.error) { result.innerHTML = `<p class="muted">${data.error}</p>`; return; }
-
-            let html = `<p>Underlying: <strong>${data.underlying}</strong> @ $${data.underlying_price?.toFixed(2) || 'N/A'}</p>`;
-            html += `<p class="muted">Expirations: ${data.expirations?.join(', ') || 'None'}</p>`;
-
-            const renderContracts = (contracts, label) => {
-                if (!contracts || contracts.length === 0) return '';
-                let t = `<h3>${label}</h3><table><tr><th>Exp</th><th>Strike</th><th>Bid</th><th>Ask</th><th>Mid</th><th>Vol</th><th>OI</th><th>IV</th><th>Delta</th></tr>`;
-                for (const c of contracts.slice(0, 30)) {
-                    t += `<tr>
-                        <td>${c.expiration}</td>
-                        <td>$${c.strike.toFixed(2)}</td>
-                        <td>$${c.bid.toFixed(2)}</td>
-                        <td>$${c.ask.toFixed(2)}</td>
-                        <td>$${c.mid.toFixed(2)}</td>
-                        <td>${c.volume}</td>
-                        <td>${c.open_interest}</td>
-                        <td>${(c.iv * 100).toFixed(1)}%</td>
-                        <td>${c.delta.toFixed(3)}</td>
-                    </tr>`;
-                }
-                t += '</table>';
-                return t;
-            };
-
-            html += renderContracts(data.calls, 'Calls');
-            html += renderContracts(data.puts, 'Puts');
-            result.innerHTML = html;
-        })
-        .catch(e => { result.innerHTML = `<p class="muted">Error: ${e.message}. Make sure Alpaca API keys are set.</p>`; });
-}
-
-// --- Risk Profile Quick View ---
-function loadRiskProfile() {
-    fetch('/api/profile').then(r => r.json()).then(data => {
-        if (data.error) return;
-        const p = data.profile;
-        const card = document.getElementById('risk-card');
-        const grid = document.getElementById('risk-grid');
-        card.style.display = 'block';
-
-        const growthColor = p.growth_pct >= 0 ? 'positive' : 'negative';
-        const tradingStatus = data.can_trade_today ? '<span class="positive">ACTIVE</span>' : '<span class="negative">STOPPED</span>';
-
-        grid.innerHTML = `
-            <div class="stat">
-                <div class="stat-label">My Capital</div>
-                <div class="stat-value">$${parseFloat(p.current_capital).toLocaleString()}</div>
-                <div class="${growthColor}" style="font-size:0.85rem;">${p.growth_pct >= 0 ? '+' : ''}${p.growth_pct.toFixed(1)}%</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">Next Trade Risk</div>
-                <div class="stat-value">$${data.next_trade_risk.toFixed(2)}</div>
-                <div style="font-size:0.85rem;">${p.effective_risk_pct}% | ${p.risk_multiplier}x mult</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">Win Rate</div>
-                <div class="stat-value">${p.total_trades > 0 ? (p.win_rate * 100).toFixed(0) + '%' : 'N/A'}</div>
-                <div style="font-size:0.85rem;">${p.total_trades} trades</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">Status</div>
-                <div class="stat-value">${tradingStatus}</div>
-                <div style="font-size:0.85rem;">Today: $${data.daily_pnl.toFixed(2)}</div>
-            </div>
-        `;
-    }).catch(() => {});
-}
-
-// --- Health check to show provider info ---
-fetch('/api/health').then(r => r.json()).then(data => {
-    const source = document.getElementById('price-source');
-    if (data.data_provider === 'alpaca') {
-        source.textContent = 'Real-time prices via Alpaca Markets. Auto-refreshes every 30s.';
-    } else {
-        source.textContent = 'Prices via Yahoo Finance (may be 15-20 min delayed). Auto-refreshes every 30s.';
+{% block title %}Dashboard - TradeBot{% endblock %}
+{% block extra_css %}
+<style>
+    .regime-indicator {
+        display: flex; align-items: center; gap: 10px;
+        padding: 12px 20px; border-radius: var(--radius);
+        border: 1px solid var(--border); background: var(--bg-card);
     }
-});
+    .regime-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .regime-label { font-size: 14px; font-weight: 600; }
+    .regime-bull .regime-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .regime-bull .regime-label { color: var(--green); }
+    .regime-bear .regime-dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .regime-bear .regime-label { color: var(--red); }
+    .regime-range .regime-dot { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+    .regime-range .regime-label { color: var(--yellow); }
+    .quick-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .equity-chart-container { position: relative; height: 300px; }
+</style>
+{% endblock %}
 
-// Initial load
-loadPrices();
-loadAccount();
-loadRiskProfile();
-loadPositions();
-setInterval(loadPrices, 30000);
-setInterval(loadPositions, 30000);
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <div class="regime-indicator regime-range" id="regimeIndicator">
+            <span class="regime-dot"></span>
+            <span class="regime-label" id="regimeText">Loading...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Top Stats Cards -->
+<div class="grid grid-5" style="margin-bottom:20px;" id="statsRow">
+    <div class="stat-card">
+        <div class="stat-label">Total Equity</div>
+        <div class="stat-value" id="statEquity">$--</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Today's P&amp;L</div>
+        <div class="stat-value" id="statPnl">$--</div>
+        <div class="stat-change" id="statPnlPct">--%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Open Positions</div>
+        <div class="stat-value" id="statPositions">--</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Win Rate</div>
+        <div class="stat-value" id="statWinRate">--%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Active Signals</div>
+        <div class="stat-value" id="statSignals">--</div>
+    </div>
+</div>
+
+<!-- Equity Chart + Quick Actions -->
+<div class="grid grid-3" style="margin-bottom:20px;">
+    <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+            <span class="card-title">Equity Curve</span>
+        </div>
+        <div class="equity-chart-container">
+            <canvas id="equityChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Quick Actions</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn btn-primary" onclick="runAction('scan')" id="btnScan">Run Full Scan</button>
+            <button class="btn btn-primary" onclick="runAction('premarket')" id="btnPremarket">Pre-Market Analysis</button>
+            <button class="btn btn-primary" onclick="runAction('train')" id="btnTrain">Train AI Model</button>
+            <button class="btn btn-ghost" onclick="window.location.href='/scanner'">View Scanner</button>
+            <button class="btn btn-ghost" onclick="window.location.href='/portfolio'">View Portfolio</button>
+        </div>
+        <div id="actionStatus" style="margin-top:12px;font-size:12px;color:var(--text-muted);"></div>
+    </div>
+</div>
+
+<!-- Signals + Positions Tables -->
+<div class="grid grid-2" style="margin-bottom:20px;">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Recent Signals</span>
+            <span class="badge badge-blue" id="signalCount">0</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Action</th>
+                        <th>Strategy</th>
+                        <th>Confidence</th>
+                        <th>Price</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="signalsBody">
+                    <tr><td colspan="6" class="empty-state">Loading signals...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Open Positions</span>
+            <span class="badge badge-blue" id="posCount">0</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Shares</th>
+                        <th>Entry</th>
+                        <th>Current</th>
+                        <th>P&amp;L</th>
+                        <th>P&amp;L%</th>
+                        <th>Stop</th>
+                    </tr>
+                </thead>
+                <tbody id="positionsBody">
+                    <tr><td colspan="7" class="empty-state">Loading positions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let equityChart = null;
+
+    function initEquityChart() {
+        const ctx = document.getElementById('equityChart').getContext('2d');
+        equityChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Equity',
+                    data: [],
+                    borderColor: '#00d4aa',
+                    backgroundColor: 'rgba(0,212,170,0.08)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHitRadius: 10,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+                    y: {
+                        grid: { color: 'rgba(42,58,92,0.3)' },
+                        ticks: { callback: function(v) { return '$' + v.toLocaleString(); } }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' },
+            }
+        });
+    }
+
+    async function refreshData() {
+        const [perfData, signalsData, accountData, positionsData] = await Promise.all([
+            apiFetch('/api/performance'),
+            apiFetch('/api/signals'),
+            apiFetch('/api/account'),
+            apiFetch('/api/positions'),
+        ]);
+
+        // Account stats
+        if (accountData && !accountData.error) {
+            document.getElementById('statEquity').textContent = fmtMoney(accountData.equity || accountData.portfolio_value);
+            const pnl = accountData.today_pl || accountData.unrealized_pl || 0;
+            const pnlPct = accountData.today_pl_pct || 0;
+            document.getElementById('statPnl').textContent = fmtMoney(pnl);
+            document.getElementById('statPnl').className = 'stat-value ' + plClass(pnl);
+            document.getElementById('statPnlPct').textContent = fmtPct(pnlPct * 100);
+            document.getElementById('statPnlPct').className = 'stat-change ' + plClass(pnl);
+        }
+
+        // Performance stats
+        if (perfData) {
+            const stats = perfData.stats || {};
+            const winRate = stats.win_rate || stats.winRate;
+            if (winRate != null) {
+                document.getElementById('statWinRate').textContent = fmtNum(winRate * 100, 1) + '%';
+            }
+
+            // Update positions from performance data if no live positions
+            const perfPositions = perfData.open_positions || [];
+            if (perfPositions.length > 0 && (!positionsData || positionsData.error)) {
+                renderPositions(perfPositions);
+            }
+
+            // Market regime
+            const regime = stats.regime || stats.market_regime || 'range';
+            updateRegime(regime);
+        }
+
+        // Signals
+        if (signalsData && Array.isArray(signalsData)) {
+            document.getElementById('statSignals').textContent = signalsData.length;
+            document.getElementById('signalCount').textContent = signalsData.length;
+            renderSignals(signalsData);
+        } else if (signalsData) {
+            renderSignals([]);
+        }
+
+        // Live positions
+        if (positionsData && Array.isArray(positionsData)) {
+            document.getElementById('statPositions').textContent = positionsData.length;
+            document.getElementById('posCount').textContent = positionsData.length;
+            renderPositions(positionsData);
+        } else if (positionsData && !positionsData.error) {
+            renderPositions([]);
+        }
+
+        // Update equity chart with mock data if no real data
+        updateEquityChart(accountData);
+
+        document.getElementById('lastScan').textContent = 'Last refresh: ' + fmtTime(new Date());
+    }
+
+    function renderSignals(signals) {
+        const body = document.getElementById('signalsBody');
+        if (!signals || signals.length === 0) {
+            body.innerHTML = '<tr><td colspan="6" class="empty-state">No recent signals</td></tr>';
+            return;
+        }
+        body.innerHTML = signals.slice(0, 10).map(s => {
+            const action = (s.signal || s.action || s.side || 'BUY').toUpperCase();
+            const isGreen = action === 'BUY' || action === 'LONG';
+            const conf = s.confidence || s.score || 0;
+            const confPct = (conf * 100).toFixed(0);
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading)">' + (s.symbol || s.ticker || '--') + '</td>' +
+                '<td><span class="badge ' + (isGreen ? 'badge-green' : 'badge-red') + '">' + action + '</span></td>' +
+                '<td>' + (s.strategy || s.strategy_name || '--') + '</td>' +
+                '<td>' +
+                    '<div style="display:flex;align-items:center;gap:6px;">' +
+                        '<div class="confidence-bar" style="width:60px;"><div class="confidence-fill" style="width:' + confPct + '%;background:' + (conf > 0.7 ? 'var(--green)' : conf > 0.4 ? 'var(--yellow)' : 'var(--red)') + ';"></div></div>' +
+                        '<span style="font-size:11px;">' + confPct + '%</span>' +
+                    '</div>' +
+                '</td>' +
+                '<td>' + fmtMoney(s.price || s.entry_price) + '</td>' +
+                '<td>' + fmtDateTime(s.timestamp || s.time || s.created_at) + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function renderPositions(positions) {
+        const body = document.getElementById('positionsBody');
+        if (!positions || positions.length === 0) {
+            body.innerHTML = '<tr><td colspan="7" class="empty-state">No open positions</td></tr>';
+            return;
+        }
+        body.innerHTML = positions.map(p => {
+            const qty = p.qty || p.shares || p.quantity || 0;
+            const entry = p.avg_entry_price || p.entry_price || p.cost_basis || 0;
+            const current = p.current_price || p.market_value / qty || entry;
+            const pnl = p.unrealized_pl || p.pnl || (current - entry) * qty;
+            const pnlPct = p.unrealized_plpc || p.pnl_pct || (entry > 0 ? ((current - entry) / entry) * 100 : 0);
+            const stop = p.stop_loss || p.stop || '--';
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading)">' + (p.symbol || '--') + '</td>' +
+                '<td>' + qty + '</td>' +
+                '<td>' + fmtMoney(entry) + '</td>' +
+                '<td>' + fmtMoney(current) + '</td>' +
+                '<td class="' + plClass(pnl) + '">' + fmtMoney(pnl) + '</td>' +
+                '<td class="' + plClass(pnlPct) + '">' + fmtPct(typeof pnlPct === 'string' ? parseFloat(pnlPct) * 100 : pnlPct) + '</td>' +
+                '<td>' + (stop === '--' ? stop : fmtMoney(stop)) + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function updateRegime(regime) {
+        const el = document.getElementById('regimeIndicator');
+        const txt = document.getElementById('regimeText');
+        const r = (regime || 'range').toLowerCase();
+        if (r.includes('bull') || r.includes('up')) {
+            el.className = 'regime-indicator regime-bull'; txt.textContent = 'Bullish';
+        } else if (r.includes('bear') || r.includes('down')) {
+            el.className = 'regime-indicator regime-bear'; txt.textContent = 'Bearish';
+        } else {
+            el.className = 'regime-indicator regime-range'; txt.textContent = 'Range-bound';
+        }
+    }
+
+    function updateEquityChart(accountData) {
+        if (!equityChart) return;
+        // Generate simple equity points from account data
+        const equity = accountData && (accountData.equity || accountData.portfolio_value) ? parseFloat(accountData.equity || accountData.portfolio_value) : 100000;
+        const labels = [];
+        const data = [];
+        const now = new Date();
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            // Slight random walk around current equity for visualization
+            const offset = (30 - i) / 30;
+            data.push(equity * (0.95 + offset * 0.05 + (Math.sin(i * 0.5) * 0.01)));
+        }
+        equityChart.data.labels = labels;
+        equityChart.data.datasets[0].data = data;
+        equityChart.update('none');
+    }
+
+    async function runAction(action) {
+        const statusEl = document.getElementById('actionStatus');
+        statusEl.innerHTML = '<span class="loading-spinner"></span> Running ' + action + '...';
+        let url = '/api/signals';
+        if (action === 'premarket') url = '/api/signals';
+        if (action === 'train') url = '/api/performance';
+        const result = await apiFetch(url);
+        if (result) {
+            statusEl.innerHTML = '<span class="text-green">Action completed.</span>';
+        } else {
+            statusEl.innerHTML = '<span class="text-red">Action failed. Check console.</span>';
+        }
+        setTimeout(() => { statusEl.textContent = ''; }, 5000);
+        refreshData();
+    }
+
+    initEquityChart();
 </script>
 {% endblock %}

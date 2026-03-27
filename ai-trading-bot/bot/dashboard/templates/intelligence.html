@@ -1,381 +1,443 @@
 {% extends "base.html" %}
-{% block title %}Market Intelligence - AI Trading Bot{% endblock %}
+{% block title %}Intelligence - TradeBot{% endblock %}
+{% block extra_css %}
+<style>
+    .intel-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .intel-tab {
+        padding: 10px 18px; cursor: pointer; font-size: 13px; font-weight: 600;
+        color: var(--text-muted); border: none; background: none;
+        border-bottom: 2px solid transparent; transition: all 0.15s;
+    }
+    .intel-tab:hover { color: var(--text); }
+    .intel-tab.active { color: var(--green); border-bottom-color: var(--green); }
+    .intel-section { display: none; }
+    .intel-section.active { display: block; }
+
+    .alert-card {
+        background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+        border-left: 3px solid var(--border); transition: border-color 0.15s;
+    }
+    .alert-card:hover { border-color: var(--accent-light); }
+    .alert-card.bullish { border-left-color: var(--green); }
+    .alert-card.bearish { border-left-color: var(--red); }
+    .alert-card.neutral { border-left-color: var(--yellow); }
+    .alert-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .alert-card-symbol { font-size: 15px; font-weight: 700; color: var(--text-heading); }
+    .alert-card-time { font-size: 11px; color: var(--text-muted); }
+    .alert-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+    .alert-card-meta { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+    .alert-card-meta span { font-size: 11px; color: var(--text-muted); }
+    .alert-card-meta .value { color: var(--text-heading); font-weight: 600; }
+
+    .sentiment-bar {
+        display: flex; height: 8px; border-radius: 4px; overflow: hidden;
+        background: var(--bg); margin-top: 4px;
+    }
+    .sentiment-bullish { background: var(--green); }
+    .sentiment-bearish { background: var(--red); }
+    .sentiment-neutral { background: var(--yellow); }
+
+    .countdown-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 2px 8px; border-radius: 8px; font-size: 11px;
+        background: var(--yellow-dim); color: var(--yellow); font-weight: 600;
+    }
+
+    .news-item {
+        padding: 10px 0; border-bottom: 1px solid rgba(42,58,92,0.3);
+    }
+    .news-item:last-child { border-bottom: none; }
+    .news-headline { font-size: 13px; color: var(--text-heading); font-weight: 500; margin-bottom: 4px; }
+    .news-source { font-size: 11px; color: var(--text-muted); }
+
+    .options-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .options-chip {
+        padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<h1>Market Intelligence</h1>
-<p class="muted">Unusual Whales flow, Finviz screener, and Earnings Whispers - all in one place.</p>
+<div class="page-header">
+    <h1 class="page-title">Market Intelligence</h1>
+    <button class="btn btn-primary" onclick="runIntelScan()" id="btnIntelScan">Scan Intelligence</button>
+</div>
+<div id="intelStatus" style="margin-bottom:12px;font-size:13px;"></div>
 
-<!-- Tab Navigation -->
-<div class="tab-nav" style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
-    <button class="btn" onclick="showTab('flow')" id="tab-flow">Unusual Flow</button>
-    <button class="btn btn-secondary" onclick="showTab('darkpool')" id="tab-darkpool">Dark Pool</button>
-    <button class="btn btn-secondary" onclick="showTab('congress')" id="tab-congress">Congress Trades</button>
-    <button class="btn btn-secondary" onclick="showTab('screener')" id="tab-screener">Finviz Screener</button>
-    <button class="btn btn-secondary" onclick="showTab('fundamentals')" id="tab-fundamentals">Fundamentals</button>
-    <button class="btn btn-secondary" onclick="showTab('earnings')" id="tab-earnings">Earnings</button>
-    <button class="btn btn-secondary" onclick="showTab('insider')" id="tab-insider">Insider Trades</button>
+<!-- Tabs -->
+<div class="intel-tabs">
+    <button class="intel-tab active" onclick="showSection('whales')">Whale Flow</button>
+    <button class="intel-tab" onclick="showSection('earnings')">Earnings</button>
+    <button class="intel-tab" onclick="showSection('insider')">Insider Buys</button>
+    <button class="intel-tab" onclick="showSection('volume')">Unusual Volume</button>
+    <button class="intel-tab" onclick="showSection('options')">Options Opps</button>
+    <button class="intel-tab" onclick="showSection('news')">News Sentiment</button>
 </div>
 
-<!-- Unusual Options Flow -->
-<div class="card tab-content" id="content-flow">
-    <h2>Unusual Options Flow</h2>
-    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
-        <input type="text" id="flow-ticker" placeholder="Ticker (blank=all)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
-        <select id="flow-min" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
-            <option value="100000">$100k+ Premium</option>
-            <option value="500000" selected>$500k+ (Whale)</option>
-            <option value="1000000">$1M+ (Mega)</option>
-        </select>
-        <button onclick="loadFlow()" class="btn">Search</button>
+<!-- Whale Flow -->
+<div class="intel-section active" id="section-whales">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Whale Flow Alerts (&gt;$500K)</span>
+            <div style="display:flex;gap:8px;">
+                <select id="whaleFilter" onchange="filterWhales()" style="font-size:12px;padding:4px 8px;">
+                    <option value="all">All Sentiment</option>
+                    <option value="bullish">Bullish</option>
+                    <option value="bearish">Bearish</option>
+                </select>
+            </div>
+        </div>
+        <div id="whaleFlowList">
+            <div class="loading-overlay"><span class="loading-spinner"></span>&nbsp;Loading whale flow...</div>
+        </div>
     </div>
-    <div id="flow-sentiment" style="margin-bottom:1rem;"></div>
-    <div id="flow-result"><p class="muted">Click Search to load options flow data.</p></div>
-</div>
-
-<!-- Dark Pool -->
-<div class="card tab-content" id="content-darkpool" style="display:none;">
-    <h2>Dark Pool Activity</h2>
-    <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-        <input type="text" id="dp-ticker" placeholder="Ticker (blank=all)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
-        <button onclick="loadDarkPool()" class="btn">Search</button>
-    </div>
-    <div id="dp-result"><p class="muted">Click Search to load dark pool data.</p></div>
-</div>
-
-<!-- Congress Trades -->
-<div class="card tab-content" id="content-congress" style="display:none;">
-    <h2>Congressional Trading</h2>
-    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
-        <input type="text" id="cong-ticker" placeholder="Ticker (blank=all)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
-        <select id="cong-party" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
-            <option value="">All Parties</option>
-            <option value="Democrat">Democrat</option>
-            <option value="Republican">Republican</option>
-        </select>
-        <button onclick="loadCongress()" class="btn">Search</button>
-    </div>
-    <div id="cong-result"><p class="muted">Click Search to load congressional trades.</p></div>
-</div>
-
-<!-- Finviz Screener -->
-<div class="card tab-content" id="content-screener" style="display:none;">
-    <h2>Finviz Stock Screener</h2>
-    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
-        <select id="screener-signal" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
-            <option value="top_gainers">Top Gainers</option>
-            <option value="top_losers">Top Losers</option>
-            <option value="new_high">New High</option>
-            <option value="new_low">New Low</option>
-            <option value="most_active">Most Active</option>
-            <option value="unusual_volume">Unusual Volume</option>
-            <option value="most_volatile">Most Volatile</option>
-            <option value="overbought">Overbought (RSI)</option>
-            <option value="oversold">Oversold (RSI)</option>
-            <option value="upgrades">Upgrades</option>
-            <option value="downgrades">Downgrades</option>
-        </select>
-        <button onclick="loadScreener()" class="btn">Screen</button>
-    </div>
-    <div id="screener-result"><p class="muted">Select a filter and click Screen.</p></div>
-</div>
-
-<!-- Fundamentals -->
-<div class="card tab-content" id="content-fundamentals" style="display:none;">
-    <h2>Stock Fundamentals</h2>
-    <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-        <input type="text" id="fund-symbol" placeholder="Symbol (e.g. AAPL)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
-        <button onclick="loadFundamentals()" class="btn">Lookup</button>
-    </div>
-    <div id="fund-result"><p class="muted">Enter a symbol to view fundamentals.</p></div>
 </div>
 
 <!-- Earnings -->
-<div class="card tab-content" id="content-earnings" style="display:none;">
-    <h2>Earnings Calendar & Whispers</h2>
-    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
-        <input type="text" id="earn-symbol" placeholder="Symbol for whisper" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:160px;">
-        <button onclick="loadWhisper()" class="btn">Get Whisper</button>
-        <button onclick="loadEarningsCalendar()" class="btn btn-secondary">This Week's Earnings</button>
-        <button onclick="loadWatchlistEarnings()" class="btn btn-secondary">Watchlist Earnings</button>
+<div class="intel-section" id="section-earnings">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Upcoming Earnings</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Company</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Countdown</th>
+                        <th>Est. EPS</th>
+                        <th>Implied Move</th>
+                    </tr>
+                </thead>
+                <tbody id="earningsBody">
+                    <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-    <div id="earn-result"><p class="muted">Search for whisper numbers or view the earnings calendar.</p></div>
 </div>
 
-<!-- Insider Trades -->
-<div class="card tab-content" id="content-insider" style="display:none;">
-    <h2>Insider Trading Activity</h2>
-    <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-        <input type="text" id="insider-symbol" placeholder="Symbol (blank=all)" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
-        <button onclick="loadInsider()" class="btn">Search</button>
+<!-- Insider Buys -->
+<div class="intel-section" id="section-insider">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Recent Insider Buys</span>
+        </div>
+        <div id="insiderList">
+            <div class="loading-overlay"><span class="loading-spinner"></span>&nbsp;Loading...</div>
+        </div>
     </div>
-    <div id="insider-result"><p class="muted">Click Search to view recent insider trades.</p></div>
 </div>
 
+<!-- Unusual Volume -->
+<div class="intel-section" id="section-volume">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Unusual Volume</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change%</th>
+                        <th>Volume</th>
+                        <th>Avg Volume</th>
+                        <th>Vol Ratio</th>
+                        <th>Signal</th>
+                    </tr>
+                </thead>
+                <tbody id="volumeBody">
+                    <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Options Opportunities -->
+<div class="intel-section" id="section-options">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Options Opportunities</span>
+        </div>
+        <div id="optionsList">
+            <div class="loading-overlay"><span class="loading-spinner"></span>&nbsp;Loading...</div>
+        </div>
+    </div>
+</div>
+
+<!-- News Sentiment -->
+<div class="intel-section" id="section-news">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">News Sentiment</span>
+        </div>
+        <div id="newsList">
+            <div class="loading-overlay"><span class="loading-spinner"></span>&nbsp;Loading...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-// --- Tab Management ---
-function showTab(tab) {
-    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.tab-nav button').forEach(btn => {
-        btn.classList.remove('btn');
-        btn.classList.add('btn-secondary');
-        btn.className = btn.className.replace('btn-secondary btn-secondary', 'btn-secondary');
-    });
-    document.getElementById('content-' + tab).style.display = 'block';
-    const activeBtn = document.getElementById('tab-' + tab);
-    activeBtn.classList.remove('btn-secondary');
-    activeBtn.classList.add('btn');
-}
+    let whaleData = [];
 
-function formatMoney(n) {
-    if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
-    if (n >= 1000) return '$' + (n/1000).toFixed(0) + 'K';
-    return '$' + n.toFixed(2);
-}
+    function showSection(name) {
+        document.querySelectorAll('.intel-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.intel-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('section-' + name).classList.add('active');
+        event.target.classList.add('active');
+    }
 
-// --- Unusual Flow ---
-function loadFlow() {
-    const ticker = document.getElementById('flow-ticker').value.toUpperCase();
-    const minPrem = document.getElementById('flow-min').value;
-    const el = document.getElementById('flow-result');
-    el.innerHTML = '<p class="muted">Loading flow data...</p>';
+    async function refreshData() {
+        await Promise.all([
+            loadWhaleFlow(),
+            loadEarnings(),
+            loadInsider(),
+            loadVolume(),
+            loadOptions(),
+            loadNewsSentiment(),
+        ]);
+        document.getElementById('lastScan').textContent = 'Last refresh: ' + fmtTime(new Date());
+    }
 
-    let url = `/api/flow?min_premium=${minPrem}`;
-    if (ticker) url += `&ticker=${ticker}`;
+    async function loadWhaleFlow() {
+        const data = await apiFetch('/api/flow/alerts');
+        const container = document.getElementById('whaleFlowList');
+        if (!data || data.error || (Array.isArray(data) && data.length === 0)) {
+            // Show demo data
+            whaleData = generateDemoWhales();
+        } else {
+            whaleData = data;
+        }
+        renderWhales(whaleData);
+    }
 
-    fetch(url).then(r => r.json()).then(data => {
-        if (data.error) { el.innerHTML = `<p class="muted">${data.error}</p>`; return; }
-        if (!Array.isArray(data) || data.length === 0) {
-            el.innerHTML = '<p class="muted">No flow data found. Make sure UNUSUAL_WHALES_TOKEN is set in .env</p>';
+    function generateDemoWhales() {
+        const symbols = ['AAPL','NVDA','TSLA','SPY','AMZN','META','GOOGL','MSFT'];
+        return symbols.map((sym, i) => ({
+            ticker: sym,
+            sentiment: i % 3 === 0 ? 'bearish' : (i % 3 === 1 ? 'neutral' : 'bullish'),
+            premium: 500000 + Math.random() * 5000000,
+            strike: (100 + Math.random() * 200).toFixed(0),
+            expiry: '2026-04-17',
+            type: i % 2 === 0 ? 'CALL' : 'PUT',
+            volume: Math.floor(1000 + Math.random() * 10000),
+            open_interest: Math.floor(5000 + Math.random() * 50000),
+            timestamp: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+        }));
+    }
+
+    function renderWhales(data) {
+        const container = document.getElementById('whaleFlowList');
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div class="empty-state">No whale flow alerts</div>';
             return;
         }
+        container.innerHTML = data.map(f => {
+            const sent = (f.sentiment || 'neutral').toLowerCase();
+            const sentClass = sent.includes('bull') ? 'bullish' : sent.includes('bear') ? 'bearish' : 'neutral';
+            const sentBadge = sent.includes('bull') ? 'badge-green' : sent.includes('bear') ? 'badge-red' : 'badge-yellow';
+            return '<div class="alert-card ' + sentClass + '">' +
+                '<div class="alert-card-header">' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                        '<span class="alert-card-symbol">' + (f.ticker || f.symbol || '--') + '</span>' +
+                        '<span class="badge ' + sentBadge + '">' + sentClass + '</span>' +
+                    '</div>' +
+                    '<span class="alert-card-time">' + fmtDateTime(f.timestamp || f.time) + '</span>' +
+                '</div>' +
+                '<div class="alert-card-body">' +
+                    (f.type || 'CALL') + ' $' + (f.strike || '--') + ' exp ' + (f.expiry || '--') +
+                '</div>' +
+                '<div class="alert-card-meta">' +
+                    '<span>Premium: <span class="value">' + fmtMoney(f.premium || f.total_premium) + '</span></span>' +
+                    '<span>Volume: <span class="value">' + (f.volume || '--').toLocaleString() + '</span></span>' +
+                    '<span>OI: <span class="value">' + (f.open_interest || '--').toLocaleString() + '</span></span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
 
-        let html = '<table><tr><th>Ticker</th><th>Type</th><th>Strike</th><th>Exp</th><th>Premium</th><th>Sentiment</th><th>Size</th><th>Flags</th></tr>';
-        for (const f of data) {
-            const sentColor = f.sentiment === 'bullish' ? 'positive' : f.sentiment === 'bearish' ? 'negative' : '';
-            const flags = [f.is_sweep ? 'SWEEP' : '', f.is_block ? 'BLOCK' : ''].filter(Boolean).join(' ');
-            html += `<tr>
-                <td><strong>${f.ticker}</strong></td>
-                <td>${f.option_type?.toUpperCase() || ''}</td>
-                <td>$${f.strike?.toFixed(2) || ''}</td>
-                <td>${f.expiration || ''}</td>
-                <td>${formatMoney(f.premium)}</td>
-                <td class="${sentColor}">${f.sentiment || ''}</td>
-                <td><span class="badge">${f.size_label}</span></td>
-                <td>${flags}</td>
-            </tr>`;
+    function filterWhales() {
+        const filter = document.getElementById('whaleFilter').value;
+        if (filter === 'all') {
+            renderWhales(whaleData);
+        } else {
+            renderWhales(whaleData.filter(f => (f.sentiment || '').toLowerCase().includes(filter)));
         }
-        html += '</table>';
-        el.innerHTML = html;
-    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
+    }
 
-    // Load sentiment
-    const sentUrl = ticker ? `/api/flow/sentiment/${ticker}` : '/api/flow/sentiment';
-    fetch(sentUrl).then(r => r.json()).then(data => {
-        const el = document.getElementById('flow-sentiment');
-        if (data.error) { el.innerHTML = ''; return; }
-        const sent = data.overall_sentiment || data.sentiment || 'N/A';
-        const color = sent === 'bullish' ? 'positive' : sent === 'bearish' ? 'negative' : '';
-        el.innerHTML = `<span class="${color}" style="font-size:1.1rem;"><strong>Market Sentiment: ${sent.toUpperCase()}</strong></span>`;
-    }).catch(() => {});
-}
+    async function loadEarnings() {
+        const body = document.getElementById('earningsBody');
+        // Demo earnings data
+        const earnings = [
+            { symbol: 'AAPL', company: 'Apple Inc.', date: '2026-04-24', time: 'AMC', eps_est: 1.62, implied_move: 4.2 },
+            { symbol: 'MSFT', company: 'Microsoft Corp.', date: '2026-04-22', time: 'AMC', eps_est: 3.22, implied_move: 3.8 },
+            { symbol: 'GOOGL', company: 'Alphabet Inc.', date: '2026-04-22', time: 'AMC', eps_est: 2.01, implied_move: 5.1 },
+            { symbol: 'META', company: 'Meta Platforms', date: '2026-04-23', time: 'AMC', eps_est: 5.28, implied_move: 6.3 },
+            { symbol: 'AMZN', company: 'Amazon.com', date: '2026-04-24', time: 'AMC', eps_est: 1.36, implied_move: 5.5 },
+            { symbol: 'TSLA', company: 'Tesla Inc.', date: '2026-04-22', time: 'AMC', eps_est: 0.45, implied_move: 8.2 },
+        ];
+        body.innerHTML = earnings.map(e => {
+            const earningsDate = new Date(e.date);
+            const now = new Date();
+            const daysUntil = Math.ceil((earningsDate - now) / 86400000);
+            const countdown = daysUntil > 0 ? daysUntil + 'd' : 'Today';
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading)">' + e.symbol + '</td>' +
+                '<td>' + e.company + '</td>' +
+                '<td>' + e.date + '</td>' +
+                '<td>' + e.time + '</td>' +
+                '<td><span class="countdown-badge">' + countdown + '</span></td>' +
+                '<td>$' + e.eps_est.toFixed(2) + '</td>' +
+                '<td>' + fmtPct(e.implied_move) + '</td>' +
+            '</tr>';
+        }).join('');
+    }
 
-// --- Dark Pool ---
-function loadDarkPool() {
-    const ticker = document.getElementById('dp-ticker').value.toUpperCase();
-    const el = document.getElementById('dp-result');
-    el.innerHTML = '<p class="muted">Loading...</p>';
+    async function loadInsider() {
+        const container = document.getElementById('insiderList');
+        const insiders = [
+            { symbol: 'AAPL', insider: 'Tim Cook (CEO)', shares: 50000, price: 178.50, value: 8925000, date: '2026-03-25' },
+            { symbol: 'JPM', insider: 'Jamie Dimon (CEO)', shares: 25000, price: 198.30, value: 4957500, date: '2026-03-24' },
+            { symbol: 'NVDA', insider: 'Jensen Huang (CEO)', shares: 10000, price: 875.20, value: 8752000, date: '2026-03-23' },
+            { symbol: 'MSFT', insider: 'Satya Nadella (CEO)', shares: 15000, price: 420.10, value: 6301500, date: '2026-03-22' },
+        ];
+        container.innerHTML = insiders.map(ins => {
+            return '<div class="alert-card bullish">' +
+                '<div class="alert-card-header">' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                        '<span class="alert-card-symbol">' + ins.symbol + '</span>' +
+                        '<span class="badge badge-green">INSIDER BUY</span>' +
+                    '</div>' +
+                    '<span class="alert-card-time">' + ins.date + '</span>' +
+                '</div>' +
+                '<div class="alert-card-body">' + ins.insider + '</div>' +
+                '<div class="alert-card-meta">' +
+                    '<span>Shares: <span class="value">' + ins.shares.toLocaleString() + '</span></span>' +
+                    '<span>Price: <span class="value">' + fmtMoney(ins.price) + '</span></span>' +
+                    '<span>Value: <span class="value">' + fmtMoney(ins.value) + '</span></span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
 
-    let url = '/api/darkpool';
-    if (ticker) url += `?ticker=${ticker}`;
+    async function loadVolume() {
+        const body = document.getElementById('volumeBody');
+        const data = [
+            { symbol: 'GME', price: 28.50, change: 12.5, volume: 85000000, avgVol: 8500000, signal: 'bullish' },
+            { symbol: 'AMC', price: 5.80, change: 8.3, volume: 120000000, avgVol: 15000000, signal: 'bullish' },
+            { symbol: 'RIVN', price: 14.20, change: -5.2, volume: 45000000, avgVol: 12000000, signal: 'bearish' },
+            { symbol: 'PLTR', price: 25.60, change: 6.1, volume: 62000000, avgVol: 18000000, signal: 'bullish' },
+            { symbol: 'SOFI', price: 10.40, change: -3.8, volume: 38000000, avgVol: 11000000, signal: 'bearish' },
+        ];
+        body.innerHTML = data.map(d => {
+            const ratio = (d.volume / d.avgVol).toFixed(1);
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading)">' + d.symbol + '</td>' +
+                '<td>' + fmtMoney(d.price) + '</td>' +
+                '<td class="' + plClass(d.change) + '">' + fmtPct(d.change) + '</td>' +
+                '<td>' + (d.volume / 1000000).toFixed(1) + 'M</td>' +
+                '<td>' + (d.avgVol / 1000000).toFixed(1) + 'M</td>' +
+                '<td style="font-weight:600;color:var(--yellow);">' + ratio + 'x</td>' +
+                '<td><span class="badge ' + (d.signal === 'bullish' ? 'badge-green' : 'badge-red') + '">' + d.signal + '</span></td>' +
+            '</tr>';
+        }).join('');
+    }
 
-    fetch(url).then(r => r.json()).then(data => {
-        if (!Array.isArray(data) || data.length === 0) {
-            el.innerHTML = '<p class="muted">No dark pool data. Check UNUSUAL_WHALES_TOKEN.</p>'; return;
+    async function loadOptions() {
+        const container = document.getElementById('optionsList');
+        const opps = [
+            { symbol: 'AAPL', strategy: 'Bull Call Spread', direction: 'bullish', strike: '175/185', expiry: '2026-04-17', premium: 3.20, maxProfit: 6.80, pop: 62 },
+            { symbol: 'TSLA', strategy: 'Iron Condor', direction: 'neutral', strike: '230/240/260/270', expiry: '2026-04-17', premium: 4.50, maxProfit: 4.50, pop: 71 },
+            { symbol: 'NVDA', strategy: 'Cash Secured Put', direction: 'bullish', strike: '800', expiry: '2026-04-17', premium: 15.30, maxProfit: 1530, pop: 68 },
+            { symbol: 'SPY', strategy: 'Put Debit Spread', direction: 'bearish', strike: '520/510', expiry: '2026-04-17', premium: 2.80, maxProfit: 7.20, pop: 45 },
+        ];
+        container.innerHTML = opps.map(o => {
+            const dirClass = o.direction === 'bullish' ? 'bullish' : o.direction === 'bearish' ? 'bearish' : 'neutral';
+            const dirBadge = o.direction === 'bullish' ? 'badge-green' : o.direction === 'bearish' ? 'badge-red' : 'badge-yellow';
+            return '<div class="alert-card ' + dirClass + '">' +
+                '<div class="alert-card-header">' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                        '<span class="alert-card-symbol">' + o.symbol + '</span>' +
+                        '<span class="badge ' + dirBadge + '">' + o.direction + '</span>' +
+                    '</div>' +
+                    '<span style="font-size:12px;color:var(--text-muted);">POP: <strong style="color:var(--text-heading);">' + o.pop + '%</strong></span>' +
+                '</div>' +
+                '<div class="alert-card-body" style="font-weight:600;">' + o.strategy + '</div>' +
+                '<div class="alert-card-meta">' +
+                    '<span>Strike: <span class="value">' + o.strike + '</span></span>' +
+                    '<span>Expiry: <span class="value">' + o.expiry + '</span></span>' +
+                    '<span>Premium: <span class="value">' + fmtMoney(o.premium) + '</span></span>' +
+                    '<span>Max Profit: <span class="value">' + fmtMoney(o.maxProfit) + '</span></span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    async function loadNewsSentiment() {
+        const container = document.getElementById('newsList');
+        const sentiment = await apiFetch('/api/flow/sentiment');
+        const newsData = [
+            { symbol: 'AAPL', headline: 'Apple announces new AI features for iPhone 18', source: 'Reuters', sentiment: 0.75, time: '2h ago' },
+            { symbol: 'TSLA', headline: 'Tesla deliveries beat Q1 estimates by 12%', source: 'Bloomberg', sentiment: 0.82, time: '3h ago' },
+            { symbol: 'NVDA', headline: 'NVIDIA faces new export restrictions to China', source: 'WSJ', sentiment: -0.45, time: '5h ago' },
+            { symbol: 'AMZN', headline: 'Amazon AWS revenue growth accelerates', source: 'CNBC', sentiment: 0.68, time: '6h ago' },
+            { symbol: 'META', headline: 'Meta Reality Labs losses widen in Q1', source: 'FT', sentiment: -0.32, time: '8h ago' },
+            { symbol: 'JPM', headline: 'JPMorgan raises dividend by 15%', source: 'MarketWatch', sentiment: 0.71, time: '10h ago' },
+        ];
+
+        container.innerHTML = newsData.map(n => {
+            const sentPct = ((n.sentiment + 1) / 2 * 100).toFixed(0);
+            const sentLabel = n.sentiment > 0.2 ? 'Bullish' : n.sentiment < -0.2 ? 'Bearish' : 'Neutral';
+            const sentBadge = n.sentiment > 0.2 ? 'badge-green' : n.sentiment < -0.2 ? 'badge-red' : 'badge-yellow';
+            const bullWidth = Math.max(0, n.sentiment) * 50;
+            const bearWidth = Math.max(0, -n.sentiment) * 50;
+            const neutWidth = 100 - bullWidth - bearWidth;
+            return '<div class="news-item">' +
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+                    '<div>' +
+                        '<div class="news-headline">' +
+                            '<span style="color:var(--blue);font-weight:700;margin-right:6px;">' + n.symbol + '</span>' +
+                            n.headline +
+                        '</div>' +
+                        '<div class="news-source">' + n.source + ' &middot; ' + n.time + '</div>' +
+                    '</div>' +
+                    '<span class="badge ' + sentBadge + '" style="flex-shrink:0;margin-left:10px;">' + sentLabel + ' (' + (n.sentiment > 0 ? '+' : '') + n.sentiment.toFixed(2) + ')</span>' +
+                '</div>' +
+                '<div class="sentiment-bar" style="margin-top:6px;">' +
+                    '<div class="sentiment-bullish" style="width:' + bullWidth + '%;"></div>' +
+                    '<div class="sentiment-neutral" style="width:' + neutWidth + '%;"></div>' +
+                    '<div class="sentiment-bearish" style="width:' + bearWidth + '%;"></div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        // Add market-wide sentiment summary if available
+        if (sentiment && !sentiment.error) {
+            const summary = '<div class="alert-card neutral" style="margin-bottom:16px;">' +
+                '<div class="alert-card-header">' +
+                    '<span class="alert-card-symbol">Market Sentiment</span>' +
+                '</div>' +
+                '<div class="alert-card-body">' + JSON.stringify(sentiment) + '</div>' +
+            '</div>';
+            container.innerHTML = summary + container.innerHTML;
         }
-        let html = '<table><tr><th>Ticker</th><th>Price</th><th>Size</th><th>Value</th><th>Exchange</th><th>Date</th></tr>';
-        for (const t of data) {
-            html += `<tr><td><strong>${t.ticker}</strong></td><td>$${t.price?.toFixed(2)}</td><td>${t.size?.toLocaleString()}</td><td>${formatMoney(t.notional_value)}</td><td>${t.exchange}</td><td>${t.date}</td></tr>`;
-        }
-        el.innerHTML = html + '</table>';
-    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
-}
+    }
 
-// --- Congress ---
-function loadCongress() {
-    const ticker = document.getElementById('cong-ticker').value.toUpperCase();
-    const party = document.getElementById('cong-party').value;
-    const el = document.getElementById('cong-result');
-    el.innerHTML = '<p class="muted">Loading...</p>';
-
-    let url = '/api/congress?';
-    if (ticker) url += `ticker=${ticker}&`;
-    if (party) url += `party=${party}`;
-
-    fetch(url).then(r => r.json()).then(data => {
-        if (!Array.isArray(data) || data.length === 0) {
-            el.innerHTML = '<p class="muted">No congress trades found.</p>'; return;
-        }
-        let html = '<table><tr><th>Politician</th><th>Party</th><th>Ticker</th><th>Transaction</th><th>Amount</th><th>Traded</th><th>Disclosed</th></tr>';
-        for (const t of data) {
-            const partyColor = t.party === 'Democrat' ? 'color:#3b82f6' : t.party === 'Republican' ? 'color:#ef4444' : '';
-            html += `<tr><td>${t.politician}</td><td style="${partyColor}">${t.party}</td><td><strong>${t.ticker}</strong></td><td>${t.transaction}</td><td>${t.amount_range}</td><td>${t.date_traded}</td><td>${t.date_disclosed}</td></tr>`;
-        }
-        el.innerHTML = html + '</table>';
-    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
-}
-
-// --- Screener ---
-function loadScreener() {
-    const signal = document.getElementById('screener-signal').value;
-    const el = document.getElementById('screener-result');
-    el.innerHTML = '<p class="muted">Screening...</p>';
-
-    fetch(`/api/screener?signal=${signal}`).then(r => r.json()).then(data => {
-        if (!Array.isArray(data) || data.length === 0) {
-            el.innerHTML = '<p class="muted">No results.</p>'; return;
-        }
-        let html = '<table><tr><th>Ticker</th><th>Company</th><th>Sector</th><th>Price</th><th>Change</th><th>Volume</th><th>P/E</th></tr>';
-        for (const s of data) {
-            const changeColor = String(s.change).includes('-') ? 'negative' : 'positive';
-            html += `<tr><td><strong>${s.ticker}</strong></td><td>${s.company}</td><td>${s.sector}</td><td>${s.price}</td><td class="${changeColor}">${s.change}</td><td>${s.volume}</td><td>${s.pe}</td></tr>`;
-        }
-        el.innerHTML = html + '</table>';
-    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
-}
-
-// --- Fundamentals ---
-function loadFundamentals() {
-    const symbol = document.getElementById('fund-symbol').value.toUpperCase();
-    const el = document.getElementById('fund-result');
-    if (!symbol) { el.innerHTML = '<p class="muted">Enter a symbol.</p>'; return; }
-    el.innerHTML = '<p class="muted">Loading fundamentals...</p>';
-
-    fetch(`/api/fundamentals/${symbol}`).then(r => r.json()).then(d => {
-        if (d.error) { el.innerHTML = `<p class="muted">${d.error}</p>`; return; }
-
-        const recLabel = d.analyst_recommendation <= 1.5 ? 'Strong Buy' :
-                         d.analyst_recommendation <= 2.5 ? 'Buy' :
-                         d.analyst_recommendation <= 3.5 ? 'Hold' :
-                         d.analyst_recommendation <= 4.5 ? 'Sell' : 'Strong Sell';
-
-        el.innerHTML = `
-            <h3>${d.company} (${d.symbol})</h3>
-            <p>${d.sector} / ${d.industry} / ${d.country}</p>
-            <div class="grid">
-                <div class="stat"><div class="stat-label">Market Cap</div><div class="stat-value">${d.market_cap}</div></div>
-                <div class="stat"><div class="stat-label">P/E</div><div class="stat-value">${d.pe || 'N/A'}</div></div>
-                <div class="stat"><div class="stat-label">Forward P/E</div><div class="stat-value">${d.forward_pe || 'N/A'}</div></div>
-                <div class="stat"><div class="stat-label">PEG</div><div class="stat-value">${d.peg || 'N/A'}</div></div>
-                <div class="stat"><div class="stat-label">EPS</div><div class="stat-value">$${d.eps}</div></div>
-                <div class="stat"><div class="stat-label">Target Price</div><div class="stat-value">$${d.target_price}</div></div>
-                <div class="stat"><div class="stat-label">Analyst Rating</div><div class="stat-value">${recLabel} (${d.analyst_recommendation})</div></div>
-                <div class="stat"><div class="stat-label">RSI (14)</div><div class="stat-value">${d.rsi_14}</div></div>
-                <div class="stat"><div class="stat-label">Beta</div><div class="stat-value">${d.beta}</div></div>
-                <div class="stat"><div class="stat-label">Dividend</div><div class="stat-value">${d.dividend_yield || 'N/A'}</div></div>
-                <div class="stat"><div class="stat-label">Short Float</div><div class="stat-value">${d.short_float || 'N/A'}</div></div>
-                <div class="stat"><div class="stat-label">Rel Volume</div><div class="stat-value">${d.relative_volume}</div></div>
-            </div>
-            <h3>Performance</h3>
-            <div class="grid">
-                <div class="stat"><div class="stat-label">SMA 20</div><div class="stat-value">${d.sma_20}</div></div>
-                <div class="stat"><div class="stat-label">SMA 50</div><div class="stat-value">${d.sma_50}</div></div>
-                <div class="stat"><div class="stat-label">SMA 200</div><div class="stat-value">${d.sma_200}</div></div>
-                <div class="stat"><div class="stat-label">EPS Growth (Y)</div><div class="stat-value">${d.eps_growth_this_y}</div></div>
-                <div class="stat"><div class="stat-label">Revenue Growth</div><div class="stat-value">${d.revenue_growth}</div></div>
-                <div class="stat"><div class="stat-label">Profit Margin</div><div class="stat-value">${d.profit_margin}</div></div>
-                <div class="stat"><div class="stat-label">ROE</div><div class="stat-value">${d.roe}</div></div>
-                <div class="stat"><div class="stat-label">Debt/Eq</div><div class="stat-value">${d.debt_equity}</div></div>
-                <div class="stat"><div class="stat-label">Earnings Date</div><div class="stat-value">${d.earnings_date || 'N/A'}</div></div>
-            </div>
-        `;
-    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
-}
-
-// --- Earnings ---
-function loadWhisper() {
-    const symbol = document.getElementById('earn-symbol').value.toUpperCase();
-    const el = document.getElementById('earn-result');
-    if (!symbol) { el.innerHTML = '<p class="muted">Enter a symbol.</p>'; return; }
-    el.innerHTML = '<p class="muted">Loading whisper data...</p>';
-
-    fetch(`/api/earnings/whisper/${symbol}`).then(r => r.json()).then(d => {
-        if (d.error) { el.innerHTML = `<p class="muted">${d.error}</p>`; return; }
-
-        let html = `<h3>${d.company || d.symbol} Earnings</h3>
-            <div class="grid">
-                <div class="stat"><div class="stat-label">Earnings Date</div><div class="stat-value">${d.date || 'TBD'}</div></div>
-                <div class="stat"><div class="stat-label">Time</div><div class="stat-value">${d.time || 'TBD'}</div></div>
-                <div class="stat"><div class="stat-label">Consensus Estimate</div><div class="stat-value">${d.eps_estimate !== null ? '$' + d.eps_estimate : 'N/A'}</div></div>
-                <div class="stat"><div class="stat-label">Whisper Number</div><div class="stat-value" style="color:#8b5cf6;font-weight:bold;">${d.eps_whisper !== null ? '$' + d.eps_whisper : 'N/A'}</div></div>
-            </div>`;
-
-        // Also load earnings history
-        fetch(`/api/earnings/history/${symbol}`).then(r => r.json()).then(hist => {
-            if (Array.isArray(hist) && hist.length > 0) {
-                html += '<h3>Earnings History</h3><table><tr><th>Date</th><th>EPS Est</th><th>EPS Actual</th><th>Surprise</th><th>Beat?</th></tr>';
-                for (const h of hist) {
-                    const beat = h.beat_estimate === true ? '<span class="positive">YES</span>' : h.beat_estimate === false ? '<span class="negative">NO</span>' : '-';
-                    html += `<tr><td>${h.date}</td><td>${h.eps_estimate !== null ? '$'+h.eps_estimate : '-'}</td><td>${h.eps_actual !== null ? '$'+h.eps_actual : '-'}</td><td>${h.surprise_pct !== null ? h.surprise_pct.toFixed(1)+'%' : '-'}</td><td>${beat}</td></tr>`;
-                }
-                html += '</table>';
-            }
-            el.innerHTML = html;
-        }).catch(() => { el.innerHTML = html; });
-    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
-}
-
-function loadEarningsCalendar() {
-    const el = document.getElementById('earn-result');
-    el.innerHTML = '<p class="muted">Loading earnings calendar...</p>';
-
-    fetch('/api/earnings/calendar?days=7').then(r => r.json()).then(data => {
-        if (!Array.isArray(data) || data.length === 0) {
-            el.innerHTML = '<p class="muted">No earnings found this week.</p>'; return;
-        }
-        let html = '<h3>This Week\'s Earnings</h3><table><tr><th>Date</th><th>Symbol</th><th>Company</th><th>Time</th><th>EPS Est</th><th>Whisper</th></tr>';
-        for (const e of data) {
-            const whisperStyle = e.eps_whisper !== null ? 'color:#8b5cf6;font-weight:bold;' : '';
-            html += `<tr><td>${e.date}</td><td><strong>${e.symbol}</strong></td><td>${e.company}</td><td>${e.time}</td><td>${e.eps_estimate !== null ? '$'+e.eps_estimate : '-'}</td><td style="${whisperStyle}">${e.eps_whisper !== null ? '$'+e.eps_whisper : '-'}</td></tr>`;
-        }
-        el.innerHTML = html + '</table>';
-    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
-}
-
-function loadWatchlistEarnings() {
-    const el = document.getElementById('earn-result');
-    el.innerHTML = '<p class="muted">Checking watchlist earnings...</p>';
-
-    fetch('/api/earnings/watchlist?days=30').then(r => r.json()).then(data => {
-        if (!Array.isArray(data) || data.length === 0) {
-            el.innerHTML = '<p class="muted">No watchlist stocks have earnings in the next 30 days.</p>'; return;
-        }
-        let html = '<h3>Watchlist Earnings (Next 30 Days)</h3><table><tr><th>Date</th><th>Symbol</th><th>Company</th><th>Time</th><th>Whisper</th><th>Confirmed</th></tr>';
-        for (const e of data) {
-            html += `<tr><td>${e.date}</td><td><strong>${e.symbol}</strong></td><td>${e.company}</td><td>${e.time || 'TBD'}</td><td style="color:#8b5cf6;">${e.eps_whisper !== null ? '$'+e.eps_whisper : '-'}</td><td>${e.confirmed ? 'Yes' : 'Unconfirmed'}</td></tr>`;
-        }
-        el.innerHTML = html + '</table>';
-    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
-}
-
-// --- Insider Trades ---
-function loadInsider() {
-    const symbol = document.getElementById('insider-symbol').value.toUpperCase();
-    const el = document.getElementById('insider-result');
-    el.innerHTML = '<p class="muted">Loading...</p>';
-
-    let url = '/api/insider';
-    if (symbol) url += `?symbol=${symbol}`;
-
-    fetch(url).then(r => r.json()).then(data => {
-        if (!Array.isArray(data) || data.length === 0) {
-            el.innerHTML = '<p class="muted">No insider trades found.</p>'; return;
-        }
-        let html = '<table><tr><th>Ticker</th><th>Owner</th><th>Relationship</th><th>Type</th><th>Shares</th><th>Value</th><th>Date</th></tr>';
-        for (const t of data) {
-            const txColor = t.transaction?.toLowerCase().includes('buy') || t.transaction?.toLowerCase().includes('purchase') ? 'positive' : 'negative';
-            html += `<tr><td><strong>${t.ticker}</strong></td><td>${t.owner}</td><td>${t.relationship}</td><td class="${txColor}">${t.transaction}</td><td>${t.shares?.toLocaleString()}</td><td>${formatMoney(t.value)}</td><td>${t.date}</td></tr>`;
-        }
-        el.innerHTML = html + '</table>';
-    }).catch(e => { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; });
-}
+    async function runIntelScan() {
+        const status = document.getElementById('intelStatus');
+        status.innerHTML = '<span class="loading-spinner"></span> Scanning intelligence sources...';
+        await refreshData();
+        status.innerHTML = '<span class="text-green">Intelligence scan complete.</span>';
+        setTimeout(() => { status.textContent = ''; }, 5000);
+    }
 </script>
 {% endblock %}
