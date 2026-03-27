@@ -87,6 +87,11 @@ class TelegramBot:
             "pnl": self._handle_pnl,
             "sectors": self._handle_sectors,
             "risk": self._handle_risk,
+            "sentiment": self._handle_sentiment,
+            "calendar": self._handle_calendar,
+            "learn": self._handle_learn,
+            "knowledge": self._handle_knowledge,
+            "strats": self._handle_strats,
             "status": self._handle_status,
             "help": self._handle_help,
         }
@@ -658,6 +663,171 @@ class TelegramBot:
 
         self.send_message("\n".join(lines), chat_id=_chat_id)
 
+    def _handle_sentiment(self, *args, _chat_id: str = ""):
+        """News sentiment for a symbol."""
+        if not args:
+            self.send_message("\u2753 Usage: `/sentiment AAPL`", chat_id=_chat_id)
+            return
+
+        symbol = args[0].upper()
+        self.send_message(f"\U0001f4f0 Checking sentiment for *{symbol}*...", chat_id=_chat_id)
+
+        try:
+            from bot.engine.news_sentiment import fetch_news_sentiment
+            result = fetch_news_sentiment(symbol)
+
+            label = result.get("overall_label", "N/A")
+            score = result.get("overall_score", 0)
+            icon = "\U0001f7e2" if score > 0.2 else "\U0001f534" if score < -0.2 else "\U0001f7e1"
+
+            lines = [f"{icon} *{symbol} News Sentiment: {label}* (score: {score:+.2f})", ""]
+            for h in result.get("headlines", [])[:6]:
+                h_icon = "+" if h["score"] > 0 else "-" if h["score"] < 0 else " "
+                lines.append(f"  [{h_icon}] {h['headline'][:70]}")
+
+            rec = result.get("recommendation")
+            if rec:
+                lines.append(f"\n\U0001f4a1 {rec}")
+
+            self.send_message("\n".join(lines), chat_id=_chat_id)
+        except Exception as exc:
+            self.send_message(f"\u274c Sentiment check failed: {exc}", chat_id=_chat_id)
+
+    def _handle_calendar(self, *args, _chat_id: str = ""):
+        """Show upcoming economic events."""
+        try:
+            from bot.engine.economic_calendar import get_upcoming_events, get_trading_caution
+
+            caution = get_trading_caution()
+            events = get_upcoming_events(days_ahead=7)
+
+            lines = ["\U0001f4c5 *Economic Calendar*", ""]
+            if caution:
+                lines.append(f"\u26a0\ufe0f *{caution}*\n")
+
+            if events:
+                for e in events[:10]:
+                    imp = "\U0001f534" if e.importance == "high" else "\U0001f7e1" if e.importance == "medium" else "\u26aa"
+                    lines.append(f"  {imp} {e.date} {e.time} \u2014 {e.event}")
+                    if e.trading_note:
+                        lines.append(f"     _{e.trading_note}_")
+            else:
+                lines.append("No major events this week.")
+
+            self.send_message("\n".join(lines), chat_id=_chat_id)
+        except Exception as exc:
+            self.send_message(f"\u274c Calendar failed: {exc}", chat_id=_chat_id)
+
+    def _handle_learn(self, *args, _chat_id: str = ""):
+        """Ingest a YouTube URL or text into the knowledge base.
+
+        Usage:
+            /learn https://youtube.com/watch?v=...
+            /learn My mentor said always use 2:1 R:R minimum and never risk more than 1% per trade
+        """
+        if not args:
+            self.send_message(
+                "\U0001f4da *Feed the bot knowledge!*\n\n"
+                "YouTube: `/learn https://youtube.com/watch?v=...`\n"
+                "Notes: `/learn My mentor said always use 2:1 R:R minimum`\n\n"
+                "The bot extracts strategies, indicators, patterns, and rules from anything you feed it.",
+                chat_id=_chat_id,
+            )
+            return
+
+        content = " ".join(args)
+
+        try:
+            from bot.learning.knowledge_base import KnowledgeBase
+            kb = KnowledgeBase()
+
+            if "youtube.com" in content or "youtu.be" in content:
+                self.send_message("\U0001f3ac Ingesting YouTube video...", chat_id=_chat_id)
+                result = kb.ingest_youtube(content)
+            else:
+                self.send_message("\U0001f4dd Ingesting knowledge...", chat_id=_chat_id)
+                result = kb.ingest_text(
+                    title="Telegram input",
+                    content=content,
+                    source_type="mentorship",
+                    confidence=0.85,
+                )
+
+            if result.get("status") == "success":
+                lines = [
+                    "\u2705 *Knowledge ingested!*",
+                    "",
+                    f"Strategies found: {result.get('strategies_found', 0)}",
+                    f"Indicators found: {result.get('indicators_found', 0)}",
+                    f"Rules extracted: {result.get('rules_extracted', 0)}",
+                    "",
+                    "_The bot is now smarter. Keep feeding it!_",
+                ]
+                self.send_message("\n".join(lines), chat_id=_chat_id)
+            else:
+                self.send_message(f"\u274c {result.get('message', 'Ingestion failed')}", chat_id=_chat_id)
+
+        except Exception as exc:
+            self.send_message(f"\u274c Learn failed: {exc}", chat_id=_chat_id)
+
+    def _handle_knowledge(self, *args, _chat_id: str = ""):
+        """Show knowledge base summary or search it."""
+        try:
+            from bot.learning.knowledge_base import KnowledgeBase
+            kb = KnowledgeBase()
+
+            if args:
+                # Search
+                query = " ".join(args)
+                results = kb.search_knowledge(query, limit=5)
+                if results:
+                    lines = [f"\U0001f50d *Knowledge: '{query}'*", ""]
+                    for r in results:
+                        lines.append(f"\u2022 [{r['source_type']}] {r['title']}")
+                        for rule in r.get('key_rules', [])[:2]:
+                            lines.append(f"  _{rule[:80]}_")
+                    self.send_message("\n".join(lines), chat_id=_chat_id)
+                else:
+                    self.send_message(f"No knowledge found for '{query}'", chat_id=_chat_id)
+                return
+
+            summary = kb.get_evolution_summary()
+            lines = [
+                "\U0001f9e0 *Knowledge Base*",
+                "",
+                f"Entries: {summary['total_entries']}",
+                f"Rules: {summary['total_rules']}",
+                f"Strategies: {summary['unique_strategies']}",
+                f"Indicators: {summary['unique_indicators']}",
+                "",
+                f"Sources: {summary['sources_breakdown']}",
+                "",
+                "_Feed me with /learn <url or notes>_",
+            ]
+            self.send_message("\n".join(lines), chat_id=_chat_id)
+
+        except Exception as exc:
+            self.send_message(f"\u274c Knowledge base error: {exc}", chat_id=_chat_id)
+
+    def _handle_strats(self, *args, _chat_id: str = ""):
+        """Show strategy performance stats."""
+        try:
+            from bot.engine.strategy_tracker import get_strategy_stats
+            stats = get_strategy_stats()
+
+            if not stats:
+                self.send_message("\U0001f4ca No strategy data yet. Stats build as signals fire.", chat_id=_chat_id)
+                return
+
+            lines = ["\U0001f4ca *Strategy Performance*", ""]
+            for name, s in sorted(stats.items(), key=lambda x: x[1].get("win_rate", 0), reverse=True):
+                wr = s.get("win_rate", 0)
+                lines.append(f"  {name}: {s['total_signals']} signals | WR {wr:.0%} | ${s.get('total_pnl', 0):+.2f}")
+
+            self.send_message("\n".join(lines), chat_id=_chat_id)
+        except Exception as exc:
+            self.send_message(f"\u274c Stats failed: {exc}", chat_id=_chat_id)
+
     def _handle_status(self, *args, _chat_id: str = ""):
         """Show bot status and uptime."""
         uptime = "unknown"
@@ -703,7 +873,13 @@ class TelegramBot:
             "  /pnl \u2014 Today's P&L\n\n"
             "*Research:*\n"
             "  /sectors \u2014 Sector rotation\n"
+            "  /sentiment AAPL \u2014 News sentiment\n"
+            "  /calendar \u2014 Economic calendar\n"
             "  /risk AAPL 150 145 \u2014 Position size calc\n\n"
+            "*Learning:*\n"
+            "  /learn <url or notes> \u2014 Feed the bot content\n"
+            "  /knowledge <query> \u2014 Search what the bot knows\n"
+            "  /strats \u2014 Strategy performance stats\n\n"
             "*System:*\n"
             "  /status \u2014 Bot status\n"
             "  /help \u2014 This message\n\n"
