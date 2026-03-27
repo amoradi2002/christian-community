@@ -2,9 +2,8 @@
 Real-time WebSocket price streaming from Alpaca Markets.
 
 Provides continuous price updates via WebSocket connection to Alpaca's
-IEX (free tier) or SIP (paid tier) data feed. Handles authentication,
-subscriptions, auto-reconnect with exponential backoff, and thread-safe
-price caching.
+IEX (free tier) or SIP (paid tier) data feed. Thread-safe with automatic
+reconnection and exponential backoff.
 
 Usage:
     from bot.data.streaming import get_stream
@@ -12,7 +11,8 @@ Usage:
     stream = get_stream()
     stream.subscribe(["AAPL", "TSLA"], callback=my_handler)
     stream.start()
-    # ...
+
+    # Later...
     price = stream.get_price("AAPL")
     stream.stop()
 """
@@ -45,18 +45,19 @@ class PriceStream:
         self.latest_quotes = {}  # symbol -> {bid, ask, last, volume}
         self._lock = threading.Lock()
         self._thread = None
-        self._subscribed_symbols = set()
+        self._subscribed_trades = set()
+        self._subscribed_quotes = set()
         self._authenticated = False
         self._reconnect_attempts = 0
         self._max_reconnect_attempts = 10
-        self._base_reconnect_delay = 1.0  # seconds
-        self._max_reconnect_delay = 60.0  # seconds
+        self._base_reconnect_delay = 1  # seconds
+        self._should_reconnect = True
 
     def subscribe(self, symbols: list, callback=None):
         """Subscribe to real-time price updates for symbols.
 
         Args:
-            symbols: List of ticker symbols (e.g. ["AAPL", "TSLA"]).
+            symbols: List of ticker symbols (e.g. ["AAPL", "TSLA"])
             callback: Optional function called on each update.
                       Signature: callback(symbol, price, data)
         """
@@ -67,13 +68,14 @@ class PriceStream:
 
         with self._lock:
             for sym in upper_symbols:
-                if callback is not None:
+                if callback and callback not in self.callbacks[sym]:
                     self.callbacks[sym].append(callback)
-                self._subscribed_symbols.add(sym)
+                self._subscribed_trades.add(sym)
+                self._subscribed_quotes.add(sym)
 
-        # If already connected and authenticated, send subscription message
+        # If already connected, send subscription message
         if self.ws and self._authenticated:
-            self._send_subscribe(upper_symbols)
+            self._send_subscription(upper_symbols)
 
     def unsubscribe(self, symbols: list):
         """Unsubscribe from symbols."""
@@ -84,20 +86,19 @@ class PriceStream:
 
         with self._lock:
             for sym in upper_symbols:
-                self._subscribed_symbols.discard(sym)
                 self.callbacks.pop(sym, None)
-                self.latest_prices.pop(sym, None)
-                self.latest_quotes.pop(sym, None)
+                self._subscribed_trades.discard(sym)
+                self._subscribed_quotes.discard(sym)
 
-        # Send unsubscribe message if connected
+        # If connected, send unsubscribe message
         if self.ws and self._authenticated:
             try:
-                msg = json.dumps({
+                unsub_msg = {
                     "action": "unsubscribe",
                     "trades": upper_symbols,
                     "quotes": upper_symbols,
-                })
-                self.ws.send(msg)
+                }
+                self.ws.send(json.dumps(unsub_msg))
             except Exception:
                 pass
 
@@ -133,24 +134,23 @@ class PriceStream:
             return
 
         self.running = True
+        self._should_reconnect = True
         self._reconnect_attempts = 0
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
-        print("[PriceStream] Started WebSocket price streaming.")
+        print("[PriceStream] Started WebSocket streaming.")
 
     def stop(self):
         """Stop WebSocket connection."""
+        self._should_reconnect = False
         self.running = False
-        self._authenticated = False
         if self.ws:
             try:
                 self.ws.close()
             except Exception:
                 pass
-            self.ws = None
-        if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=5)
-        self._thread = None
+        self.ws = None
+        self._authenticated = False
         print("[PriceStream] Stopped.")
 
     def _run(self):
@@ -168,11 +168,11 @@ class PriceStream:
             except Exception as e:
                 print(f"[PriceStream] WebSocket error: {e}")
 
-            # If we get here, connection dropped
-            if self.running:
-                self._reconnect()
-            else:
+            if not self.running or not self._should_reconnect:
                 break
+
+            # Reconnect with backoff
+            self._reconnect()
 
     def _on_message(self, ws, message):
         """Handle incoming WebSocket messages."""
@@ -181,38 +181,37 @@ class PriceStream:
         except json.JSONDecodeError:
             return
 
-        # Alpaca sends messages as a list of events
         if not isinstance(data, list):
             data = [data]
 
         for msg in data:
             msg_type = msg.get("T", "")
 
-            # Authentication response
+            # Connection/auth messages
             if msg_type == "success":
                 action = msg.get("msg", "")
                 if action == "connected":
-                    # Connection established, now authenticate
-                    pass
+                    # Send authentication
+                    self._send_auth()
                 elif action == "authenticated":
                     self._authenticated = True
                     self._reconnect_attempts = 0
                     print("[PriceStream] Authenticated successfully.")
-                    # Subscribe to any pending symbols
+                    # Re-subscribe to all symbols
                     with self._lock:
-                        symbols = list(self._subscribed_symbols)
+                        symbols = list(self._subscribed_trades)
                     if symbols:
-                        self._send_subscribe(symbols)
+                        self._send_subscription(symbols)
 
             elif msg_type == "error":
-                code = msg.get("code", 0)
-                error_msg = msg.get("msg", "Unknown error")
-                print(f"[PriceStream] Error ({code}): {error_msg}")
-                if code == 402:  # Auth failure
+                error_code = msg.get("code", "")
+                error_msg = msg.get("msg", "")
+                print(f"[PriceStream] Server error [{error_code}]: {error_msg}")
+                if error_code == 402:  # auth failure
                     print("[PriceStream] Authentication failed. Check API keys.")
-                    self.running = False
+                    self._should_reconnect = False
 
-            # Trade update
+            # Trade updates
             elif msg_type == "t":
                 symbol = msg.get("S", "")
                 price = msg.get("p", 0.0)
@@ -222,27 +221,32 @@ class PriceStream:
                 if symbol and price:
                     with self._lock:
                         self.latest_prices[symbol] = price
-                        quote = self.latest_quotes.get(symbol, {})
-                        quote["last"] = price
-                        quote["last_size"] = size
-                        quote["last_timestamp"] = timestamp
-                        self.latest_quotes[symbol] = quote
+                        if symbol in self.latest_quotes:
+                            self.latest_quotes[symbol]["last"] = price
+                        else:
+                            self.latest_quotes[symbol] = {
+                                "bid": 0.0,
+                                "ask": 0.0,
+                                "last": price,
+                                "volume": size,
+                            }
 
                     # Fire callbacks
-                    with self._lock:
-                        cbs = list(self.callbacks.get(symbol, []))
-                    for cb in cbs:
+                    callbacks = self.callbacks.get(symbol, [])
+                    trade_data = {
+                        "type": "trade",
+                        "symbol": symbol,
+                        "price": price,
+                        "size": size,
+                        "timestamp": timestamp,
+                    }
+                    for cb in callbacks:
                         try:
-                            cb(symbol, price, {
-                                "type": "trade",
-                                "price": price,
-                                "size": size,
-                                "timestamp": timestamp,
-                            })
+                            cb(symbol, price, trade_data)
                         except Exception as e:
                             print(f"[PriceStream] Callback error for {symbol}: {e}")
 
-            # Quote update
+            # Quote updates
             elif msg_type == "q":
                 symbol = msg.get("S", "")
                 bid = msg.get("bp", 0.0)
@@ -250,114 +254,118 @@ class PriceStream:
                 bid_size = msg.get("bs", 0)
                 ask_size = msg.get("as", 0)
 
-                if symbol and (bid or ask):
-                    midpoint = round((bid + ask) / 2, 4) if bid and ask else (bid or ask)
+                if symbol:
+                    midpoint = round((bid + ask) / 2, 4) if bid and ask else 0.0
                     with self._lock:
-                        self.latest_prices[symbol] = midpoint
+                        if midpoint > 0:
+                            self.latest_prices[symbol] = midpoint
                         self.latest_quotes[symbol] = {
                             "bid": bid,
                             "ask": ask,
                             "bid_size": bid_size,
                             "ask_size": ask_size,
-                            "spread": round(ask - bid, 4) if bid and ask else 0.0,
                             "last": self.latest_quotes.get(symbol, {}).get("last", midpoint),
-                            "last_size": self.latest_quotes.get(symbol, {}).get("last_size", 0),
-                            "last_timestamp": self.latest_quotes.get(symbol, {}).get("last_timestamp", ""),
+                            "spread": round(ask - bid, 4) if bid and ask else 0.0,
                         }
 
-                    # Fire callbacks
-                    with self._lock:
-                        cbs = list(self.callbacks.get(symbol, []))
-                    for cb in cbs:
+                    # Fire callbacks for quote updates
+                    callbacks = self.callbacks.get(symbol, [])
+                    quote_data = {
+                        "type": "quote",
+                        "symbol": symbol,
+                        "price": midpoint,
+                        "bid": bid,
+                        "ask": ask,
+                        "bid_size": bid_size,
+                        "ask_size": ask_size,
+                    }
+                    for cb in callbacks:
                         try:
-                            cb(symbol, midpoint, {
-                                "type": "quote",
-                                "bid": bid,
-                                "ask": ask,
-                                "bid_size": bid_size,
-                                "ask_size": ask_size,
-                            })
+                            cb(symbol, midpoint, quote_data)
                         except Exception as e:
                             print(f"[PriceStream] Callback error for {symbol}: {e}")
 
-            # Bar/minute aggregation update
-            elif msg_type == "b":
-                symbol = msg.get("S", "")
-                close_price = msg.get("c", 0.0)
-                volume = msg.get("v", 0)
-
-                if symbol and close_price:
-                    with self._lock:
-                        self.latest_prices[symbol] = close_price
-                        quote = self.latest_quotes.get(symbol, {})
-                        quote["volume"] = volume
-                        self.latest_quotes[symbol] = quote
+            # Subscription confirmation
+            elif msg_type == "subscription":
+                trades = msg.get("trades", [])
+                quotes = msg.get("quotes", [])
+                if trades or quotes:
+                    print(f"[PriceStream] Subscribed - trades: {trades}, quotes: {quotes}")
 
     def _on_open(self, ws):
-        """Authenticate on connection open."""
-        auth_msg = json.dumps({
-            "action": "auth",
-            "key": self.api_key,
-            "secret": self.secret_key,
-        })
-        ws.send(auth_msg)
+        """Handle WebSocket connection opened (auth happens via on_message)."""
+        print("[PriceStream] WebSocket connected.")
 
     def _on_error(self, ws, error):
         """Handle WebSocket errors."""
         print(f"[PriceStream] WebSocket error: {error}")
 
     def _on_close(self, ws, close_status, close_msg):
-        """Handle connection close."""
+        """Handle WebSocket connection close."""
         self._authenticated = False
-        if self.running:
-            print(f"[PriceStream] Connection closed (status={close_status}, "
-                  f"msg={close_msg}). Will reconnect...")
+        status_str = f" (status={close_status})" if close_status else ""
+        msg_str = f" {close_msg}" if close_msg else ""
+        print(f"[PriceStream] WebSocket closed{status_str}{msg_str}")
 
-    def _reconnect(self):
-        """Auto-reconnect with exponential backoff."""
-        if not self.running:
-            return
-
-        self._reconnect_attempts += 1
-
-        if self._reconnect_attempts > self._max_reconnect_attempts:
-            print(f"[PriceStream] Max reconnect attempts ({self._max_reconnect_attempts}) "
-                  "reached. Stopping.")
-            self.running = False
-            return
-
-        # Exponential backoff: 1s, 2s, 4s, 8s, ... up to max
-        delay = min(
-            self._base_reconnect_delay * (2 ** (self._reconnect_attempts - 1)),
-            self._max_reconnect_delay,
-        )
-        print(f"[PriceStream] Reconnecting in {delay:.1f}s "
-              f"(attempt {self._reconnect_attempts}/{self._max_reconnect_attempts})...")
-        time.sleep(delay)
-
-    def _send_subscribe(self, symbols: list):
-        """Send subscription message for symbols."""
-        if not self.ws or not self._authenticated:
+    def _send_auth(self):
+        """Send authentication message."""
+        if not self.ws:
             return
         try:
-            msg = json.dumps({
+            auth_msg = {
+                "action": "auth",
+                "key": self.api_key,
+                "secret": self.secret_key,
+            }
+            self.ws.send(json.dumps(auth_msg))
+        except Exception as e:
+            print(f"[PriceStream] Auth send failed: {e}")
+
+    def _send_subscription(self, symbols: list):
+        """Send subscription message for symbols."""
+        if not self.ws or not symbols:
+            return
+        try:
+            sub_msg = {
                 "action": "subscribe",
                 "trades": symbols,
                 "quotes": symbols,
-            })
-            self.ws.send(msg)
-            print(f"[PriceStream] Subscribed to: {', '.join(symbols)}")
+            }
+            self.ws.send(json.dumps(sub_msg))
         except Exception as e:
-            print(f"[PriceStream] Subscribe send failed: {e}")
+            print(f"[PriceStream] Subscription send failed: {e}")
+
+    def _reconnect(self):
+        """Auto-reconnect with exponential backoff."""
+        if not self._should_reconnect:
+            return
+
+        self._reconnect_attempts += 1
+        if self._reconnect_attempts > self._max_reconnect_attempts:
+            print(f"[PriceStream] Max reconnect attempts ({self._max_reconnect_attempts}) "
+                  f"reached. Stopping.")
+            self.running = False
+            return
+
+        delay = min(
+            self._base_reconnect_delay * (2 ** (self._reconnect_attempts - 1)),
+            60,  # cap at 60 seconds
+        )
+        print(f"[PriceStream] Reconnecting in {delay}s "
+              f"(attempt {self._reconnect_attempts}/{self._max_reconnect_attempts})...")
+        time.sleep(delay)
 
 
-# Singleton instance
+# ---------------------------------------------------------------------------
+# Singleton access
+# ---------------------------------------------------------------------------
+
 _stream = None
 _stream_lock = threading.Lock()
 
 
 def get_stream() -> PriceStream:
-    """Get the singleton PriceStream instance."""
+    """Get or create the singleton PriceStream instance."""
     global _stream
     with _stream_lock:
         if _stream is None:
