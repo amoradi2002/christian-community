@@ -45,6 +45,48 @@ nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justi
 .modal-tab{flex:1;padding:10px;background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text-muted);transition:all 0.2s}
 .modal-tab.active{background:var(--brown);color:var(--gold-light)}
 .modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)}
+
+/* PROFILE PANEL */
+.profile-panel{position:fixed;top:0;right:-100%;width:100%;max-width:420px;height:100vh;height:100dvh;background:var(--white);z-index:300;transition:right 0.35s cubic-bezier(0.4,0,0.2,1);overflow-y:auto;box-shadow:-8px 0 30px rgba(0,0,0,0.15)}
+.profile-panel.open{right:0}
+.profile-panel-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.9);border:none;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;color:var(--brown);z-index:10;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.profile-cover{height:120px;background:linear-gradient(135deg,var(--brown) 0%,#5c3d1e 50%,var(--gold) 100%);position:relative}
+.profile-cover::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--white))}
+.profile-avatar-wrap{display:flex;justify-content:center;margin-top:-45px;position:relative;z-index:5}
+.profile-avatar-lg{width:90px;height:90px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:var(--white);border:4px solid var(--white);box-shadow:0 4px 15px rgba(0,0,0,0.15);font-family:'Cormorant Garamond',serif}
+.profile-display-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--brown);text-align:center;margin:10px 0 2px}
+.profile-username-tag{font-size:14px;color:var(--gold);text-align:center;margin-bottom:8px;font-weight:500}
+.profile-bio-display{font-size:13px;color:var(--text-muted);text-align:center;padding:0 30px;margin-bottom:16px;line-height:1.5}
+.profile-stats{display:flex;justify-content:center;gap:32px;padding:16px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:0 24px}
+.profile-stat{display:flex;flex-direction:column;align-items:center;gap:2px}
+.stat-num{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--brown)}
+.stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:500}
+.profile-panel-body{padding:20px 24px 40px}
+.profile-section{margin-bottom:24px}
+.profile-section-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--brown);margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.profile-field{margin-bottom:12px}
+.profile-field label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px}
+.profile-field input,.profile-field textarea{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:border 0.2s;background:var(--parchment)}
+.profile-field input:focus,.profile-field textarea:focus{border-color:var(--gold)}
+.profile-save-btn{width:100%;padding:12px;background:var(--brown);color:var(--gold-light);border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.profile-save-btn:hover{background:#4a2e10}
+.profile-activity{display:flex;flex-direction:column;gap:10px}
+.activity-item{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:var(--parchment);border-radius:10px}
+.activity-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.activity-icon.prayer{background:#e8f4ec;color:#2a5c35}
+.activity-icon.discussion{background:#e8ecf4;color:#2a3a5c}
+.activity-icon.testimony{background:#f4ece8;color:#5c3a2a}
+.activity-icon.highlight{background:#fef9e8;color:#5c4a2a}
+.activity-text{font-size:13px;color:var(--text);line-height:1.4}
+.activity-time{font-size:11px;color:var(--text-muted);margin-top:2px}
+.activity-empty{text-align:center;padding:20px;color:var(--text-muted);font-size:13px;background:var(--parchment);border-radius:10px}
+.profile-account-info{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.account-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--parchment);border-radius:10px}
+.account-label{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px}
+.account-value{font-size:13px;color:var(--text);font-weight:500}
+.profile-signout-btn{width:100%;padding:12px;background:none;border:1.5px solid #e74c3c;color:#e74c3c;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.profile-signout-btn:hover{background:#e74c3c;color:white}
+
 .msg-error{background:#fff0f0;border:1px solid #ffcccc;border-radius:8px;padding:10px 14px;font-size:13px;color:#c0392b;margin-bottom:14px;display:none}
 .msg-error.show{display:block}
 .msg-ok{background:var(--green-soft);border:1px solid #b5d9c0;border-radius:8px;padding:10px 14px;font-size:13px;color:#2a5c35;margin-bottom:14px;display:none}
@@ -316,18 +358,44 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
-<!-- PROFILE MODAL -->
-<div class="modal-overlay" id="profileModal">
-  <div class="modal">
-    <button class="modal-close" onclick="document.getElementById('profileModal').classList.remove('open')">✕</button>
-    <h2>Your Profile</h2>
-    <p>Update your community info</p>
-    <div class="form-group"><label>Full Name</label><input type="text" id="edit-name"/></div>
-    <div class="form-group"><label>Username</label><input type="text" id="edit-username"/></div>
-    <div class="form-group"><label>Bio</label><textarea id="edit-bio" rows="3"></textarea></div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-primary" style="flex:1" onclick="saveProfile()">Save</button>
-      <button class="btn btn-danger btn-sm" onclick="handleLogout()">Sign Out</button>
+<!-- PROFILE PANEL -->
+<div class="profile-panel" id="profilePanel">
+  <div class="profile-panel-header">
+    <button class="profile-panel-close" onclick="closeProfilePanel()">✕</button>
+    <div class="profile-cover"></div>
+    <div class="profile-avatar-wrap">
+      <div class="profile-avatar-lg" id="profile-avatar-lg">?</div>
+    </div>
+    <h2 class="profile-display-name" id="profile-display-name">—</h2>
+    <p class="profile-username-tag" id="profile-username-tag">@username</p>
+    <p class="profile-bio-display" id="profile-bio-display"></p>
+    <div class="profile-stats" id="profile-stats">
+      <div class="profile-stat"><span class="stat-num" id="stat-posts">0</span><span class="stat-label">Posts</span></div>
+      <div class="profile-stat"><span class="stat-num" id="stat-prayers">0</span><span class="stat-label">Prayers</span></div>
+      <div class="profile-stat"><span class="stat-num" id="stat-highlights">0</span><span class="stat-label">Highlights</span></div>
+    </div>
+  </div>
+  <div class="profile-panel-body">
+    <div class="profile-section">
+      <h3 class="profile-section-title">Edit Profile</h3>
+      <div class="profile-field"><label>Full Name</label><input type="text" id="edit-name" placeholder="Your name"/></div>
+      <div class="profile-field"><label>Username</label><input type="text" id="edit-username" placeholder="username"/></div>
+      <div class="profile-field"><label>Bio</label><textarea id="edit-bio" rows="3" placeholder="Tell the community about yourself..."></textarea></div>
+      <button class="profile-save-btn" onclick="saveProfile()">Save Changes</button>
+    </div>
+    <div class="profile-section">
+      <h3 class="profile-section-title">Your Activity</h3>
+      <div class="profile-activity" id="profile-activity">
+        <div class="activity-empty">No activity yet. Start sharing with the community!</div>
+      </div>
+    </div>
+    <div class="profile-section">
+      <h3 class="profile-section-title">Account</h3>
+      <div class="profile-account-info">
+        <div class="account-row"><span class="account-label">Email</span><span class="account-value" id="profile-email-display">—</span></div>
+        <div class="account-row"><span class="account-label">Member since</span><span class="account-value" id="profile-joined">—</span></div>
+      </div>
+      <button class="profile-signout-btn" onclick="handleLogout()">Sign Out</button>
     </div>
   </div>
 </div>
@@ -382,7 +450,7 @@ textarea{resize:vertical;min-height:80px}
   </div>
   <div class="nav-right">
     <div id="nav-auth-btns"><button class="btn btn-sm" style="background:transparent;border:1.5px solid rgba(201,151,58,0.5);color:var(--gold-light);font-size:12px" onclick="openModal()">Sign In</button></div>
-    <div id="nav-user-area" style="display:none"><div class="nav-avatar" id="nav-avatar" onclick="openProfileModal()">?</div></div>
+    <div id="nav-user-area" style="display:none"><div class="nav-avatar" id="nav-avatar" onclick="openProfilePanel()">?</div></div>
   </div>
 </nav>
 
@@ -431,10 +499,20 @@ textarea{resize:vertical;min-height:80px}
       </div>
       <div class="bible-top-right">
         <select class="bible-version-pill" id="b-version" onchange="loadBibleChapter()">
-          <option value="kjv">KJV</option>
-          <option value="web" selected>WEB</option>
-          <option value="asv">ASV</option>
-          <option value="ylt">YLT</option>
+          <optgroup label="Popular">
+            <option value="kjv">KJV</option>
+            <option value="web" selected>WEB</option>
+          </optgroup>
+          <optgroup label="Classic">
+            <option value="asv">ASV</option>
+            <option value="ylt">YLT</option>
+            <option value="darby">Darby</option>
+            <option value="weymouth">Weymouth</option>
+          </optgroup>
+          <optgroup label="Other Languages">
+            <option value="almeida">Almeida (PT)</option>
+            <option value="rccv">Romanian</option>
+          </optgroup>
         </select>
         <button class="bible-icon-btn" onclick="toggleHLBar()" title="Highlight">🖍</button>
         <button class="bible-icon-btn" onclick="toggleBookmark()" id="bookmark-btn" title="Bookmark">🔖</button>
@@ -706,20 +784,73 @@ async function handleLogin(){
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Sign In';return}
   closeModal();btn.disabled=false;btn.textContent='Sign In';
 }
-async function handleLogout(){await db.auth.signOut();document.getElementById('profileModal').classList.remove('open')}
-function openProfileModal(){
+async function handleLogout(){await db.auth.signOut();closeProfilePanel()}
+function closeProfilePanel(){document.getElementById('profilePanel').classList.remove('open');document.body.style.overflow=''}
+function openProfilePanel(){
   if(!currentUser){openModal();return}
+  const panel=document.getElementById('profilePanel');
   document.getElementById('edit-name').value=currentProfile?.full_name||'';
   document.getElementById('edit-username').value=currentProfile?.username||'';
   document.getElementById('edit-bio').value=currentProfile?.bio||'';
-  document.getElementById('profileModal').classList.add('open');
+  const name=currentProfile?.full_name||'Friend';
+  const uname=currentProfile?.username||'';
+  document.getElementById('profile-avatar-lg').textContent=name[0].toUpperCase();
+  document.getElementById('profile-display-name').textContent=name;
+  document.getElementById('profile-username-tag').textContent=uname?'@'+uname:'';
+  document.getElementById('profile-bio-display').textContent=currentProfile?.bio||'';
+  document.getElementById('profile-email-display').textContent=currentUser.email||'—';
+  const joined=currentUser.created_at?new Date(currentUser.created_at).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
+  document.getElementById('profile-joined').textContent=joined;
+  loadProfileStats();
+  loadProfileActivity();
+  panel.classList.add('open');
+  document.body.style.overflow='hidden';
 }
+async function loadProfileStats(){
+  try{
+    const[disc,prayers]=await Promise.all([
+      db.from('discussions').select('id',{count:'exact',head:true}).eq('user_id',currentUser.id),
+      db.from('prayer_requests').select('id',{count:'exact',head:true}).eq('user_id',currentUser.id)
+    ]);
+    document.getElementById('stat-posts').textContent=disc.count||0;
+    document.getElementById('stat-prayers').textContent=prayers.count||0;
+    const hlCount=Object.keys(bHighlights||{}).length;
+    document.getElementById('stat-highlights').textContent=hlCount;
+  }catch(e){console.error('Stats error:',e)}
+}
+async function loadProfileActivity(){
+  const el=document.getElementById('profile-activity');
+  try{
+    const[discRes,prayerRes]=await Promise.all([
+      db.from('discussions').select('title,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(3),
+      db.from('prayer_requests').select('content,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(3)
+    ]);
+    const items=[];
+    (discRes.data||[]).forEach(d=>items.push({type:'discussion',text:d.title,time:d.created_at}));
+    (prayerRes.data||[]).forEach(p=>items.push({type:'prayer',text:p.content?.slice(0,80)+'...',time:p.created_at}));
+    items.sort((a,b)=>new Date(b.time)-new Date(a.time));
+    if(items.length===0){el.innerHTML='<div class="activity-empty">No activity yet. Start sharing with the community!</div>';return}
+    el.innerHTML=items.slice(0,5).map(i=>{
+      const icon=i.type==='prayer'?'🙏':'💬';
+      const cls=i.type==='prayer'?'prayer':'discussion';
+      const ago=timeAgo(i.time);
+      return `<div class="activity-item"><div class="activity-icon ${cls}">${icon}</div><div><div class="activity-text">${escHTML(i.text)}</div><div class="activity-time">${ago}</div></div></div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<div class="activity-empty">Could not load activity.</div>'}
+}
+function timeAgo(d){const s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';if(s<604800)return Math.floor(s/86400)+'d ago';return new Date(d).toLocaleDateString()}
+function escHTML(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 async function saveProfile(){
   if(!currentUser)return;
+  const btn=document.querySelector('.profile-save-btn');btn.textContent='Saving...';btn.disabled=true;
   const full_name=document.getElementById('edit-name').value.trim(),username=document.getElementById('edit-username').value.trim(),bio=document.getElementById('edit-bio').value.trim();
-  await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio});
+  await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio,email:currentUser.email||''});
   currentProfile={...currentProfile,full_name,username,bio};
-  updateUI();document.getElementById('profileModal').classList.remove('open');
+  document.getElementById('profile-avatar-lg').textContent=full_name?full_name[0].toUpperCase():'?';
+  document.getElementById('profile-display-name').textContent=full_name||'Friend';
+  document.getElementById('profile-username-tag').textContent=username?'@'+username:'';
+  document.getElementById('profile-bio-display').textContent=bio;
+  updateUI();btn.textContent='Saved!';setTimeout(()=>{btn.textContent='Save Changes';btn.disabled=false},1500);
 }
 function updateUI(){
   const on=!!currentUser;
