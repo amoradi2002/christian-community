@@ -499,19 +499,26 @@ textarea{resize:vertical;min-height:80px}
       </div>
       <div class="bible-top-right">
         <select class="bible-version-pill" id="b-version" onchange="loadBibleChapter()">
-          <optgroup label="Popular">
+          <optgroup label="English">
             <option value="kjv">KJV</option>
             <option value="web" selected>WEB</option>
-          </optgroup>
-          <optgroup label="Classic">
             <option value="asv">ASV</option>
-            <option value="ylt">YLT</option>
-            <option value="darby">Darby</option>
-            <option value="weymouth">Weymouth</option>
+            <option value="bbe">BBE</option>
           </optgroup>
-          <optgroup label="Other Languages">
-            <option value="almeida">Almeida (PT)</option>
-            <option value="rccv">Romanian</option>
+          <optgroup label="Spanish">
+            <option value="bolls:RVR09">Reina Valera</option>
+          </optgroup>
+          <optgroup label="Russian">
+            <option value="bolls:SYNOD">Synodal</option>
+          </optgroup>
+          <optgroup label="Armenian">
+            <option value="bolls:ARMW">Western</option>
+            <option value="bolls:ARME">Eastern</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="almeida">Portuguese</option>
+            <option value="bolls:LSG">French (LSG)</option>
+            <option value="bolls:LUTH1545">German (Luther)</option>
           </optgroup>
         </select>
         <button class="bible-icon-btn" onclick="toggleHLBar()" title="Highlight">🖍</button>
@@ -980,29 +987,43 @@ function bibleChNav(dir){
   loadBibleChapter();
 }
 function toggleHLBar(){document.getElementById('hl-float-bar').classList.toggle('open')}
+function getBookNumber(bookName){return ALL_BOOKS.findIndex(b=>b.name===bookName)+1}
+function getVersionLabel(){const v=document.getElementById('b-version').value;return v.startsWith('bolls:')?v.split(':')[1]:v.toUpperCase()}
 async function loadBibleChapter(){
   bVersion=document.getElementById('b-version').value;
   updateBibleLabel();
   const area=document.getElementById('verse-area');
+  const vLabel=getVersionLabel();
   // Skeleton loading
-  area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div class="trans-note">${bVersion.toUpperCase()}</div>${Array(12).fill('<div class="verse-skeleton"><div class="verse-skeleton-line"></div><div class="verse-skeleton-line"></div><div class="verse-skeleton-line"></div></div>').join('')}`;
+  area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div class="trans-note">${vLabel}</div>${Array(12).fill('<div class="verse-skeleton"><div class="verse-skeleton-line"></div><div class="verse-skeleton-line"></div><div class="verse-skeleton-line"></div></div>').join('')}`;
   // Scroll to top
   const readArea=document.getElementById('bible-reading-area');
   if(readArea)readArea.scrollTo({top:0,behavior:'smooth'});
   // Check offline
-  if(offlineKJV&&offlineKJV[bBook]&&offlineKJV[bBook][bChapter]){renderBibleVerses(offlineKJV[bBook][bChapter],area);return}
+  if(offlineKJV&&offlineKJV[bBook]&&offlineKJV[bBook][bChapter]&&(bVersion==='kjv')){renderBibleVerses(offlineKJV[bBook][bChapter],area);return}
   try{
-    const res=await fetch(`https://bible-api.com/${encodeURIComponent(bBook)}+${bChapter}?translation=${bVersion}`);
-    const data=await res.json();
-    if(data.error||!data.verses){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">Could not load this chapter.<br/>Try another translation.</div>`;return}
-    renderBibleVerses(data.verses,area);
+    let verses;
+    if(bVersion.startsWith('bolls:')){
+      const trans=bVersion.split(':')[1];
+      const bookNum=getBookNumber(bBook);
+      const res=await fetch(`https://bolls.life/get-text/${trans}/${bookNum}/${bChapter}/`);
+      const data=await res.json();
+      if(!Array.isArray(data)||data.length===0){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">Could not load this chapter.<br/>Try another translation.</div>`;return}
+      verses=data.map(v=>({verse:v.verse,text:v.text}));
+    }else{
+      const res=await fetch(`https://bible-api.com/${encodeURIComponent(bBook)}+${bChapter}?translation=${bVersion}`);
+      const data=await res.json();
+      if(data.error||!data.verses){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">Could not load this chapter.<br/>Try another translation.</div>`;return}
+      verses=data.verses;
+    }
+    renderBibleVerses(verses,area);
   }catch{area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">No internet connection.<br/>Download KJV for offline reading.</div>`}
 }
 function renderBibleVerses(verses,area){
   const hlKey=`${bBook}-${bChapter}`;
   const savedHL=bHighlights[hlKey]||{};
   const savedNotes=bNotes[hlKey]||{};
-  area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div class="trans-note">${bVersion.toUpperCase()}</div>`;
+  area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div class="trans-note">${getVersionLabel()}</div>`;
   verses.forEach(v=>{
     const vn=v.verse,hlCls=savedHL[vn]?`hl-${savedHL[vn]}`:'',hasNote=savedNotes[vn]?'<span class="v-note-dot"></span>':'';
     const row=document.createElement('div');
