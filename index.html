@@ -694,9 +694,11 @@ async function handleLogin(){
   const btn=document.getElementById('login-btn');btn.disabled=true;btn.textContent='Signing in...';
   let email=input;
   if(!input.includes('@')){
-    const{data:profile,error:pErr}=await db.from('profiles').select('email').ilike('username',input).maybeSingle();
-    if(pErr||!profile||!profile.email){showErr('Username not found. Try your email instead.');btn.disabled=false;btn.textContent='Sign In';return}
-    email=profile.email;
+    try{
+      const{data:profile,error:pErr}=await Promise.race([db.from('profiles').select('email').ilike('username',input).maybeSingle(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),5000))]);
+      if(pErr||!profile||!profile.email){showErr('Username not found. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+      email=profile.email;
+    }catch(e){showErr('Username lookup failed. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
   }
   const{error}=await db.auth.signInWithPassword({email,password});
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Sign In';return}
