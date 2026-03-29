@@ -683,8 +683,10 @@ async function handleSignup(){
   if(!name||!username||!email||!password){showErr('Please fill in all fields.');return}
   if(password.length<6){showErr('Password must be at least 6 characters.');return}
   const btn=document.getElementById('signup-btn');btn.disabled=true;btn.textContent='Creating...';
-  const{error}=await db.auth.signUp({email,password,options:{data:{full_name:name,username}}});
+  const{data,error}=await db.auth.signUp({email,password,options:{data:{full_name:name,username}}});
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Create Account';return}
+  if(data?.user?.identities?.length===0){showErr('An account with this email already exists. Please sign in.');switchTab('login');btn.disabled=false;btn.textContent='Create Account';return}
+  if(data?.session){closeModal();btn.disabled=false;btn.textContent='Create Account';return}
   showOk('Account created! Check your email to confirm, then sign in.');
   switchTab('login');btn.disabled=false;btn.textContent='Create Account';
 }
