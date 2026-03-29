@@ -196,6 +196,38 @@ textarea{resize:vertical;min-height:80px}
 
 /* PUBLISH MODAL */
 #publishModal .modal{max-width:420px}
+
+/* NOTES DRAWER */
+.notes-drawer-overlay{display:none;position:fixed;inset:0;background:rgba(44,31,14,0.5);z-index:300}
+.notes-drawer-overlay.open{display:block}
+.notes-drawer{position:fixed;top:0;right:-420px;width:400px;max-width:90vw;height:100vh;background:var(--white);z-index:301;transition:right 0.3s ease;display:flex;flex-direction:column;box-shadow:-4px 0 30px rgba(44,31,14,0.15)}
+.notes-drawer.open{right:0}
+.notes-drawer-header{padding:18px 20px;border-bottom:1px solid var(--border);background:var(--parchment);display:flex;align-items:center;justify-content:space-between}
+.notes-drawer-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--brown)}
+.notes-drawer-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);padding:4px 8px;border-radius:6px}
+.notes-drawer-close:hover{background:var(--gold-light);color:var(--brown)}
+.notes-search{padding:10px 20px;border-bottom:1px solid var(--border)}
+.notes-search input{width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+.notes-search input:focus{border-color:var(--gold)}
+.notes-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 20px}
+.notes-tab{padding:10px 14px;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;font-family:'DM Sans',sans-serif;background:none;border-top:none;border-left:none;border-right:none}
+.notes-tab.active{color:var(--gold-dark);border-bottom-color:var(--gold)}
+.notes-list{flex:1;overflow-y:auto;padding:12px 20px;-webkit-overflow-scrolling:touch}
+.notes-empty{text-align:center;padding:40px 20px;color:var(--text-muted);font-style:italic;font-size:14px}
+.note-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:all 0.2s}
+.note-card:hover{border-color:var(--gold);box-shadow:0 2px 8px rgba(201,151,58,0.1)}
+.note-card-ref{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:700;color:var(--brown);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+.note-card-verse{font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--text-muted);font-style:italic;line-height:1.5;margin-bottom:6px;border-left:3px solid var(--gold);padding-left:10px}
+.note-card-text{font-size:13px;line-height:1.6;color:var(--text);margin-bottom:8px}
+.note-card-actions{display:flex;gap:6px}
+.note-card-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--white);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text-muted);transition:all 0.15s}
+.note-card-btn:hover{border-color:var(--gold);color:var(--brown)}
+.note-card-btn.delete:hover{border-color:#e74c3c;color:#e74c3c;background:#fff5f5}
+.hl-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all 0.2s}
+.hl-card:hover{border-color:var(--gold)}
+.hl-card-ref{font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:600;color:var(--brown);margin-bottom:2px}
+.hl-card-color{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.notes-count{font-size:11px;color:var(--text-muted);padding:8px 20px;border-bottom:1px solid var(--border);background:var(--cream)}
 </style>
 </head>
 <body>
@@ -213,7 +245,7 @@ textarea{resize:vertical;min-height:80px}
     <div id="modal-error" class="msg-error"></div>
     <div id="modal-success" class="msg-ok"></div>
     <div id="form-login">
-      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="your@email.com"/></div>
+      <div class="form-group"><label>Username or Email</label><input type="text" id="login-email" placeholder="username or email"/></div>
       <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="Your password"/></div>
       <button class="btn btn-primary" style="width:100%" id="login-btn" onclick="handleLogin()">Sign In</button>
     </div>
@@ -256,6 +288,23 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-ghost" onclick="document.getElementById('publishModal').classList.remove('open')">Cancel</button>
     </div>
   </div>
+</div>
+
+<!-- NOTES DRAWER -->
+<div class="notes-drawer-overlay" id="notesOverlay" onclick="closeNotesDrawer()"></div>
+<div class="notes-drawer" id="notesDrawer">
+  <div class="notes-drawer-header">
+    <span class="notes-drawer-title">My Notes & Highlights</span>
+    <button class="notes-drawer-close" onclick="closeNotesDrawer()">✕</button>
+  </div>
+  <div class="notes-search"><input type="text" id="notes-search-input" placeholder="Search notes..." oninput="renderNotesDrawer()"/></div>
+  <div class="notes-tabs">
+    <button class="notes-tab active" id="ntab-notes" onclick="switchNotesTab('notes')">Notes</button>
+    <button class="notes-tab" id="ntab-highlights" onclick="switchNotesTab('highlights')">Highlights</button>
+    <button class="notes-tab" id="ntab-bookmarks" onclick="switchNotesTab('bookmarks')">Bookmarks</button>
+  </div>
+  <div class="notes-count" id="notes-count"></div>
+  <div class="notes-list" id="notes-list"></div>
 </div>
 
 <nav>
@@ -372,7 +421,8 @@ textarea{resize:vertical;min-height:80px}
         </div>
         <div class="tb-group" style="margin-left:auto">
           <button class="dl-btn" id="dl-btn" onclick="downloadKJV()">⬇ Download KJV Offline</button>
-          <button class="btn btn-ghost btn-sm" onclick="showMyNotes()">📝 Notes</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleBookmark()">🔖 Bookmark</button>
+          <button class="btn btn-ghost btn-sm" onclick="openNotesDrawer()">📝 Notes</button>
         </div>
       </div>
       <!-- verse content -->
@@ -588,9 +638,15 @@ async function handleSignup(){
   switchTab('login');btn.disabled=false;btn.textContent='Create Account';
 }
 async function handleLogin(){
-  const email=document.getElementById('login-email').value.trim(),password=document.getElementById('login-password').value;
-  if(!email||!password){showErr('Please enter email and password.');return}
+  const input=document.getElementById('login-email').value.trim(),password=document.getElementById('login-password').value;
+  if(!input||!password){showErr('Please enter username/email and password.');return}
   const btn=document.getElementById('login-btn');btn.disabled=true;btn.textContent='Signing in...';
+  let email=input;
+  if(!input.includes('@')){
+    const{data:profile}=await db.from('profiles').select('email').eq('username',input).single().catch(()=>({data:null}));
+    if(!profile||!profile.email){showErr('Username not found. Try your email instead.');btn.disabled=false;btn.textContent='Sign In';return}
+    email=profile.email;
+  }
   const{error}=await db.auth.signInWithPassword({email,password});
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Sign In';return}
   closeModal();btn.disabled=false;btn.textContent='Sign In';
@@ -808,20 +864,111 @@ async function confirmPublish(){
   publishTarget=null;
   alert(`Published to ${book} Discussions! 🙌`);
 }
-function showMyNotes(){
-  const entries=[];
-  Object.entries(bNotes).forEach(([k,vNotes])=>{
-    const[book,chapter]=k.split('-');
-    Object.entries(vNotes).forEach(([vn,text])=>entries.push({book,chapter,vn,text}));
-  });
-  if(!entries.length){alert('No notes yet! Tap any verse to add a note.');return}
-  const msg=entries.map(e=>`${e.book} ${e.chapter}:${e.vn} — ${e.text}`).join('\n\n');
-  alert('Your Notes:\n\n'+msg);
+let bBookmarks={},notesTab='notes';
+function loadBookmarks(){try{const b=localStorage.getItem('gc_bookmarks');if(b)bBookmarks=JSON.parse(b);}catch{bBookmarks={}}}
+function saveBookmarks(){try{localStorage.setItem('gc_bookmarks',JSON.stringify(bBookmarks))}catch{}}
+function toggleBookmark(){
+  const key=`${bBook}-${bChapter}`;
+  if(bBookmarks[key]){delete bBookmarks[key]}
+  else{bBookmarks[key]={book:bBook,chapter:bChapter,date:new Date().toLocaleDateString()}}
+  saveBookmarks();
+}
+function openNotesDrawer(){
+  document.getElementById('notesOverlay').classList.add('open');
+  document.getElementById('notesDrawer').classList.add('open');
+  document.getElementById('notes-search-input').value='';
+  renderNotesDrawer();
+}
+function closeNotesDrawer(){
+  document.getElementById('notesOverlay').classList.remove('open');
+  document.getElementById('notesDrawer').classList.remove('open');
+}
+function switchNotesTab(tab){
+  notesTab=tab;
+  document.querySelectorAll('.notes-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('ntab-'+tab).classList.add('active');
+  renderNotesDrawer();
+}
+function renderNotesDrawer(){
+  const list=document.getElementById('notes-list');
+  const countEl=document.getElementById('notes-count');
+  const search=(document.getElementById('notes-search-input').value||'').toLowerCase();
+  if(notesTab==='notes'){
+    const entries=[];
+    Object.entries(bNotes).forEach(([k,vNotes])=>{
+      const parts=k.split('-');const chapter=parts.pop();const book=parts.join('-');
+      Object.entries(vNotes).forEach(([vn,text])=>{
+        const ref=`${book} ${chapter}:${vn}`;
+        if(!search||ref.toLowerCase().includes(search)||text.toLowerCase().includes(search)){
+          entries.push({book,chapter,vn,text,ref,key:k});
+        }
+      });
+    });
+    countEl.textContent=`${entries.length} note${entries.length!==1?'s':''}`;
+    if(!entries.length){list.innerHTML='<div class="notes-empty">No notes yet. Tap any verse while reading to add a note.</div>';return}
+    list.innerHTML=entries.map(e=>`<div class="note-card">
+      <div class="note-card-ref"><span>${e.ref}</span></div>
+      <div class="note-card-text">${e.text}</div>
+      <div class="note-card-actions">
+        <button class="note-card-btn" onclick="goToVerse('${e.book}',${e.chapter},${e.vn})">Go to verse</button>
+        <button class="note-card-btn" onclick="editNoteFromDrawer('${e.key}',${e.vn})">Edit</button>
+        <button class="note-card-btn delete" onclick="deleteNote('${e.key}',${e.vn})">Delete</button>
+      </div>
+    </div>`).join('');
+  }else if(notesTab==='highlights'){
+    const entries=[];
+    Object.entries(bHighlights).forEach(([k,vHLs])=>{
+      const parts=k.split('-');const chapter=parts.pop();const book=parts.join('-');
+      Object.entries(vHLs).forEach(([vn,color])=>{
+        const ref=`${book} ${chapter}:${vn}`;
+        if(!search||ref.toLowerCase().includes(search)){
+          entries.push({book,chapter,vn,color,ref});
+        }
+      });
+    });
+    countEl.textContent=`${entries.length} highlight${entries.length!==1?'s':''}`;
+    if(!entries.length){list.innerHTML='<div class="notes-empty">No highlights yet. Select a highlight color and tap verses to highlight them.</div>';return}
+    const colorMap={yellow:'#FFEC64',green:'#64DC82',blue:'#64AAFF',pink:'#FF78AA',orange:'#FFA53C'};
+    list.innerHTML=entries.map(e=>`<div class="hl-card" onclick="goToVerse('${e.book}',${e.chapter},${e.vn})">
+      <div class="hl-card-ref"><span class="hl-card-color" style="background:${colorMap[e.color]||'#ccc'}"></span>${e.ref}</div>
+    </div>`).join('');
+  }else if(notesTab==='bookmarks'){
+    loadBookmarks();
+    const entries=Object.values(bBookmarks).filter(b=>!search||`${b.book} ${b.chapter}`.toLowerCase().includes(search));
+    countEl.textContent=`${entries.length} bookmark${entries.length!==1?'s':''}`;
+    if(!entries.length){list.innerHTML='<div class="notes-empty">No bookmarks yet. Click "Bookmark" in the toolbar to save your place.</div>';return}
+    list.innerHTML=entries.map(e=>`<div class="hl-card" onclick="goToVerse('${e.book}',${e.chapter},1)">
+      <div class="hl-card-ref">🔖 ${e.book} ${e.chapter}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Saved ${e.date}</div>
+    </div>`).join('');
+  }
+}
+function goToVerse(book,chapter,vn){
+  closeNotesDrawer();
+  bBook=book;bChapter=parseInt(chapter);
+  buildBibleSidebar();loadBibleChapter();
+  setTimeout(()=>{const row=document.getElementById('vr-'+vn);if(row)row.scrollIntoView({behavior:'smooth',block:'center'});},500);
+}
+function editNoteFromDrawer(key,vn){
+  const text=prompt('Edit note:',bNotes[key]?.[vn]||'');
+  if(text===null)return;
+  if(!bNotes[key])bNotes[key]={};
+  if(text.trim())bNotes[key][vn]=text.trim();else delete bNotes[key][vn];
+  saveBibleLocal();renderNotesDrawer();
+}
+function deleteNote(key,vn){
+  if(!confirm('Delete this note?'))return;
+  if(bNotes[key])delete bNotes[key][vn];
+  if(bNotes[key]&&!Object.keys(bNotes[key]).length)delete bNotes[key];
+  saveBibleLocal();renderNotesDrawer();
+}
+function showMyNotes(){openNotesDrawer();
 }
 function saveBibleLocal(){try{localStorage.setItem('gc_hl',JSON.stringify(bHighlights));localStorage.setItem('gc_notes',JSON.stringify(bNotes))}catch{}}
 function loadBibleLocal(){
   try{const h=localStorage.getItem('gc_hl');if(h)bHighlights=JSON.parse(h);}catch{bHighlights={}}
   try{const n=localStorage.getItem('gc_notes');if(n)bNotes=JSON.parse(n);}catch{bNotes={}}
+  try{const b=localStorage.getItem('gc_bookmarks');if(b)bBookmarks=JSON.parse(b);}catch{bBookmarks={}}
   try{const o=localStorage.getItem('gc_kjv');if(o){offlineKJV=JSON.parse(o);const dlBtn=document.getElementById('dl-btn');if(dlBtn){dlBtn.classList.add('done');dlBtn.textContent='✅ KJV Downloaded';}}}catch{offlineKJV=null}
 }
 async function downloadKJV(){
@@ -986,8 +1133,8 @@ try{
       currentUser=session?.user||null;
       if(currentUser){
         const{data}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));
-        if(!data){await db.from('profiles').insert({id:currentUser.id,full_name:currentUser.user_metadata?.full_name||'',username:currentUser.user_metadata?.username||''}).catch(()=>{});const{data:p}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));currentProfile=p;}
-        else{currentProfile=data}
+        if(!data){await db.from('profiles').insert({id:currentUser.id,full_name:currentUser.user_metadata?.full_name||'',username:currentUser.user_metadata?.username||'',email:currentUser.email||''}).catch(()=>{});const{data:p}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));currentProfile=p;}
+        else{if(!data.email&&currentUser.email){await db.from('profiles').update({email:currentUser.email}).eq('id',currentUser.id).catch(()=>{});data.email=currentUser.email;}currentProfile=data}
       }else{currentProfile=null}
       updateUI();
     }catch(e){console.error('Auth state error:',e);updateUI()}
