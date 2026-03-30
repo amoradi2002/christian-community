@@ -15,10 +15,10 @@
 </div>
 <div class="wrap">
 <div class="tabs">
-<button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
-<button class="tab" onclick="showTab('schedule')">Schedule</button>
-<button class="tab" onclick="showTab('patients')">Patients</button>
-<button class="tab" onclick="showTab('billing')">Billing</button>
+<button class="tab active" onclick="showTab('dashboard',this)">Dashboard</button>
+<button class="tab" onclick="showTab('schedule',this)">Schedule</button>
+<button class="tab" onclick="showTab('patients',this)">Patients</button>
+<button class="tab" onclick="showTab('billing',this)">Billing</button>
 </div>
 <div class="ai-box">
 <h3>&#129302; AI Dental Assistant</h3>
@@ -515,7 +515,7 @@
 </div>
 <div style="text-align:center;margin-top:30px;padding:14px;background:#f1f5f9;border-radius:10px;font-size:12px;color:#94a3b8">DEMO - Sample data for demonstration purposes</div>
 </div>
-<script>function showTab(id){['dashboard','schedule','patients','billing'].forEach(function(t){document.getElementById('tab-'+t).style.display='none'});document.getElementById('tab-'+id).style.display='block';document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active')});event.target.classList.add('active')}var responses={d:"Today you have 14 appointments with 2 openings (11 AM and 3:30 PM). Revenue so far is $8,420 which is 15% above your average Monday. Tom Bradley has an emergency at 11:30 - reporting pain in lower right, likely #30. I'd recommend getting a PA x-ray first.",r:"You have 89 patients due for recall, 37 overdue by 6+ months. If we send automated reminders today, based on historical data you'll book about 40% within 2 weeks. That's roughly 35 hygiene appointments worth $14,800 in production.",v:"This month's production is $67,800 with 1 day left. You're on pace for $82K which would be your best month this quarter. Collections rate is 94.2% - above your 92% target. Outstanding A/R of $34,650 includes 12 accounts over 60 days that need follow-up.",t:"Mrs. Patterson has a treatment plan for 2 crowns on #18 and #19. Her Delta Dental PPO covers 50% on major work after deductible. Patient cost estimate: $1,200 per crown x 2 = $2,400 total, insurance covers $1,440, patient pays $960. She's coming in at 2:30 today - good time to present the plan."};function sendChat(){var inp=document.getElementById('chatInput');var val=inp.value.trim();if(!val)return;var box=document.getElementById('chatBox');box.innerHTML+='<div class="msg user">
+<script>function showTab(id,btn){['dashboard','schedule','patients','billing'].forEach(function(t){document.getElementById('tab-'+t).style.display='none'});document.getElementById('tab-'+id).style.display='block';document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active')});btn.classList.add('active')}var responses={d:"Today you have 14 appointments with 2 openings (11 AM and 3:30 PM). Revenue so far is $8,420 which is 15% above your average Monday. Tom Bradley has an emergency at 11:30 - reporting pain in lower right, likely #30. I'd recommend getting a PA x-ray first.",r:"You have 89 patients due for recall, 37 overdue by 6+ months. If we send automated reminders today, based on historical data you'll book about 40% within 2 weeks. That's roughly 35 hygiene appointments worth $14,800 in production.",v:"This month's production is $67,800 with 1 day left. You're on pace for $82K which would be your best month this quarter. Collections rate is 94.2% - above your 92% target. Outstanding A/R of $34,650 includes 12 accounts over 60 days that need follow-up.",t:"Mrs. Patterson has a treatment plan for 2 crowns on #18 and #19. Her Delta Dental PPO covers 50% on major work after deductible. Patient cost estimate: $1,200 per crown x 2 = $2,400 total, insurance covers $1,440, patient pays $960. She's coming in at 2:30 today - good time to present the plan."};function sendChat(){var inp=document.getElementById('chatInput');var val=inp.value.trim();if(!val)return;var box=document.getElementById('chatBox');box.innerHTML+='<div class="msg user">
 <div class="bubble">'+val+'</div>
 </div>';inp.value='';var lc=val.toLowerCase();var r=responses.d;if(lc.indexOf('recall')>=0||lc.indexOf('remind')>=0||lc.indexOf('overdue')>=0)r=responses.r;else if(lc.indexOf('revenue')>=0||lc.indexOf('money')>=0||lc.indexOf('billing')>=0||lc.indexOf('production')>=0||lc.indexOf('collection')>=0)r=responses.v;else if(lc.indexOf('treatment')>=0||lc.indexOf('plan')>=0||lc.indexOf('crown')>=0||lc.indexOf('patterson')>=0||lc.indexOf('insurance')>=0)r=responses.t;setTimeout(function(){box.innerHTML+='<div class="msg ai">
 <div class="bubble">'+r+'</div>
