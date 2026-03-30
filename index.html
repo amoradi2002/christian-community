@@ -506,20 +506,20 @@ textarea{resize:vertical;min-height:80px}
             <option value="bbe">BBE</option>
           </optgroup>
           <optgroup label="Spanish">
-            <option value="gb:rv1858">Reina Valera</option>
+            <option value="gb:valera">Reina Valera</option>
           </optgroup>
           <optgroup label="Russian">
-            <option value="gb:rst">Synodal</option>
+            <option value="gb:synodal">Synodal</option>
           </optgroup>
           <optgroup label="Armenian">
             <option value="gb:easternarmenian">Eastern Armenian</option>
             <option value="gb:westernarmenian">Western Armenian</option>
           </optgroup>
           <optgroup label="French">
-            <option value="gb:ls1910">Louis Segond</option>
+            <option value="gb:martin">Martin</option>
           </optgroup>
           <optgroup label="German">
-            <option value="gb:luther1912">Luther</option>
+            <option value="gb:luther1545">Luther</option>
           </optgroup>
           <optgroup label="Portuguese">
             <option value="almeida">Almeida</option>
@@ -1012,7 +1012,7 @@ async function loadBibleChapter(){
       const bookNum=getBookNumber(bBook);
       const controller=new AbortController();
       const timer=setTimeout(()=>controller.abort(),12000);
-      const res=await fetch(`https://getbible.net/v2/${trans}/${bookNum}/${bChapter}.json`,{signal:controller.signal});
+      const res=await fetch(`https://api.getbible.net/v2/${trans}/${bookNum}/${bChapter}.json`,{signal:controller.signal});
       clearTimeout(timer);
       if(!res.ok){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">This translation is not available for this book.<br/>Try KJV or WEB instead.</div>`;return}
       const data=await res.json();
