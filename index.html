@@ -506,19 +506,20 @@ textarea{resize:vertical;min-height:80px}
             <option value="bbe">BBE</option>
           </optgroup>
           <optgroup label="Spanish">
-            <option value="bolls:RVR60">Reina Valera 1960</option>
+            <option value="gb:rv1858">Reina Valera</option>
           </optgroup>
           <optgroup label="Russian">
-            <option value="bolls:RST">Synodal</option>
+            <option value="gb:rst">Synodal</option>
           </optgroup>
           <optgroup label="Armenian">
-            <option value="bolls:WEBA">Armenian Bible</option>
+            <option value="gb:easternarmenian">Eastern Armenian</option>
+            <option value="gb:westernarmenian">Western Armenian</option>
           </optgroup>
           <optgroup label="French">
-            <option value="bolls:LSG">Louis Segond</option>
+            <option value="gb:ls1910">Louis Segond</option>
           </optgroup>
           <optgroup label="German">
-            <option value="bolls:LUTH1912">Luther</option>
+            <option value="gb:luther1912">Luther</option>
           </optgroup>
           <optgroup label="Portuguese">
             <option value="almeida">Almeida</option>
@@ -991,7 +992,7 @@ function bibleChNav(dir){
 }
 function toggleHLBar(){document.getElementById('hl-float-bar').classList.toggle('open')}
 function getBookNumber(bookName){return ALL_BOOKS.findIndex(b=>b.name===bookName)+1}
-function getVersionLabel(){const v=document.getElementById('b-version').value;return v.startsWith('bolls:')?v.split(':')[1]:v.toUpperCase()}
+function getVersionLabel(){const v=document.getElementById('b-version').value;return v.startsWith('gb:')?v.split(':')[1].toUpperCase():v.toUpperCase()}
 async function loadBibleChapter(){
   bVersion=document.getElementById('b-version').value;
   updateBibleLabel();
@@ -1006,16 +1007,18 @@ async function loadBibleChapter(){
   if(offlineKJV&&offlineKJV[bBook]&&offlineKJV[bBook][bChapter]&&(bVersion==='kjv')){renderBibleVerses(offlineKJV[bBook][bChapter],area);return}
   try{
     let verses;
-    if(bVersion.startsWith('bolls:')){
+    if(bVersion.startsWith('gb:')){
       const trans=bVersion.split(':')[1];
       const bookNum=getBookNumber(bBook);
       const controller=new AbortController();
-      const timer=setTimeout(()=>controller.abort(),10000);
-      const res=await fetch(`https://bolls.life/get-text/${trans}/${bookNum}/${bChapter}/`,{signal:controller.signal});
+      const timer=setTimeout(()=>controller.abort(),12000);
+      const res=await fetch(`https://getbible.net/v2/${trans}/${bookNum}/${bChapter}.json`,{signal:controller.signal});
       clearTimeout(timer);
+      if(!res.ok){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">This translation is not available for this book.<br/>Try KJV or WEB instead.</div>`;return}
       const data=await res.json();
-      if(!Array.isArray(data)||data.length===0){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">This translation is not available for this book.<br/>Try KJV or WEB instead.</div>`;return}
-      verses=data.map(v=>({verse:v.verse,text:(v.text||'').replace(/<[^>]*>/g,' ').trim()}));
+      const vArr=data.verses?Object.values(data.verses):[];
+      if(vArr.length===0){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">This translation is not available for this book.<br/>Try KJV or WEB instead.</div>`;return}
+      verses=vArr.map(v=>({verse:v.verse,text:(v.text||'').replace(/<[^>]*>/g,' ').trim()}));
     }else{
       const res=await fetch(`https://bible-api.com/${encodeURIComponent(bBook)}+${bChapter}?translation=${bVersion}`);
       const data=await res.json();
