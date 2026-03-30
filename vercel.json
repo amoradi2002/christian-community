@@ -1,6 +1,4 @@
 {
-  "rewrites": [
-    { "source": "/demos.html", "destination": "/demos.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "buildCommand": "",
+  "outputDirectory": "."
 }
