@@ -506,19 +506,22 @@ textarea{resize:vertical;min-height:80px}
             <option value="bbe">BBE</option>
           </optgroup>
           <optgroup label="Spanish">
-            <option value="bolls:RVR09">Reina Valera</option>
+            <option value="bolls:RVR60">Reina Valera 1960</option>
           </optgroup>
           <optgroup label="Russian">
-            <option value="bolls:SYNOD">Synodal</option>
+            <option value="bolls:RST">Synodal</option>
           </optgroup>
           <optgroup label="Armenian">
-            <option value="bolls:ARMW">Western</option>
-            <option value="bolls:ARME">Eastern</option>
+            <option value="bolls:WEBA">Armenian Bible</option>
           </optgroup>
-          <optgroup label="Other">
-            <option value="almeida">Portuguese</option>
-            <option value="bolls:LSG">French (LSG)</option>
-            <option value="bolls:LUTH1545">German (Luther)</option>
+          <optgroup label="French">
+            <option value="bolls:LSG">Louis Segond</option>
+          </optgroup>
+          <optgroup label="German">
+            <option value="bolls:LUTH1912">Luther</option>
+          </optgroup>
+          <optgroup label="Portuguese">
+            <option value="almeida">Almeida</option>
           </optgroup>
         </select>
         <button class="bible-icon-btn" onclick="toggleHLBar()" title="Highlight">🖍</button>
@@ -1006,10 +1009,13 @@ async function loadBibleChapter(){
     if(bVersion.startsWith('bolls:')){
       const trans=bVersion.split(':')[1];
       const bookNum=getBookNumber(bBook);
-      const res=await fetch(`https://bolls.life/get-text/${trans}/${bookNum}/${bChapter}/`);
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),10000);
+      const res=await fetch(`https://bolls.life/get-text/${trans}/${bookNum}/${bChapter}/`,{signal:controller.signal});
+      clearTimeout(timer);
       const data=await res.json();
-      if(!Array.isArray(data)||data.length===0){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">Could not load this chapter.<br/>Try another translation.</div>`;return}
-      verses=data.map(v=>({verse:v.verse,text:v.text}));
+      if(!Array.isArray(data)||data.length===0){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">This translation is not available for this book.<br/>Try KJV or WEB instead.</div>`;return}
+      verses=data.map(v=>({verse:v.verse,text:(v.text||'').replace(/<[^>]*>/g,' ').trim()}));
     }else{
       const res=await fetch(`https://bible-api.com/${encodeURIComponent(bBook)}+${bChapter}?translation=${bVersion}`);
       const data=await res.json();
