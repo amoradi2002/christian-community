@@ -1,6 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import './App.css';
+import DemoHub from './demos/DemoHub';
+import LendingDemo from './demos/LendingDemo';
+import RealtorDemo from './demos/RealtorDemo';
+import RestaurantDemo from './demos/RestaurantDemo';
 
 // Simple brown cross SVG as a React component
 const BrownCross = () => (
@@ -908,6 +912,7 @@ function App() {
               <Link to="/testimonies" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>Testimonies</Link>
               <Link to="/prayer-wall" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>Prayer</Link>
               <Link to="/music-forum" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>Music</Link>
+              <Link to="/demos" style={{ color: '#fbbf24', textDecoration: 'none', fontWeight: 700 }}>Demos</Link>
             </nav>
           </div>
         </header>
@@ -927,6 +932,10 @@ function App() {
             <Route path="/testimonies" element={<Testimonies />} />
             <Route path="/prayer-wall" element={<PrayerWall />} />
             <Route path="/music-forum" element={<MusicForum />} />
+            <Route path="/demos" element={<DemoHub />} />
+            <Route path="/demos/lending" element={<LendingDemo />} />
+            <Route path="/demos/realtor" element={<RealtorDemo />} />
+            <Route path="/demos/restaurant" element={<RestaurantDemo />} />
           </Routes>
         </main>
 
