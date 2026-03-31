@@ -93,6 +93,14 @@ nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justi
 .report-btn.block-btn{color:#95574a;border-color:rgba(149,87,74,0.3);background:rgba(149,87,74,0.08)}
 .report-btn.block-btn:hover{background:rgba(192,57,43,0.12);color:#c0392b;border-color:rgba(192,57,43,0.3)}
 .content-actions{display:flex;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+.notif-bell{background:none;border:none;cursor:pointer;position:relative;font-size:18px;padding:4px 8px;margin-right:4px}
+.bell-icon{filter:grayscale(1) brightness(2)}
+.notif-badge{position:absolute;top:-2px;right:0;background:#e74c3c;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.notif-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.notif-card.unread{border-left:3px solid var(--gold);background:linear-gradient(135deg,var(--white),var(--parchment))}
+.notif-meta{font-size:11px;color:var(--text-muted);margin-top:6px}
+.notif-source{font-size:12px;color:var(--gold-dark);font-weight:500;margin-bottom:4px}
+.announce-form{background:var(--parchment);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px}
 .account-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
 .account-type-card{border:1.5px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--white)}
 .account-type-card:hover{border-color:var(--gold)}
@@ -573,7 +581,7 @@ textarea{resize:vertical;min-height:80px}
   </div>
   <div class="nav-right">
     <div id="nav-auth-btns"><button class="btn btn-sm" style="background:transparent;border:1.5px solid rgba(201,151,58,0.5);color:var(--gold-light);font-size:12px" onclick="openModal()">Sign In</button></div>
-    <div id="nav-user-area" style="display:none"><div class="nav-avatar" id="nav-avatar" onclick="openProfilePanel()">?</div></div>
+    <div id="nav-user-area" style="display:none"><button class="notif-bell" id="notif-bell" onclick="showPage('notifications')"><span class="bell-icon">🔔</span><span class="notif-badge" id="notif-badge" style="display:none">0</span></button><div class="nav-avatar" id="nav-avatar" onclick="openProfilePanel()">?</div></div>
   </div>
 </nav>
 
@@ -804,6 +812,11 @@ textarea{resize:vertical;min-height:80px}
   <div id="music-list"><div class="loading">Loading music posts...</div></div>
 </main></div>
 
+<div id="page-notifications" class="page"><main>
+  <div class="section-header"><h2>🔔 Notifications</h2><p>Announcements from your churches and life groups.</p></div>
+  <div id="notif-list"><div class="empty-state"><div class="empty-icon">🔔</div><p>No notifications yet. Join a church or life group to get announcements.</p></div></div>
+</main></div>
+
 <script>
 // Global error handlers to prevent unhandled crashes on iOS Safari
 window.onerror=function(msg,src,line,col,err){
@@ -856,7 +869,7 @@ const dailyVerses=[
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  const map={home:'Home',churches:'Churches','life-groups':'Life Groups',discussions:'Discussions',bible:'Bible',testimonies:'Testimonies',prayer:'Prayer Wall',music:'Music'};
+  const map={home:'Home',churches:'Churches','life-groups':'Life Groups',discussions:'Discussions',bible:'Bible',testimonies:'Testimonies',prayer:'Prayer Wall',music:'Music',notifications:'Notifications'};
   document.querySelectorAll('.nav-link').forEach(l=>{l.classList.toggle('active',l.textContent===map[id])});
   document.getElementById('navLinks').classList.remove('open');
   window.scrollTo(0,0);
@@ -865,6 +878,7 @@ function showPage(id){
   if(id==='testimonies')loadTestimonies();
   if(id==='prayer')loadPrayers();
   if(id==='music')loadMusic();
+  if(id==='notifications')loadNotifications();
   if(id==='discussions')loadDiscussions();
   if(id==='bible')initBible();
 }
@@ -1074,6 +1088,7 @@ function updateUI(){
     if(!on){p.innerHTML=`<div class="sign-in-prompt">🙏 <strong>Sign in</strong> to post. <button class="btn btn-gold btn-sm" style="margin-left:8px" onclick="openModal()">Sign In</button></div>`;f.style.opacity='0.4';f.style.pointerEvents='none';}
     else{p.innerHTML='';f.style.opacity='1';f.style.pointerEvents='auto'}
   });
+  if(on)setTimeout(()=>checkNotifBadge(),500);
 }
 function setDailyVerse(){
   const d=new Date(),start=new Date(d.getFullYear(),0,0);
@@ -1507,10 +1522,11 @@ function openChurchProfile(idx){
       ${ch.listed_by_role?`<div class="profile-detail"><span class="profile-detail-icon">✝️</span><div><div class="profile-detail-label">Listed by</div><div class="profile-detail-value">${ch.contact_name||'Church member'} — ${ch.listed_by_role}</div></div></div>`:''}
     </div>
     <div class="profile-actions">
-      ${ch.website?`<a class="btn btn-primary" href="${ch.website}" target="_blank" style="text-decoration:none">Visit Website</a>`:''}
-      ${ch.contact_email?`<a class="btn btn-ghost" href="mailto:${ch.contact_email}" style="text-decoration:none">Contact</a>`:''}
+      ${ch.id&&currentUser?isMember('church',ch.id)?`<button class="btn btn-ghost" onclick="leaveEntity('church','${ch.id}','${ch.name.replace(/'/g,"\\'")}');document.getElementById('churchProfileModal').classList.remove('open')">Leave Church</button>`:`<button class="btn btn-primary" onclick="joinEntity('church','${ch.id}','${ch.name.replace(/'/g,"\\'")}');document.getElementById('churchProfileModal').classList.remove('open')">Join Church</button>`:''}
+      ${ch.website?`<a class="btn btn-ghost" href="${ch.website}" target="_blank" style="text-decoration:none">Website</a>`:''}
       <button class="btn btn-ghost" onclick="document.getElementById('churchProfileModal').classList.remove('open')">Close</button>
-    </div>`;
+    </div>
+    ${ch.user_id===currentUser?.id?`<div class="announce-form"><strong style="font-size:13px;color:var(--brown)">Post Announcement</strong><p style="font-size:11px;color:var(--text-muted);margin:4px 0 8px">All members will be notified.</p><textarea id="announce-text-${ch.id}" placeholder="Write an announcement for your church members..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-height:60px;font-family:inherit;resize:vertical"></textarea><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="postAnnouncement('church','${ch.id}','${ch.name.replace(/'/g,"\\'")}')">Post Announcement</button></div>`:''}`;
   document.getElementById('churchProfileModal').classList.add('open');
 }
 
@@ -1522,9 +1538,9 @@ async function loadLifeGroups(){
   const fallback=[{id:'d1',name:'Downtown Fellowship',meeting_time:'Wednesdays 7pm',location:'123 Main St',description:'Mixed age group focused on Romans.',member_count:12,leader_id:null},{id:'d2',name:'Young Adults Group',meeting_time:'Fridays 6pm',location:'456 Oak Ave',description:'For young adults 18-35.',member_count:24,leader_id:null},{id:'d3',name:'Morning Prayer Circle',meeting_time:'Sundays 8am',location:'789 Pine Rd',description:'Early morning prayer.',member_count:8,leader_id:null}];
   const list=data&&data.length>0?data:fallback;
   allLifeGroups=list;
-  document.getElementById('life-groups-list').innerHTML=list.map((g,i)=>`<div class="group-card" onclick="openGroupProfile(${i})"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3>${g.group_type?`<span class="badge-denom" style="font-size:10px;margin-bottom:4px;display:inline-block">${g.group_type}</span>`:''}<p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p>${g.leader_name?`<div style="font-size:11px;color:var(--brown);margin-top:4px">Led by <strong>${g.leader_name}</strong></div>`:''}<div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="event.stopPropagation();deleteGroup('${g.id}')">Delete</button></div>`:''}</div><div><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();joinGroup()">Join</button><div style="font-size:11px;color:var(--gold-dark);margin-top:6px;font-weight:500;text-align:center">View profile →</div></div></div>`).join('');
+  document.getElementById('life-groups-list').innerHTML=list.map((g,i)=>`<div class="group-card" onclick="openGroupProfile(${i})"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3>${g.group_type?`<span class="badge-denom" style="font-size:10px;margin-bottom:4px;display:inline-block">${g.group_type}</span>`:''}<p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p>${g.leader_name?`<div style="font-size:11px;color:var(--brown);margin-top:4px">Led by <strong>${g.leader_name}</strong></div>`:''}<div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="event.stopPropagation();deleteGroup('${g.id}')">Delete</button></div>`:''}</div><div><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openGroupProfile(${i})">Join</button><div style="font-size:11px;color:var(--gold-dark);margin-top:6px;font-weight:500;text-align:center">View profile →</div></div></div>`).join('');
 }
-async function joinGroup(){if(!currentUser){openModal();return}alert('You joined! 🙌')}
+async function joinGroup(groupId,groupName){if(!currentUser){openModal();return}if(groupId){joinEntity('group',groupId,groupName)}else{alert('You joined! 🙌')}}
 async function deleteGroup(id){if(!confirm('Delete?'))return;await db.from('life_groups').delete().eq('id',id);loadLifeGroups()}
 async function addLifeGroup(){
   if(!currentUser){openModal();return}
@@ -1555,10 +1571,11 @@ function openGroupProfile(idx){
       <div class="profile-detail"><span class="profile-detail-icon">👥</span><div><div class="profile-detail-label">Members</div><div class="profile-detail-value">${g.member_count||1} member${(g.member_count||1)!==1?'s':''}</div></div></div>
     </div>
     <div class="profile-actions">
-      <button class="btn btn-primary" onclick="document.getElementById('groupProfileModal').classList.remove('open');joinGroup()">Join Group</button>
-      ${g.contact_email?`<a class="btn btn-ghost" href="mailto:${g.contact_email}" style="text-decoration:none">Contact Leader</a>`:''}
+      ${g.id&&currentUser?isMember('group',g.id)?`<button class="btn btn-ghost" onclick="leaveEntity('group','${g.id}','${g.name.replace(/'/g,"\\'")}');document.getElementById('groupProfileModal').classList.remove('open')">Leave Group</button>`:`<button class="btn btn-primary" onclick="joinEntity('group','${g.id}','${g.name.replace(/'/g,"\\'")}');document.getElementById('groupProfileModal').classList.remove('open')">Join Group</button>`:''}
+      ${g.contact_email?`<a class="btn btn-ghost" href="mailto:${g.contact_email}" style="text-decoration:none">Contact</a>`:''}
       <button class="btn btn-ghost" onclick="document.getElementById('groupProfileModal').classList.remove('open')">Close</button>
-    </div>`;
+    </div>
+    ${g.leader_id===currentUser?.id?`<div class="announce-form"><strong style="font-size:13px;color:var(--brown)">Post Announcement</strong><p style="font-size:11px;color:var(--text-muted);margin:4px 0 8px">All members will be notified.</p><textarea id="announce-text-${g.id}" placeholder="Write an announcement for your group members..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-height:60px;font-family:inherit;resize:vertical"></textarea><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="postAnnouncement('group','${g.id}','${g.name.replace(/'/g,"\\'")}')">Post Announcement</button></div>`:''}`;
   document.getElementById('groupProfileModal').classList.add('open');
 }
 
@@ -1639,6 +1656,82 @@ async function addMusic(){
   if(!title||!artist){alert('Please enter title and artist.');return}
   await db.from('music_posts').insert({title,artist,note:document.getElementById('music-note').value.trim(),user_id:currentUser.id});
   ['music-title','music-artist','music-note'].forEach(id=>document.getElementById(id).value='');loadMusic();
+}
+
+// MEMBERS & ANNOUNCEMENTS
+let myMemberships=[];
+async function loadMyMemberships(){
+  if(!currentUser)return;
+  const{data}=await db.from('members').select('*').eq('user_id',currentUser.id).catch(()=>({data:null}));
+  myMemberships=data||[];
+}
+function isMember(type,entityId){
+  return myMemberships.some(m=>m.entity_type===type&&m.entity_id===entityId);
+}
+async function joinEntity(type,entityId,entityName){
+  if(!currentUser){openModal();return}
+  if(isMember(type,entityId)){alert('You already joined '+entityName+'!');return}
+  const{error}=await db.from('members').insert({user_id:currentUser.id,entity_type:type,entity_id:entityId,entity_name:entityName});
+  if(error){
+    // Fallback if members table doesn't exist yet
+    alert('Joined '+entityName+'! 🙌');return;
+  }
+  // Update member count
+  if(type==='church'){
+    const{data:members}=await db.from('members').select('id',{count:'exact'}).eq('entity_type','church').eq('entity_id',entityId).catch(()=>({data:null}));
+    if(members)await db.from('churches').update({member_count:members.length}).eq('id',entityId).catch(()=>{});
+  }else{
+    const{data:members}=await db.from('members').select('id',{count:'exact'}).eq('entity_type','group').eq('entity_id',entityId).catch(()=>({data:null}));
+    if(members)await db.from('life_groups').update({member_count:members.length+1}).eq('id',entityId).catch(()=>{});
+  }
+  await loadMyMemberships();
+  alert('You joined '+entityName+'! You\'ll now receive their announcements. 🙌');
+  loadChurches();loadLifeGroups();
+}
+async function leaveEntity(type,entityId,entityName){
+  if(!currentUser)return;
+  if(!confirm('Leave '+entityName+'? You will stop receiving their announcements.'))return;
+  await db.from('members').delete().eq('user_id',currentUser.id).eq('entity_type',type).eq('entity_id',entityId).catch(()=>{});
+  await loadMyMemberships();
+  alert('You left '+entityName+'.');
+  loadChurches();loadLifeGroups();
+}
+async function postAnnouncement(type,entityId,entityName){
+  if(!currentUser){openModal();return}
+  const text=document.getElementById('announce-text-'+entityId)?.value?.trim();
+  if(!text){alert('Please write an announcement.');return}
+  const{error}=await db.from('announcements').insert({entity_type:type,entity_id:entityId,entity_name:entityName,message:text,posted_by:currentUser.id,posted_by_name:currentProfile?.full_name||'Leader'});
+  if(error){alert('Error posting announcement: '+error.message);return}
+  document.getElementById('announce-text-'+entityId).value='';
+  alert('Announcement posted! All members will see it in their notifications.');
+}
+async function loadNotifications(){
+  if(!currentUser){document.getElementById('notif-list').innerHTML='<div class="empty-state"><div class="empty-icon">🔔</div><p>Sign in to see notifications.</p></div>';return}
+  await loadMyMemberships();
+  if(!myMemberships.length){document.getElementById('notif-list').innerHTML='<div class="empty-state"><div class="empty-icon">🔔</div><p>No notifications yet. Join a church or life group to get announcements.</p></div>';return}
+  const entityIds=myMemberships.map(m=>m.entity_id);
+  const{data}=await db.from('announcements').select('*').in('entity_id',entityIds).order('created_at',{ascending:false}).limit(50).catch(()=>({data:null}));
+  if(!data||!data.length){document.getElementById('notif-list').innerHTML='<div class="empty-state"><div class="empty-icon">🔔</div><p>No announcements yet from your churches and groups.</p></div>';return}
+  const lastSeen=localStorage.getItem('gc_notif_seen')||'';
+  document.getElementById('notif-list').innerHTML=data.map(a=>`<div class="notif-card${a.created_at>lastSeen?' unread':''}"><div class="notif-source">${a.entity_type==='church'?'⛪':'👥'} ${a.entity_name||'Community'}</div><div style="font-size:14px;line-height:1.6">${a.message}</div><div class="notif-meta">Posted by ${a.posted_by_name||'Leader'} · ${new Date(a.created_at).toLocaleDateString()}</div></div>`).join('');
+  localStorage.setItem('gc_notif_seen',new Date().toISOString());
+  updateNotifBadge(0);
+}
+async function checkNotifBadge(){
+  if(!currentUser)return;
+  await loadMyMemberships();
+  if(!myMemberships.length)return;
+  const lastSeen=localStorage.getItem('gc_notif_seen')||'1970-01-01';
+  const entityIds=myMemberships.map(m=>m.entity_id);
+  const{data}=await db.from('announcements').select('id').in('entity_id',entityIds).gt('created_at',lastSeen).catch(()=>({data:null}));
+  const count=data?.length||0;
+  updateNotifBadge(count);
+}
+function updateNotifBadge(count){
+  const badge=document.getElementById('notif-badge');
+  if(!badge)return;
+  if(count>0){badge.textContent=count;badge.style.display='flex';}
+  else{badge.style.display='none';}
 }
 
 // INIT
