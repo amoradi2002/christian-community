@@ -1467,7 +1467,7 @@ async function downloadKJV(){
 
 // CHURCHES
 async function loadChurches(){
-  const{data}=await db.from('churches').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  let data=null;try{const res=await Promise.race([db.from('churches').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const fallback=[{id:'c1',name:'Grace Community Church',pastor:'Pastor Michael Thompson',address:'1200 Hope Blvd',city:'Los Angeles',zip:'90001',denomination:'Non-denominational',service_day:'Sunday',service_time:'9:00 AM & 11:00 AM',website:'https://gracecommunity.com',social:'',about:'A welcoming church for all people.',user_id:null},{id:'c2',name:'First Baptist Church',pastor:'Pastor Sarah Williams',address:'456 Faith Ave',city:'Houston',zip:'77001',denomination:'Baptist',service_day:'Sunday',service_time:'8:30 AM & 10:30 AM',website:'',social:'',about:'Rooted in the Word, reaching the world.',user_id:null},{id:'c3',name:'Calvary Pentecostal',pastor:'Pastor David Cruz',address:'789 Spirit Lane',city:'Miami',zip:'33101',denomination:'Pentecostal',service_day:'Sunday',service_time:'10:00 AM',website:'https://calvarymiami.org',social:'',about:'Spirit-filled worship and powerful prayer.',user_id:null}];
   allChurches=data&&data.length>0?data:fallback;filterChurches();
 }
@@ -1534,7 +1534,7 @@ let allLifeGroups=[];
 
 // LIFE GROUPS
 async function loadLifeGroups(){
-  const{data}=await db.from('life_groups').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  let data=null;try{const res=await Promise.race([db.from('life_groups').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const fallback=[{id:'d1',name:'Downtown Fellowship',meeting_time:'Wednesdays 7pm',location:'123 Main St',description:'Mixed age group focused on Romans.',member_count:12,leader_id:null},{id:'d2',name:'Young Adults Group',meeting_time:'Fridays 6pm',location:'456 Oak Ave',description:'For young adults 18-35.',member_count:24,leader_id:null},{id:'d3',name:'Morning Prayer Circle',meeting_time:'Sundays 8am',location:'789 Pine Rd',description:'Early morning prayer.',member_count:8,leader_id:null}];
   const list=data&&data.length>0?data:fallback;
   allLifeGroups=list;
@@ -1588,10 +1588,14 @@ function initDiscBooks(){
 async function loadDiscussions(){
   const book=document.getElementById('disc-book-select').value,c=document.getElementById('disc-list');
   c.innerHTML='<div class="loading">Loading...</div>';
-  const{data}=await db.from('discussions').select('*,profiles(full_name)').eq('book',book).order('created_at',{ascending:false}).limit(30).catch(()=>({data:null}));
+  let data=null;
+  try{
+    const res=await Promise.race([db.from('discussions').select('*').eq('book',book).order('created_at',{ascending:false}).limit(30),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);
+    data=res?.data||null;
+  }catch(e){console.error('Discussions load error:',e);data=null}
   const fallback={"Matthew":[{profiles:{full_name:'Sarah'},comment:'The Great Commission inspires me daily.'},{profiles:{full_name:'John'},comment:'Jesus promises to be with us always!'}],"John":[{profiles:{full_name:'Alex'},comment:'John 3:16 is the heart of the gospel.'}],"Romans":[{profiles:{full_name:'Chris'},comment:"Nothing can separate us from God's love!"}]};
   const list=(data&&data.length>0?data:(fallback[book]||[])).filter(d=>!blockedUsers.includes(d.user_id));
-  c.innerHTML=list.length===0?`<div class="empty-state"><div class="empty-icon">📖</div><p>No discussions yet for ${book}.</p></div>`:list.map(d=>`<div class="disc-item"><strong style="font-size:12px;color:var(--brown)">${d.profiles?.full_name||'Community member'}</strong><p style="font-size:13px;margin-top:3px;line-height:1.5">${d.comment}</p><div class="content-actions"><button class="report-btn" onclick="openReport('${d.id||''}','discussion','${d.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${d.user_id||''}')">⊘ Block User</button></div></div>`).join('');
+  c.innerHTML=list.length===0?`<div class="empty-state"><div class="empty-icon">📖</div><p>No discussions yet for ${book}.</p></div>`:list.map(d=>`<div class="disc-item"><strong style="font-size:12px;color:var(--brown)">${d.profiles?.full_name||d.user_name||'Community member'}</strong><p style="font-size:13px;margin-top:3px;line-height:1.5">${d.comment}</p><div class="content-actions"><button class="report-btn" onclick="openReport('${d.id||''}','discussion','${d.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${d.user_id||''}')">⊘ Block User</button></div></div>`).join('');
 }
 async function addDiscussion(){
   if(!currentUser){openModal();return}
@@ -1603,7 +1607,7 @@ async function addDiscussion(){
 
 // TESTIMONIES
 async function loadTestimonies(){
-  const{data}=await db.from('testimonies').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  let data=null;try{const res=await Promise.race([db.from('testimonies').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const fallback=[{name:'Anonymous',story:'I was deep in addiction for seven years. A friend invited me to church and I found Jesus. Three years clean — God is faithful.',created_at:new Date().toISOString()},{name:'Sarah M.',story:'I lost my job and clung to Jeremiah 29:11. Three months later I found a better position. Never doubt His timing.',created_at:new Date().toISOString()}];
   const list=data&&data.length>0?data:fallback;
   document.getElementById('testimonies-list').innerHTML=list.map(t=>`<div class="testimony-card"><div style="display:flex;align-items:center;gap:9px;margin-bottom:9px"><div class="avatar">${(t.name||'A')[0].toUpperCase()}</div><div><strong style="font-size:13px;color:var(--brown)">${t.name||'Anonymous'}</strong><div style="font-size:10px;color:var(--text-muted)">${new Date(t.created_at).toLocaleDateString()}</div></div></div><span class="quote-mark">"</span><div class="testimony-text">${t.story}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${t.id||''}','testimony','${t.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${t.user_id||''}')">⊘ Block User</button></div></div>`).join('');
@@ -1619,7 +1623,7 @@ async function addTestimony(){
 
 // PRAYER WALL
 async function loadPrayers(){
-  const{data}=await db.from('prayer_requests').select('*,comments(*)').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  let data=null;try{const res=await Promise.race([db.from('prayer_requests').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const c=document.getElementById('prayer-list');
   if(!data||!data.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">🙏</div><p>No prayer requests yet. Share one!</p></div>';return}
   c.innerHTML=data.map(p=>`<div class="prayer-card"><div style="display:flex;align-items:center;gap:9px;margin-bottom:7px"><div class="avatar">${(p.first_name||'?')[0].toUpperCase()}</div><div><div style="font-weight:500;font-size:13px;color:var(--brown)">${p.first_name}</div><div style="font-size:10px;color:var(--text-muted)">${new Date(p.created_at).toLocaleDateString()}</div></div></div><div style="font-size:13px;line-height:1.6;margin-bottom:9px">${p.request}</div><button class="pray-btn" onclick="incrementPray('${p.id}',this)">🙏 ${p.pray_count||0} Praying</button><div class="content-actions"><button class="report-btn" onclick="openReport('${p.id}','prayer','${p.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${p.user_id||''}')">⊘ Block User</button></div><div class="comments-section"><strong style="font-size:10px;color:var(--text-muted)">ENCOURAGEMENTS</strong><div>${(p.comments||[]).length===0?'<p style="font-size:11px;color:var(--text-muted);margin-top:4px;font-style:italic">No comments yet.</p>':(p.comments||[]).map(c=>`<div class="comment-item">${c.content}</div>`).join('')}</div><div class="comment-input-row"><input type="text" id="ci-${p.id}" placeholder="Write an encouragement..."/><button class="btn btn-ghost btn-sm" onclick="addComment('${p.id}')">Send</button></div></div></div>`).join('');
@@ -1645,7 +1649,7 @@ async function addComment(pid){
 
 // MUSIC
 async function loadMusic(){
-  const{data}=await db.from('music_posts').select('*,profiles(full_name)').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  let data=null;try{const res=await Promise.race([db.from('music_posts').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const fallback=[{title:'Way Maker',artist:'Sinach',note:"Reminds me that God is always at work.",profiles:{full_name:'James'}},{title:'Goodness of God',artist:'Bethel Music',note:'His goodness never fails.',profiles:{full_name:'Maria'}}];
   const list=data&&data.length>0?data:fallback;
   document.getElementById('music-list').innerHTML=list.filter(m=>!blockedUsers.includes(m.user_id)).map(m=>`<div class="music-card"><h3>${m.title}</h3><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">by ${m.artist} · shared by ${m.profiles?.full_name||'Community member'}</div><p style="font-size:13px;line-height:1.5">${m.note||''}</p><div class="content-actions"><button class="report-btn" onclick="openReport('${m.id||''}','music','${m.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${m.user_id||''}')">⊘ Block User</button></div></div>`).join('');
