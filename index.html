@@ -143,8 +143,8 @@ textarea{resize:vertical;min-height:80px}
 .badge-denom{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:var(--gold-light);color:var(--gold-dark)}
 .auth-banner{background:var(--brown);border-radius:var(--radius);padding:18px 22px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .auth-banner p{color:rgba(240,232,216,0.85);font-size:13px}
-.church-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:13px;box-shadow:var(--shadow)}
-.church-card:hover{border-color:var(--gold)}
+.church-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:13px;box-shadow:var(--shadow);cursor:pointer;transition:all 0.2s}
+.church-card:hover{border-color:var(--gold);transform:translateY(-1px);box-shadow:0 4px 20px rgba(92,61,30,0.12)}
 .church-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
 .church-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--brown);margin-bottom:3px}
 .church-pastor{font-size:12px;color:var(--text-muted);margin-bottom:6px}
@@ -155,7 +155,19 @@ textarea{resize:vertical;min-height:80px}
 .filter-bar{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
 .filter-bar .form-group{margin-bottom:0;flex:1;min-width:140px}
 .filter-count{font-size:13px;color:var(--text-muted);margin-bottom:8px}
-.group-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:11px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.group-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:11px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;cursor:pointer;transition:all 0.2s}
+.group-card:hover{border-color:var(--gold);transform:translateY(-1px);box-shadow:0 4px 20px rgba(92,61,30,0.12)}
+.profile-hero{background:linear-gradient(135deg,var(--brown),var(--brown-light));padding:30px 24px;color:var(--gold-light);text-align:center}
+.profile-hero h2{font-family:'Cormorant Garamond',serif;font-size:24px;margin-bottom:4px;color:var(--white)}
+.profile-hero .badge-denom{margin-top:8px;display:inline-block}
+.profile-body{padding:20px 24px}
+.profile-detail{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.5}
+.profile-detail:last-child{border-bottom:none}
+.profile-detail-icon{font-size:16px;min-width:24px;text-align:center}
+.profile-detail-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px}
+.profile-detail-value{color:var(--text);font-weight:400}
+.profile-actions{display:flex;gap:8px;padding:16px 24px;border-top:1px solid var(--border)}
+.profile-actions .btn{flex:1;text-align:center}
 .group-info h3{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--brown)}
 .group-meta{font-size:12px;color:var(--text-muted);display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
 .admin-controls{background:#fff9ed;border:1px solid var(--gold);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px}
@@ -457,6 +469,22 @@ textarea{resize:vertical;min-height:80px}
       <button class="btn btn-primary" onclick="submitReport()">Submit Report</button>
       <button class="btn btn-ghost" onclick="blockAndReport()">Block & Report</button>
     </div>
+  </div>
+</div>
+
+<!-- CHURCH PROFILE MODAL -->
+<div class="modal-overlay" id="churchProfileModal">
+  <div class="modal" style="max-width:500px;padding:0;overflow:hidden">
+    <button class="modal-close" onclick="document.getElementById('churchProfileModal').classList.remove('open')" style="z-index:2;color:var(--brown)">✕</button>
+    <div id="church-profile-content"></div>
+  </div>
+</div>
+
+<!-- LIFE GROUP PROFILE MODAL -->
+<div class="modal-overlay" id="groupProfileModal">
+  <div class="modal" style="max-width:500px;padding:0;overflow:hidden">
+    <button class="modal-close" onclick="document.getElementById('groupProfileModal').classList.remove('open')" style="z-index:2;color:var(--brown)">✕</button>
+    <div id="group-profile-content"></div>
   </div>
 </div>
 
@@ -902,10 +930,12 @@ async function handleLogin(){
   let email=input;
   if(!input.includes('@')){
     try{
-      const{data:profile,error:pErr}=await Promise.race([db.from('profiles').select('email').ilike('username',input).maybeSingle(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),5000))]);
-      if(pErr||!profile||!profile.email){showErr('Username not found. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+      const{data:profile,error:pErr}=await Promise.race([db.from('profiles').select('email,username').ilike('username',input).maybeSingle(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);
+      if(pErr){console.error('Username lookup error:',pErr.message);showErr('Username lookup error: '+pErr.message);btn.disabled=false;btn.textContent='Sign In';return}
+      if(!profile){showErr('Username "'+input+'" not found. Try signing in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+      if(!profile.email){showErr('No email linked to this username. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
       email=profile.email;
-    }catch(e){showErr('Username lookup failed. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+    }catch(e){console.error('Username lookup exception:',e);showErr('Username lookup timed out. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
   }
   const{error}=await db.auth.signInWithPassword({email,password});
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Sign In';return}
@@ -1386,26 +1416,53 @@ function filterChurches(){
   document.getElementById('church-count').textContent=`Showing ${filtered.length} church${filtered.length!==1?'es':''}`;
   const c=document.getElementById('churches-list');
   if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">⛪</div><p>No churches found.</p></div>';return}
-  c.innerHTML=filtered.map(ch=>`<div class="church-card"><div class="church-card-header"><div><div class="church-name">${ch.name}</div>${ch.pastor?`<div class="church-pastor">👤 ${ch.pastor}</div>`:''}<span class="badge-denom">${ch.denomination||'Christian'}</span></div>${ch.user_id===currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="deleteChurch('${ch.id}')">Remove</button>`:''}</div>${ch.about?`<p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px">${ch.about}</p>`:''}<div class="church-meta">${ch.address?`<span class="church-meta-item">📍 ${ch.address}, ${ch.city||''} ${ch.zip||''}</span>`:''} ${ch.service_day?`<span class="church-meta-item">📅 ${ch.service_day}</span>`:''} ${ch.service_time?`<span class="church-meta-item">🕐 ${ch.service_time}</span>`:''}</div>${(ch.website||ch.social)?`<div class="church-links">${ch.website?`<a class="church-link" href="${ch.website}" target="_blank">🌐 Website</a>`:''} ${ch.social?`<a class="church-link" href="${ch.social}" target="_blank">📱 Social</a>`:''}</div>`:''}</div>`).join('');
+  c.innerHTML=filtered.map((ch,i)=>`<div class="church-card" onclick="openChurchProfile(${i})"><div class="church-card-header"><div><div class="church-name">${ch.name}</div>${ch.pastor?`<div class="church-pastor">👤 ${ch.pastor}</div>`:''}<span class="badge-denom">${ch.denomination||'Christian'}</span></div>${ch.user_id===currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteChurch('${ch.id}')">Remove</button>`:''}</div>${ch.about?`<p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px">${ch.about}</p>`:''}<div class="church-meta">${ch.address?`<span class="church-meta-item">📍 ${ch.address}, ${ch.city||''} ${ch.zip||''}</span>`:''} ${ch.service_day?`<span class="church-meta-item">📅 ${ch.service_day}</span>`:''} ${ch.service_time?`<span class="church-meta-item">🕐 ${ch.service_time}</span>`:''}</div><div style="font-size:11px;color:var(--gold-dark);margin-top:8px;font-weight:500">Tap to view full profile →</div></div>`).join('');
 }
 function clearFilters(){document.getElementById('filter-denom').value='';document.getElementById('filter-day').value='';document.getElementById('filter-city').value='';filterChurches()}
 async function addChurch(){
   if(!currentUser){openModal();return}
   const name=document.getElementById('ch-name').value.trim(),address=document.getElementById('ch-address').value.trim(),city=document.getElementById('ch-city').value.trim(),denomination=document.getElementById('ch-denom').value,service_day=document.getElementById('ch-day').value,service_time=document.getElementById('ch-time').value.trim();
   if(!name||!address||!city||!denomination||!service_day||!service_time){alert('Please fill in all required fields.');return}
-  await db.from('churches').insert({name,address,city,zip:document.getElementById('ch-zip').value.trim(),denomination,service_day,service_time,pastor:document.getElementById('ch-pastor').value.trim(),website:document.getElementById('ch-website').value.trim(),social:document.getElementById('ch-social').value.trim(),about:document.getElementById('ch-about').value.trim(),user_id:currentUser.id}).catch(()=>{});
+  const{error}=await db.from('churches').insert({name,address,city,zip:document.getElementById('ch-zip').value.trim(),denomination,service_day,service_time,pastor:document.getElementById('ch-pastor').value.trim(),website:document.getElementById('ch-website').value.trim(),social:document.getElementById('ch-social').value.trim(),about:document.getElementById('ch-about').value.trim(),user_id:currentUser.id});
+  if(error){alert('Error listing church: '+error.message);return}
   ['ch-name','ch-pastor','ch-address','ch-city','ch-zip','ch-time','ch-website','ch-social','ch-about'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ch-denom').value='';document.getElementById('ch-day').value='';
   loadChurches();alert('Your church has been listed! 🙏');
 }
 async function deleteChurch(id){if(!confirm('Remove?'))return;await db.from('churches').delete().eq('id',id);loadChurches()}
+function openChurchProfile(idx){
+  const ch=allChurches[idx];if(!ch)return;
+  document.getElementById('church-profile-content').innerHTML=`
+    <div class="profile-hero">
+      <div style="font-size:40px;margin-bottom:8px">⛪</div>
+      <h2>${ch.name}</h2>
+      ${ch.pastor?`<div style="font-size:14px;opacity:0.85;margin-top:4px">👤 ${ch.pastor}</div>`:''}
+      <span class="badge-denom" style="margin-top:10px">${ch.denomination||'Christian'}</span>
+    </div>
+    <div class="profile-body">
+      ${ch.about?`<p style="font-size:14px;line-height:1.7;color:var(--text);margin-bottom:16px">${ch.about}</p>`:''}
+      <div class="profile-detail"><span class="profile-detail-icon">📍</span><div><div class="profile-detail-label">Address</div><div class="profile-detail-value">${ch.address||''}${ch.city?', '+ch.city:''}${ch.zip?' '+ch.zip:''}</div></div></div>
+      <div class="profile-detail"><span class="profile-detail-icon">📅</span><div><div class="profile-detail-label">Service Day</div><div class="profile-detail-value">${ch.service_day||'Not specified'}</div></div></div>
+      <div class="profile-detail"><span class="profile-detail-icon">🕐</span><div><div class="profile-detail-label">Service Time</div><div class="profile-detail-value">${ch.service_time||'Not specified'}</div></div></div>
+      ${ch.website?`<div class="profile-detail"><span class="profile-detail-icon">🌐</span><div><div class="profile-detail-label">Website</div><div class="profile-detail-value"><a href="${ch.website}" target="_blank" style="color:var(--gold-dark);text-decoration:underline">${ch.website}</a></div></div></div>`:''}
+      ${ch.social?`<div class="profile-detail"><span class="profile-detail-icon">📱</span><div><div class="profile-detail-label">Social Media</div><div class="profile-detail-value"><a href="${ch.social}" target="_blank" style="color:var(--gold-dark);text-decoration:underline">${ch.social}</a></div></div></div>`:''}
+    </div>
+    <div class="profile-actions">
+      ${ch.website?`<a class="btn btn-primary" href="${ch.website}" target="_blank" style="text-decoration:none">Visit Website</a>`:''}
+      <button class="btn btn-ghost" onclick="document.getElementById('churchProfileModal').classList.remove('open')">Close</button>
+    </div>`;
+  document.getElementById('churchProfileModal').classList.add('open');
+}
+
+let allLifeGroups=[];
 
 // LIFE GROUPS
 async function loadLifeGroups(){
   const{data}=await db.from('life_groups').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
   const fallback=[{id:'d1',name:'Downtown Fellowship',meeting_time:'Wednesdays 7pm',location:'123 Main St',description:'Mixed age group focused on Romans.',member_count:12,leader_id:null},{id:'d2',name:'Young Adults Group',meeting_time:'Fridays 6pm',location:'456 Oak Ave',description:'For young adults 18-35.',member_count:24,leader_id:null},{id:'d3',name:'Morning Prayer Circle',meeting_time:'Sundays 8am',location:'789 Pine Rd',description:'Early morning prayer.',member_count:8,leader_id:null}];
   const list=data&&data.length>0?data:fallback;
-  document.getElementById('life-groups-list').innerHTML=list.map(g=>`<div class="group-card"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3><p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p><div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="deleteGroup('${g.id}')">Delete</button></div>`:''}</div><button class="btn btn-ghost btn-sm" onclick="joinGroup()">Join</button></div>`).join('');
+  allLifeGroups=list;
+  document.getElementById('life-groups-list').innerHTML=list.map((g,i)=>`<div class="group-card" onclick="openGroupProfile(${i})"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3><p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p><div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="event.stopPropagation();deleteGroup('${g.id}')">Delete</button></div>`:''}</div><div><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();joinGroup()">Join</button><div style="font-size:11px;color:var(--gold-dark);margin-top:6px;font-weight:500;text-align:center">View profile →</div></div></div>`).join('');
 }
 async function joinGroup(){if(!currentUser){openModal();return}alert('You joined! 🙌')}
 async function deleteGroup(id){if(!confirm('Delete?'))return;await db.from('life_groups').delete().eq('id',id);loadLifeGroups()}
@@ -1413,8 +1470,30 @@ async function addLifeGroup(){
   if(!currentUser){openModal();return}
   const name=document.getElementById('lg-name').value.trim(),meeting_time=document.getElementById('lg-time').value.trim(),location=document.getElementById('lg-location').value.trim();
   if(!name||!meeting_time||!location){alert('Please fill in name, time, and location.');return}
-  await db.from('life_groups').insert({name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),leader_id:currentUser.id,member_count:1});
+  const{error}=await db.from('life_groups').insert({name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),leader_id:currentUser.id,member_count:1});
+  if(error){alert('Error creating group: '+error.message);return}
   ['lg-name','lg-time','lg-location','lg-desc'].forEach(id=>document.getElementById(id).value='');loadLifeGroups();
+  alert('Life group created! 🙌');
+}
+function openGroupProfile(idx){
+  const g=allLifeGroups[idx];if(!g)return;
+  document.getElementById('group-profile-content').innerHTML=`
+    <div class="profile-hero">
+      <div style="font-size:40px;margin-bottom:8px">👥</div>
+      <h2>${g.name}</h2>
+      <div style="font-size:14px;opacity:0.85;margin-top:4px">${g.member_count||1} member${(g.member_count||1)!==1?'s':''}</div>
+    </div>
+    <div class="profile-body">
+      ${g.description?`<p style="font-size:14px;line-height:1.7;color:var(--text);margin-bottom:16px">${g.description}</p>`:''}
+      <div class="profile-detail"><span class="profile-detail-icon">🕐</span><div><div class="profile-detail-label">Meeting Time</div><div class="profile-detail-value">${g.meeting_time||'TBD'}</div></div></div>
+      <div class="profile-detail"><span class="profile-detail-icon">📍</span><div><div class="profile-detail-label">Location</div><div class="profile-detail-value">${g.location||'TBD'}</div></div></div>
+      <div class="profile-detail"><span class="profile-detail-icon">👥</span><div><div class="profile-detail-label">Members</div><div class="profile-detail-value">${g.member_count||1} member${(g.member_count||1)!==1?'s':''}</div></div></div>
+    </div>
+    <div class="profile-actions">
+      <button class="btn btn-primary" onclick="document.getElementById('groupProfileModal').classList.remove('open');joinGroup()">Join Group</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('groupProfileModal').classList.remove('open')">Close</button>
+    </div>`;
+  document.getElementById('groupProfileModal').classList.add('open');
 }
 
 // DISCUSSIONS
