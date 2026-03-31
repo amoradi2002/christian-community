@@ -685,19 +685,22 @@ textarea{resize:vertical;min-height:80px}
   <div class="divider"></div>
   <div class="card">
     <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:6px">⛪ List Your Church</h3>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Help people find your congregation.</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Only pastors, church admins, and ministry leaders may list a church.</p>
     <div id="church-prompt"></div>
     <div id="church-fields">
-      <div class="form-row"><div class="form-group"><label>Church Name *</label><input type="text" id="ch-name" placeholder="Grace Community Church"/></div><div class="form-group"><label>Pastor Name</label><input type="text" id="ch-pastor" placeholder="Pastor John Smith"/></div></div>
+      <div class="form-row"><div class="form-group"><label>Your Role *</label><select id="ch-role"><option value="">Select your role</option><option value="Pastor">Pastor</option><option value="Church Admin">Church Admin</option><option value="Ministry Leader">Ministry Leader</option><option value="Worship Leader">Worship Leader</option></select></div><div class="form-group"><label>Your Name *</label><input type="text" id="ch-contact-name" placeholder="Your full name"/></div></div>
+      <div class="form-group"><label>Contact Email</label><input type="email" id="ch-contact-email" placeholder="pastor@church.com"/></div>
+      <div class="divider" style="margin:12px 0"></div>
+      <div class="form-row"><div class="form-group"><label>Church Name *</label><input type="text" id="ch-name" placeholder="Grace Community Church"/></div><div class="form-group"><label>Pastor Name *</label><input type="text" id="ch-pastor" placeholder="Pastor John Smith"/></div></div>
       <div class="form-group"><label>Address *</label><input type="text" id="ch-address" placeholder="123 Main St, Los Angeles, CA"/></div>
       <div class="form-row"><div class="form-group"><label>City *</label><input type="text" id="ch-city" placeholder="Los Angeles"/></div><div class="form-group"><label>Zip Code</label><input type="text" id="ch-zip" placeholder="90001"/></div></div>
       <div class="form-row">
         <div class="form-group"><label>Denomination *</label><select id="ch-denom"><option value="">Select denomination</option><option>Baptist</option><option>Catholic</option><option>Pentecostal</option><option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option><option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option><option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option></select></div>
         <div class="form-group"><label>Service Day *</label><select id="ch-day"><option value="">Select day</option><option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option><option>Multiple days</option></select></div>
       </div>
-      <div class="form-row"><div class="form-group"><label>Service Time *</label><input type="text" id="ch-time" placeholder="10:00 AM & 6:00 PM"/></div><div class="form-group"><label>Website</label><input type="url" id="ch-website" placeholder="https://yourchurch.com"/></div></div>
-      <div class="form-group"><label>Social Media</label><input type="url" id="ch-social" placeholder="https://instagram.com/yourchurch"/></div>
-      <div class="form-group"><label>About Your Church</label><textarea id="ch-about" placeholder="Tell people about your church..."></textarea></div>
+      <div class="form-row"><div class="form-group"><label>Service Time *</label><input type="text" id="ch-time" placeholder="10:00 AM & 6:00 PM"/></div><div class="form-group"><label>Phone Number</label><input type="tel" id="ch-phone" placeholder="(555) 123-4567"/></div></div>
+      <div class="form-row"><div class="form-group"><label>Website</label><input type="url" id="ch-website" placeholder="https://yourchurch.com"/></div><div class="form-group"><label>Social Media</label><input type="url" id="ch-social" placeholder="https://instagram.com/yourchurch"/></div></div>
+      <div class="form-group"><label>About Your Church</label><textarea id="ch-about" placeholder="Tell people about your church, ministries, and community..."></textarea></div>
       <button class="btn btn-primary" onclick="addChurch()">List My Church</button>
     </div>
   </div>
@@ -708,13 +711,14 @@ textarea{resize:vertical;min-height:80px}
   <div id="life-groups-list"><div class="loading">Loading groups...</div></div>
   <div class="divider"></div>
   <div class="card">
-    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Start a Life Group</h3>
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:6px">Start a Life Group</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">You will be the group leader.</p>
     <div id="lg-prompt"></div>
     <div id="lg-fields">
-      <div class="form-group"><label>Group Name</label><input type="text" id="lg-name" placeholder="Eastside Women's Bible Study"/></div>
-      <div class="form-group"><label>Meeting Time</label><input type="text" id="lg-time" placeholder="Tuesdays 7pm"/></div>
-      <div class="form-group"><label>Location</label><input type="text" id="lg-location" placeholder="123 Main St or Online"/></div>
-      <div class="form-group"><label>Description</label><textarea id="lg-desc" placeholder="Tell people about your group..."></textarea></div>
+      <div class="form-row"><div class="form-group"><label>Group Name *</label><input type="text" id="lg-name" placeholder="Eastside Women's Bible Study"/></div><div class="form-group"><label>Group Type</label><select id="lg-type"><option value="Bible Study">Bible Study</option><option value="Prayer Group">Prayer Group</option><option value="Youth Group">Youth Group</option><option value="Women's Group">Women's Group</option><option value="Men's Group">Men's Group</option><option value="Couples">Couples</option><option value="Young Adults">Young Adults</option><option value="Worship">Worship</option><option value="Other">Other</option></select></div></div>
+      <div class="form-row"><div class="form-group"><label>Meeting Time *</label><input type="text" id="lg-time" placeholder="Tuesdays 7pm"/></div><div class="form-group"><label>Location *</label><input type="text" id="lg-location" placeholder="123 Main St or Online"/></div></div>
+      <div class="form-group"><label>Contact Email</label><input type="email" id="lg-email" placeholder="yourname@email.com"/></div>
+      <div class="form-group"><label>Description</label><textarea id="lg-desc" placeholder="What does your group study? Who is welcome? What can new members expect?"></textarea></div>
       <button class="btn btn-primary" onclick="addLifeGroup()">Create Group</button>
     </div>
   </div>
@@ -1416,17 +1420,20 @@ function filterChurches(){
   document.getElementById('church-count').textContent=`Showing ${filtered.length} church${filtered.length!==1?'es':''}`;
   const c=document.getElementById('churches-list');
   if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">⛪</div><p>No churches found.</p></div>';return}
-  c.innerHTML=filtered.map((ch,i)=>`<div class="church-card" onclick="openChurchProfile(${i})"><div class="church-card-header"><div><div class="church-name">${ch.name}</div>${ch.pastor?`<div class="church-pastor">👤 ${ch.pastor}</div>`:''}<span class="badge-denom">${ch.denomination||'Christian'}</span></div>${ch.user_id===currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteChurch('${ch.id}')">Remove</button>`:''}</div>${ch.about?`<p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px">${ch.about}</p>`:''}<div class="church-meta">${ch.address?`<span class="church-meta-item">📍 ${ch.address}, ${ch.city||''} ${ch.zip||''}</span>`:''} ${ch.service_day?`<span class="church-meta-item">📅 ${ch.service_day}</span>`:''} ${ch.service_time?`<span class="church-meta-item">🕐 ${ch.service_time}</span>`:''}</div><div style="font-size:11px;color:var(--gold-dark);margin-top:8px;font-weight:500">Tap to view full profile →</div></div>`).join('');
+  c.innerHTML=filtered.map((ch,i)=>`<div class="church-card" onclick="openChurchProfile(${i})"><div class="church-card-header"><div><div class="church-name">${ch.name}</div>${ch.pastor?`<div class="church-pastor">👤 ${ch.pastor}</div>`:''}<span class="badge-denom">${ch.denomination||'Christian'}</span>${ch.listed_by_role?`<span class="badge-denom" style="background:var(--green-soft);color:#2d6a4f;margin-left:4px">Listed by ${ch.listed_by_role}</span>`:''}</div>${ch.user_id===currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteChurch('${ch.id}')">Remove</button>`:''}</div>${ch.about?`<p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px">${ch.about}</p>`:''}<div class="church-meta">${ch.address?`<span class="church-meta-item">📍 ${ch.address}, ${ch.city||''} ${ch.zip||''}</span>`:''} ${ch.service_day?`<span class="church-meta-item">📅 ${ch.service_day}</span>`:''} ${ch.service_time?`<span class="church-meta-item">🕐 ${ch.service_time}</span>`:''}</div><div style="font-size:11px;color:var(--gold-dark);margin-top:8px;font-weight:500">Tap to view full profile →</div></div>`).join('');
 }
 function clearFilters(){document.getElementById('filter-denom').value='';document.getElementById('filter-day').value='';document.getElementById('filter-city').value='';filterChurches()}
 async function addChurch(){
   if(!currentUser){openModal();return}
-  const name=document.getElementById('ch-name').value.trim(),address=document.getElementById('ch-address').value.trim(),city=document.getElementById('ch-city').value.trim(),denomination=document.getElementById('ch-denom').value,service_day=document.getElementById('ch-day').value,service_time=document.getElementById('ch-time').value.trim();
-  if(!name||!address||!city||!denomination||!service_day||!service_time){alert('Please fill in all required fields.');return}
-  const{error}=await db.from('churches').insert({name,address,city,zip:document.getElementById('ch-zip').value.trim(),denomination,service_day,service_time,pastor:document.getElementById('ch-pastor').value.trim(),website:document.getElementById('ch-website').value.trim(),social:document.getElementById('ch-social').value.trim(),about:document.getElementById('ch-about').value.trim(),user_id:currentUser.id});
+  const role=document.getElementById('ch-role').value,contactName=document.getElementById('ch-contact-name').value.trim();
+  const name=document.getElementById('ch-name').value.trim(),pastor=document.getElementById('ch-pastor').value.trim(),address=document.getElementById('ch-address').value.trim(),city=document.getElementById('ch-city').value.trim(),denomination=document.getElementById('ch-denom').value,service_day=document.getElementById('ch-day').value,service_time=document.getElementById('ch-time').value.trim();
+  if(!role){alert('Please select your role at this church.');return}
+  if(!contactName){alert('Please enter your name.');return}
+  if(!name||!pastor||!address||!city||!denomination||!service_day||!service_time){alert('Please fill in all required fields.');return}
+  const{error}=await db.from('churches').insert({name,address,city,zip:document.getElementById('ch-zip').value.trim(),denomination,service_day,service_time,pastor,website:document.getElementById('ch-website').value.trim(),social:document.getElementById('ch-social').value.trim(),about:document.getElementById('ch-about').value.trim(),phone:document.getElementById('ch-phone').value.trim(),contact_name:contactName,contact_email:document.getElementById('ch-contact-email').value.trim(),listed_by_role:role,user_id:currentUser.id});
   if(error){alert('Error listing church: '+error.message);return}
-  ['ch-name','ch-pastor','ch-address','ch-city','ch-zip','ch-time','ch-website','ch-social','ch-about'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('ch-denom').value='';document.getElementById('ch-day').value='';
+  ['ch-name','ch-pastor','ch-address','ch-city','ch-zip','ch-time','ch-website','ch-social','ch-about','ch-contact-name','ch-contact-email','ch-phone'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ch-denom').value='';document.getElementById('ch-day').value='';document.getElementById('ch-role').value='';
   loadChurches();alert('Your church has been listed! 🙏');
 }
 async function deleteChurch(id){if(!confirm('Remove?'))return;await db.from('churches').delete().eq('id',id);loadChurches()}
@@ -1444,11 +1451,14 @@ function openChurchProfile(idx){
       <div class="profile-detail"><span class="profile-detail-icon">📍</span><div><div class="profile-detail-label">Address</div><div class="profile-detail-value">${ch.address||''}${ch.city?', '+ch.city:''}${ch.zip?' '+ch.zip:''}</div></div></div>
       <div class="profile-detail"><span class="profile-detail-icon">📅</span><div><div class="profile-detail-label">Service Day</div><div class="profile-detail-value">${ch.service_day||'Not specified'}</div></div></div>
       <div class="profile-detail"><span class="profile-detail-icon">🕐</span><div><div class="profile-detail-label">Service Time</div><div class="profile-detail-value">${ch.service_time||'Not specified'}</div></div></div>
+      ${ch.phone?`<div class="profile-detail"><span class="profile-detail-icon">📞</span><div><div class="profile-detail-label">Phone</div><div class="profile-detail-value">${ch.phone}</div></div></div>`:''}
       ${ch.website?`<div class="profile-detail"><span class="profile-detail-icon">🌐</span><div><div class="profile-detail-label">Website</div><div class="profile-detail-value"><a href="${ch.website}" target="_blank" style="color:var(--gold-dark);text-decoration:underline">${ch.website}</a></div></div></div>`:''}
       ${ch.social?`<div class="profile-detail"><span class="profile-detail-icon">📱</span><div><div class="profile-detail-label">Social Media</div><div class="profile-detail-value"><a href="${ch.social}" target="_blank" style="color:var(--gold-dark);text-decoration:underline">${ch.social}</a></div></div></div>`:''}
+      ${ch.listed_by_role?`<div class="profile-detail"><span class="profile-detail-icon">✝️</span><div><div class="profile-detail-label">Listed by</div><div class="profile-detail-value">${ch.contact_name||'Church member'} — ${ch.listed_by_role}</div></div></div>`:''}
     </div>
     <div class="profile-actions">
       ${ch.website?`<a class="btn btn-primary" href="${ch.website}" target="_blank" style="text-decoration:none">Visit Website</a>`:''}
+      ${ch.contact_email?`<a class="btn btn-ghost" href="mailto:${ch.contact_email}" style="text-decoration:none">Contact</a>`:''}
       <button class="btn btn-ghost" onclick="document.getElementById('churchProfileModal').classList.remove('open')">Close</button>
     </div>`;
   document.getElementById('churchProfileModal').classList.add('open');
@@ -1462,7 +1472,7 @@ async function loadLifeGroups(){
   const fallback=[{id:'d1',name:'Downtown Fellowship',meeting_time:'Wednesdays 7pm',location:'123 Main St',description:'Mixed age group focused on Romans.',member_count:12,leader_id:null},{id:'d2',name:'Young Adults Group',meeting_time:'Fridays 6pm',location:'456 Oak Ave',description:'For young adults 18-35.',member_count:24,leader_id:null},{id:'d3',name:'Morning Prayer Circle',meeting_time:'Sundays 8am',location:'789 Pine Rd',description:'Early morning prayer.',member_count:8,leader_id:null}];
   const list=data&&data.length>0?data:fallback;
   allLifeGroups=list;
-  document.getElementById('life-groups-list').innerHTML=list.map((g,i)=>`<div class="group-card" onclick="openGroupProfile(${i})"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3><p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p><div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="event.stopPropagation();deleteGroup('${g.id}')">Delete</button></div>`:''}</div><div><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();joinGroup()">Join</button><div style="font-size:11px;color:var(--gold-dark);margin-top:6px;font-weight:500;text-align:center">View profile →</div></div></div>`).join('');
+  document.getElementById('life-groups-list').innerHTML=list.map((g,i)=>`<div class="group-card" onclick="openGroupProfile(${i})"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3>${g.group_type?`<span class="badge-denom" style="font-size:10px;margin-bottom:4px;display:inline-block">${g.group_type}</span>`:''}<p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p>${g.leader_name?`<div style="font-size:11px;color:var(--brown);margin-top:4px">Led by <strong>${g.leader_name}</strong></div>`:''}<div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="event.stopPropagation();deleteGroup('${g.id}')">Delete</button></div>`:''}</div><div><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();joinGroup()">Join</button><div style="font-size:11px;color:var(--gold-dark);margin-top:6px;font-weight:500;text-align:center">View profile →</div></div></div>`).join('');
 }
 async function joinGroup(){if(!currentUser){openModal();return}alert('You joined! 🙌')}
 async function deleteGroup(id){if(!confirm('Delete?'))return;await db.from('life_groups').delete().eq('id',id);loadLifeGroups()}
@@ -1470,9 +1480,10 @@ async function addLifeGroup(){
   if(!currentUser){openModal();return}
   const name=document.getElementById('lg-name').value.trim(),meeting_time=document.getElementById('lg-time').value.trim(),location=document.getElementById('lg-location').value.trim();
   if(!name||!meeting_time||!location){alert('Please fill in name, time, and location.');return}
-  const{error}=await db.from('life_groups').insert({name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),leader_id:currentUser.id,member_count:1});
+  const leaderName=currentProfile?.full_name||'Group Leader';
+  const{error}=await db.from('life_groups').insert({name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),group_type:document.getElementById('lg-type').value,contact_email:document.getElementById('lg-email').value.trim(),leader_name:leaderName,leader_id:currentUser.id,member_count:1});
   if(error){alert('Error creating group: '+error.message);return}
-  ['lg-name','lg-time','lg-location','lg-desc'].forEach(id=>document.getElementById(id).value='');loadLifeGroups();
+  ['lg-name','lg-time','lg-location','lg-desc','lg-email'].forEach(id=>document.getElementById(id).value='');loadLifeGroups();
   alert('Life group created! 🙌');
 }
 function openGroupProfile(idx){
@@ -1481,16 +1492,19 @@ function openGroupProfile(idx){
     <div class="profile-hero">
       <div style="font-size:40px;margin-bottom:8px">👥</div>
       <h2>${g.name}</h2>
+      ${g.group_type?`<span class="badge-denom" style="margin-top:8px">${g.group_type}</span>`:''}
       <div style="font-size:14px;opacity:0.85;margin-top:4px">${g.member_count||1} member${(g.member_count||1)!==1?'s':''}</div>
     </div>
     <div class="profile-body">
       ${g.description?`<p style="font-size:14px;line-height:1.7;color:var(--text);margin-bottom:16px">${g.description}</p>`:''}
+      <div class="profile-detail"><span class="profile-detail-icon">👤</span><div><div class="profile-detail-label">Group Leader</div><div class="profile-detail-value">${g.leader_name||'Group Leader'}</div></div></div>
       <div class="profile-detail"><span class="profile-detail-icon">🕐</span><div><div class="profile-detail-label">Meeting Time</div><div class="profile-detail-value">${g.meeting_time||'TBD'}</div></div></div>
       <div class="profile-detail"><span class="profile-detail-icon">📍</span><div><div class="profile-detail-label">Location</div><div class="profile-detail-value">${g.location||'TBD'}</div></div></div>
       <div class="profile-detail"><span class="profile-detail-icon">👥</span><div><div class="profile-detail-label">Members</div><div class="profile-detail-value">${g.member_count||1} member${(g.member_count||1)!==1?'s':''}</div></div></div>
     </div>
     <div class="profile-actions">
       <button class="btn btn-primary" onclick="document.getElementById('groupProfileModal').classList.remove('open');joinGroup()">Join Group</button>
+      ${g.contact_email?`<a class="btn btn-ghost" href="mailto:${g.contact_email}" style="text-decoration:none">Contact Leader</a>`:''}
       <button class="btn btn-ghost" onclick="document.getElementById('groupProfileModal').classList.remove('open')">Close</button>
     </div>`;
   document.getElementById('groupProfileModal').classList.add('open');
