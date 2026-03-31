@@ -1430,9 +1430,12 @@ async function addChurch(){
   if(!role){alert('Please select your role at this church.');return}
   if(!contactName){alert('Please enter your name.');return}
   if(!name||!pastor||!address||!city||!denomination||!service_day||!service_time){alert('Please fill in all required fields.');return}
-  const{error}=await db.from('churches').insert({name,address,city,zip:document.getElementById('ch-zip').value.trim(),denomination,service_day,service_time,pastor,website:document.getElementById('ch-website').value.trim(),social:document.getElementById('ch-social').value.trim(),about:document.getElementById('ch-about').value.trim(),phone:document.getElementById('ch-phone').value.trim(),contact_name:contactName,contact_email:document.getElementById('ch-contact-email').value.trim(),listed_by_role:role,user_id:currentUser.id});
-  if(error){alert('Error listing church: '+error.message);return}
-  ['ch-name','ch-pastor','ch-address','ch-city','ch-zip','ch-time','ch-website','ch-social','ch-about','ch-contact-name','ch-contact-email','ch-phone'].forEach(id=>document.getElementById(id).value='');
+  const row={name,address,city,zip:document.getElementById('ch-zip').value.trim(),denomination,service_day,service_time,pastor,website:document.getElementById('ch-website').value.trim(),social:document.getElementById('ch-social').value.trim(),about:document.getElementById('ch-about').value.trim(),user_id:currentUser.id};
+  // Try with new columns first, fall back to basic columns
+  let res=await db.from('churches').insert({...row,phone:document.getElementById('ch-phone').value.trim(),contact_name:contactName,contact_email:document.getElementById('ch-contact-email').value.trim(),listed_by_role:role});
+  if(res.error){res=await db.from('churches').insert(row)}
+  if(res.error){alert('Error listing church: '+res.error.message);return}
+  ['ch-name','ch-pastor','ch-address','ch-city','ch-zip','ch-time','ch-website','ch-social','ch-about','ch-contact-name','ch-contact-email','ch-phone'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
   document.getElementById('ch-denom').value='';document.getElementById('ch-day').value='';document.getElementById('ch-role').value='';
   loadChurches();alert('Your church has been listed! 🙏');
 }
@@ -1481,9 +1484,11 @@ async function addLifeGroup(){
   const name=document.getElementById('lg-name').value.trim(),meeting_time=document.getElementById('lg-time').value.trim(),location=document.getElementById('lg-location').value.trim();
   if(!name||!meeting_time||!location){alert('Please fill in name, time, and location.');return}
   const leaderName=currentProfile?.full_name||'Group Leader';
-  const{error}=await db.from('life_groups').insert({name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),group_type:document.getElementById('lg-type').value,contact_email:document.getElementById('lg-email').value.trim(),leader_name:leaderName,leader_id:currentUser.id,member_count:1});
-  if(error){alert('Error creating group: '+error.message);return}
-  ['lg-name','lg-time','lg-location','lg-desc','lg-email'].forEach(id=>document.getElementById(id).value='');loadLifeGroups();
+  const row={name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),leader_id:currentUser.id,member_count:1};
+  let res=await db.from('life_groups').insert({...row,group_type:document.getElementById('lg-type').value,contact_email:document.getElementById('lg-email').value.trim(),leader_name:leaderName});
+  if(res.error){res=await db.from('life_groups').insert(row)}
+  if(res.error){alert('Error creating group: '+res.error.message);return}
+  ['lg-name','lg-time','lg-location','lg-desc','lg-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});loadLifeGroups();
   alert('Life group created! 🙌');
 }
 function openGroupProfile(idx){
