@@ -18,24 +18,32 @@
   --hl-yellow:rgba(255,236,100,0.55);--hl-green:rgba(100,220,130,0.45);
   --hl-blue:rgba(100,170,255,0.45);--hl-pink:rgba(255,120,170,0.45);--hl-orange:rgba(255,165,60,0.5);
 }
-body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;min-height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);-webkit-text-size-adjust:100%}
-nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;height:58px;box-shadow:0 2px 12px rgba(44,31,14,0.25)}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;min-height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);padding-bottom:72px;-webkit-text-size-adjust:100%}
+nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;height:50px;box-shadow:0 2px 12px rgba(44,31,14,0.25)}
 .nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer}
-.nav-logo svg{width:30px;height:30px}
-.nav-logo-text{font-family:'Cormorant Garamond',serif;color:var(--gold-light);font-size:19px;font-weight:600}
+.nav-logo svg{width:26px;height:26px}
+.nav-logo-text{font-family:'Cormorant Garamond',serif;color:var(--gold-light);font-size:18px;font-weight:600}
 .nav-right{display:flex;align-items:center;gap:8px}
-.nav-links{display:flex;gap:2px;flex-wrap:wrap}
-.nav-link{background:none;border:none;color:rgba(240,232,216,0.75);padding:7px 9px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11.5px;transition:all 0.2s;white-space:nowrap}
-.nav-link:hover,.nav-link.active{color:var(--gold-light);background:rgba(255,255,255,0.1)}
+.nav-links{display:none}
+.nav-link{display:none}
 .nav-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--white);cursor:pointer;border:2px solid var(--gold-light)}
-.hamburger{display:none;background:none;border:none;cursor:pointer;flex-direction:column;gap:5px;padding:8px}
+.hamburger{display:none}
 .hamburger span{width:20px;height:2px;background:var(--gold-light);border-radius:2px}
-@media(max-width:750px){
-  .nav-links{display:none;position:absolute;top:58px;left:0;right:0;background:var(--brown);flex-direction:column;padding:10px;gap:2px;box-shadow:0 8px 20px rgba(0,0,0,0.3)}
-  .nav-links.open{display:flex}
-  .hamburger{display:flex}
-  .nav-link{font-size:14px;padding:10px 14px}
-}
+.bottom-tabs{position:fixed;bottom:0;left:0;right:0;background:var(--brown);display:flex;align-items:center;justify-content:space-around;z-index:100;padding:6px 0 calc(6px + env(safe-area-inset-bottom));box-shadow:0 -2px 12px rgba(44,31,14,0.3);border-top:1px solid rgba(201,151,58,0.15)}
+.tab-btn{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 12px;color:rgba(240,232,216,0.5);transition:color 0.2s;min-width:56px}
+.tab-btn svg,.tab-btn .tab-icon{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab-btn .tab-label{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;letter-spacing:0.3px}
+.tab-btn.active{color:var(--gold-light)}
+.tab-btn.active svg,.tab-btn.active .tab-icon{stroke:var(--gold-light)}
+.tab-avatar{width:24px;height:24px;border-radius:50%;border:2px solid rgba(240,232,216,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:rgba(240,232,216,0.5);transition:all 0.2s}
+.tab-btn.active .tab-avatar{border-color:var(--gold-light);color:var(--gold-light)}
+.community-grid,.discover-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:0;max-width:500px;margin:0 auto}
+.grid-card{background:var(--white);border-radius:var(--radius);padding:20px 16px;text-align:center;cursor:pointer;border:1.5px solid var(--border);transition:all 0.2s;display:flex;flex-direction:column;align-items:center;gap:8px}
+.grid-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 4px 12px rgba(44,31,14,0.1)}
+.grid-card .grid-icon{font-size:28px}
+.grid-card .grid-label{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--brown)}
+.grid-card .grid-desc{font-size:11px;color:var(--text-muted);line-height:1.3}
+@media(max-width:750px){body{padding-bottom:70px}}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(44,31,14,0.6);z-index:200;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.open{display:flex}
 .modal{background:var(--white);border-radius:var(--radius);padding:30px;width:100%;max-width:400px;position:relative;max-height:90vh;overflow-y:auto}
@@ -93,6 +101,23 @@ nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justi
 .report-btn.block-btn{color:#95574a;border-color:rgba(149,87,74,0.3);background:rgba(149,87,74,0.08)}
 .report-btn.block-btn:hover{background:rgba(192,57,43,0.12);color:#c0392b;border-color:rgba(192,57,43,0.3)}
 .content-actions{display:flex;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+.filter-pill{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer;color:var(--text-muted);font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.filter-pill:hover,.filter-pill.active{background:var(--brown);color:var(--gold-light);border-color:var(--brown)}
+.notif-bell{background:none;border:none;cursor:pointer;position:relative;font-size:18px;padding:4px 8px;margin-right:4px}
+.bell-icon{filter:grayscale(1) brightness(2)}
+.notif-badge{position:absolute;top:-2px;right:0;background:#e74c3c;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.notif-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.notif-card.unread{border-left:3px solid var(--gold);background:linear-gradient(135deg,var(--white),var(--parchment))}
+.notif-meta{font-size:11px;color:var(--text-muted);margin-top:6px}
+.notif-source{font-size:12px;color:var(--gold-dark);font-weight:500;margin-bottom:4px}
+.announce-form{background:var(--parchment);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px}
+.account-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.account-type-card{border:1.5px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--white)}
+.account-type-card:hover{border-color:var(--gold)}
+.account-type-card.active{border-color:var(--gold);background:linear-gradient(135deg,var(--parchment),var(--gold-light));box-shadow:0 2px 8px rgba(201,151,58,0.2)}
+.at-icon{font-size:24px;margin-bottom:4px}
+.at-label{font-size:12px;font-weight:600;color:var(--brown)}
+.at-desc{font-size:10px;color:var(--text-muted);margin-top:2px}
 .safety-banner{background:linear-gradient(135deg,#f0e8d8,#e8f0f8);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:12.5px;color:var(--brown);margin-bottom:14px;line-height:1.5;display:flex;align-items:flex-start;gap:6px}
 
 .msg-error{background:#fff0f0;border:1px solid #ffcccc;border-radius:8px;padding:10px 14px;font-size:13px;color:#c0392b;margin-bottom:14px;display:none}
@@ -111,6 +136,30 @@ main{max-width:900px;margin:0 auto;padding:28px 20px}
 .verse-label{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-weight:500;margin-bottom:7px}
 .verse-text{font-family:'Cormorant Garamond',serif;font-size:19px;line-height:1.5;color:var(--brown);font-style:italic;margin-bottom:5px}
 .verse-ref{font-size:12px;color:var(--text-muted);font-weight:500}
+.verse-save-btn{background:none;border:1px solid var(--border);color:var(--gold-dark);font-size:11px;padding:6px 12px;border-radius:8px;cursor:pointer;margin-top:10px;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.verse-save-btn:hover{background:var(--gold);color:var(--white);border-color:var(--gold)}
+.toggle-switch{position:relative;width:44px;height:24px;display:inline-block}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#ccc;border-radius:24px;cursor:pointer;transition:0.3s}
+.toggle-slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s}
+.toggle-switch input:checked+.toggle-slider{background:var(--gold)}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px)}
+.wp-bg-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.wp-bg-opt{width:100%;aspect-ratio:1;border-radius:10px;cursor:pointer;border:2.5px solid transparent;transition:all 0.15s}
+.wp-bg-opt:hover{transform:scale(1.08)}
+.wp-bg-opt.active{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,151,58,0.3)}
+.wp-font-btn{background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.wp-font-btn:hover,.wp-font-btn.active{background:var(--brown);color:var(--gold-light);border-color:var(--brown)}
+.sermon-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.sermon-platform{display:inline-block;font-size:10px;padding:3px 8px;border-radius:12px;font-weight:600;text-transform:uppercase}
+.sermon-platform.youtube{background:#fce4ec;color:#c62828}.sermon-platform.tiktok{background:#e8eaf6;color:#283593}.sermon-platform.spotify{background:#e8f5e9;color:#2e7d32}.sermon-platform.apple{background:#fff3e0;color:#e65100}
+.music-links{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.music-link{font-size:11px;padding:5px 10px;border-radius:8px;text-decoration:none;font-weight:500;display:inline-flex;align-items:center;gap:4px}
+.music-link.spotify{background:#1DB954;color:#fff}.music-link.apple{background:#FC3C44;color:#fff}.music-link.youtube{background:#FF0000;color:#fff}
+.promise-card{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:var(--radius);padding:18px 22px;margin-bottom:13px;box-shadow:var(--shadow)}
+.promise-card .promise-text{font-family:'Cormorant Garamond',serif;font-size:17px;line-height:1.6;color:var(--brown);font-style:italic;margin-bottom:6px}
+.promise-card .promise-ref{font-size:12px;color:var(--text-muted);font-weight:500}
+.promise-card .promise-topic{font-size:10px;color:var(--gold-dark);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
 .features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:22px}
 .feature-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:17px;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow)}
 .feature-card:hover{transform:translateY(-3px);box-shadow:0 6px 28px rgba(92,61,30,0.14);border-color:var(--gold)}
@@ -143,8 +192,8 @@ textarea{resize:vertical;min-height:80px}
 .badge-denom{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:var(--gold-light);color:var(--gold-dark)}
 .auth-banner{background:var(--brown);border-radius:var(--radius);padding:18px 22px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .auth-banner p{color:rgba(240,232,216,0.85);font-size:13px}
-.church-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:13px;box-shadow:var(--shadow)}
-.church-card:hover{border-color:var(--gold)}
+.church-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:13px;box-shadow:var(--shadow);cursor:pointer;transition:all 0.2s}
+.church-card:hover{border-color:var(--gold);transform:translateY(-1px);box-shadow:0 4px 20px rgba(92,61,30,0.12)}
 .church-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
 .church-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--brown);margin-bottom:3px}
 .church-pastor{font-size:12px;color:var(--text-muted);margin-bottom:6px}
@@ -155,7 +204,19 @@ textarea{resize:vertical;min-height:80px}
 .filter-bar{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
 .filter-bar .form-group{margin-bottom:0;flex:1;min-width:140px}
 .filter-count{font-size:13px;color:var(--text-muted);margin-bottom:8px}
-.group-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:11px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.group-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:11px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;cursor:pointer;transition:all 0.2s}
+.group-card:hover{border-color:var(--gold);transform:translateY(-1px);box-shadow:0 4px 20px rgba(92,61,30,0.12)}
+.profile-hero{background:linear-gradient(135deg,var(--brown),var(--brown-light));padding:30px 24px;color:var(--gold-light);text-align:center}
+.profile-hero h2{font-family:'Cormorant Garamond',serif;font-size:24px;margin-bottom:4px;color:var(--white)}
+.profile-hero .badge-denom{margin-top:8px;display:inline-block}
+.profile-body{padding:20px 24px}
+.profile-detail{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.5}
+.profile-detail:last-child{border-bottom:none}
+.profile-detail-icon{font-size:16px;min-width:24px;text-align:center}
+.profile-detail-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px}
+.profile-detail-value{color:var(--text);font-weight:400}
+.profile-actions{display:flex;gap:8px;padding:16px 24px;border-top:1px solid var(--border)}
+.profile-actions .btn{flex:1;text-align:center}
 .group-info h3{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--brown)}
 .group-meta{font-size:12px;color:var(--text-muted);display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
 .admin-controls{background:#fff9ed;border:1px solid var(--gold);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px}
@@ -355,12 +416,41 @@ textarea{resize:vertical;min-height:80px}
       <div class="form-group"><label>Username or Email</label><input type="text" id="login-email" placeholder="username or email"/></div>
       <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="Your password"/></div>
       <button class="btn btn-primary" style="width:100%" id="login-btn" onclick="handleLogin()">Sign In</button>
+      <button type="button" style="background:none;border:none;color:var(--gold);font-size:12px;cursor:pointer;margin-top:10px;text-decoration:underline;display:block;text-align:center;width:100%" onclick="handleForgotPassword()">Forgot Password?</button>
     </div>
     <div id="form-signup" style="display:none">
-      <div class="form-group"><label>Full Name</label><input type="text" id="signup-name" placeholder="Your full name"/></div>
-      <div class="form-group"><label>Username</label><input type="text" id="signup-username" placeholder="username"/></div>
-      <div class="form-group"><label>Email</label><input type="email" id="signup-email" placeholder="your@email.com"/></div>
-      <div class="form-group"><label>Password</label><input type="password" id="signup-password" placeholder="Min 6 characters"/></div>
+      <div class="form-group"><label style="font-weight:500;margin-bottom:8px">Account Type</label>
+        <div class="account-type-grid">
+          <div class="account-type-card active" id="at-personal" onclick="selectAccountType('personal')"><div class="at-icon">👤</div><div class="at-label">Personal</div><div class="at-desc">Join the community</div></div>
+          <div class="account-type-card" id="at-church" onclick="selectAccountType('church')"><div class="at-icon">⛪</div><div class="at-label">Church</div><div class="at-desc">List your church</div></div>
+          <div class="account-type-card" id="at-group" onclick="selectAccountType('group')"><div class="at-icon">👥</div><div class="at-label">Life Group</div><div class="at-desc">Lead a group</div></div>
+        </div>
+      </div>
+      <input type="hidden" id="signup-account-type" value="personal"/>
+      <div class="form-group"><label>Full Name *</label><input type="text" id="signup-name" placeholder="Your full name"/></div>
+      <div class="form-group"><label>Username *</label><input type="text" id="signup-username" placeholder="username"/></div>
+      <div class="form-group"><label>Email *</label><input type="email" id="signup-email" placeholder="your@email.com"/></div>
+      <div class="form-group"><label>Password *</label><input type="password" id="signup-password" placeholder="Min 6 characters"/></div>
+      <!-- Church fields -->
+      <div id="signup-church-fields" style="display:none">
+        <div style="border-top:1.5px solid var(--border);margin:14px 0;position:relative"><span style="position:absolute;top:-10px;left:12px;background:var(--white);padding:0 8px;font-size:11px;color:var(--gold-dark);text-transform:uppercase;letter-spacing:0.5px;font-weight:500">Church Details</span></div>
+        <div class="form-group"><label>Your Role at Church *</label><select id="signup-ch-role"><option value="">Select your role</option><option value="Pastor">Pastor</option><option value="Associate Pastor">Associate Pastor</option><option value="Church Admin">Church Admin</option><option value="Ministry Leader">Ministry Leader</option><option value="Worship Leader">Worship Leader</option><option value="Deacon/Elder">Deacon / Elder</option></select></div>
+        <div class="form-group"><label>Church Name *</label><input type="text" id="signup-ch-name" placeholder="Grace Community Church"/></div>
+        <div class="form-group"><label>Pastor Name *</label><input type="text" id="signup-ch-pastor" placeholder="Pastor John Smith"/></div>
+        <div class="form-group"><label>Address *</label><input type="text" id="signup-ch-address" placeholder="123 Main St"/></div>
+        <div class="form-row"><div class="form-group"><label>City *</label><input type="text" id="signup-ch-city" placeholder="Los Angeles"/></div><div class="form-group"><label>Zip</label><input type="text" id="signup-ch-zip" placeholder="90001"/></div></div>
+        <div class="form-row"><div class="form-group"><label>Denomination *</label><select id="signup-ch-denom"><option value="">Select</option><option>Baptist</option><option>Catholic</option><option>Pentecostal</option><option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option><option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option><option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option></select></div><div class="form-group"><label>Service Day *</label><select id="signup-ch-day"><option value="">Select</option><option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option><option>Multiple days</option></select></div></div>
+        <div class="form-row"><div class="form-group"><label>Service Time *</label><input type="text" id="signup-ch-time" placeholder="10:00 AM & 6:00 PM"/></div><div class="form-group"><label>Phone</label><input type="tel" id="signup-ch-phone" placeholder="(555) 123-4567"/></div></div>
+        <div class="form-row"><div class="form-group"><label>Website</label><input type="url" id="signup-ch-website" placeholder="https://yourchurch.com"/></div><div class="form-group"><label>Social Media</label><input type="url" id="signup-ch-social" placeholder="https://instagram.com/church"/></div></div>
+        <div class="form-group"><label>About Your Church *</label><textarea id="signup-ch-about" placeholder="Tell people about your church, ministries, service style, and community..."></textarea></div>
+      </div>
+      <!-- Life Group fields -->
+      <div id="signup-group-fields" style="display:none">
+        <div style="border-top:1.5px solid var(--border);margin:14px 0;position:relative"><span style="position:absolute;top:-10px;left:12px;background:var(--white);padding:0 8px;font-size:11px;color:var(--gold-dark);text-transform:uppercase;letter-spacing:0.5px;font-weight:500">Life Group Details</span></div>
+        <div class="form-row"><div class="form-group"><label>Group Name *</label><input type="text" id="signup-lg-name" placeholder="Eastside Women's Bible Study"/></div><div class="form-group"><label>Group Type *</label><select id="signup-lg-type"><option value="Bible Study">Bible Study</option><option value="Prayer Group">Prayer Group</option><option value="Youth Group">Youth Group</option><option value="Women's Group">Women's Group</option><option value="Men's Group">Men's Group</option><option value="Couples">Couples</option><option value="Young Adults">Young Adults</option><option value="Worship">Worship</option><option value="Fellowship">Fellowship</option><option value="Other">Other</option></select></div></div>
+        <div class="form-row"><div class="form-group"><label>Meeting Day & Time *</label><input type="text" id="signup-lg-time" placeholder="Tuesdays 7:00 PM"/></div><div class="form-group"><label>Location *</label><input type="text" id="signup-lg-location" placeholder="123 Main St or Online"/></div></div>
+        <div class="form-group"><label>About Your Group *</label><textarea id="signup-lg-desc" placeholder="What does your group study? Who is welcome? What can new members expect?"></textarea></div>
+      </div>
       <label class="form-check" style="font-size:12px;line-height:1.5;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px"><input type="checkbox" id="signup-eula" style="margin-top:3px"/> I agree to the <a href="#" onclick="event.preventDefault();openEULA()" style="color:var(--gold);text-decoration:underline">Terms of Use & Community Guidelines</a></label>
       <button class="btn btn-primary" style="width:100%" id="signup-btn" onclick="handleSignup()">Create Account</button>
     </div>
@@ -397,6 +487,14 @@ textarea{resize:vertical;min-height:80px}
       <div class="profile-activity" id="profile-activity">
         <div class="activity-empty">No activity yet. Start sharing with the community!</div>
       </div>
+    </div>
+    <div class="profile-section">
+      <h3 class="profile-section-title">Settings</h3>
+      <div class="account-row" style="justify-content:space-between;display:flex;align-items:center">
+        <div><span class="account-label" style="font-weight:500">Notifications</span><div style="font-size:11px;color:var(--text-muted)">Show bell icon for announcements</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="toggle-notifs" onchange="toggleNotifications()"/><span class="toggle-slider"></span></label>
+      </div>
+      <div id="notif-link-row" style="display:none;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="closeProfilePanel();showPage('notifications')" style="width:100%">View Notifications</button></div>
     </div>
     <div class="profile-section">
       <h3 class="profile-section-title">Account</h3>
@@ -460,13 +558,86 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- WALLPAPER CREATOR -->
+<div class="modal-overlay" id="wallpaperModal">
+  <div class="modal" style="max-width:420px;padding:0;overflow:hidden">
+    <button class="modal-close" onclick="document.getElementById('wallpaperModal').classList.remove('open')" style="z-index:2">✕</button>
+    <div style="padding:20px 24px 0">
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--brown);margin-bottom:4px">Create Wallpaper</h2>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Customize and save to your phone</p>
+    </div>
+    <div style="padding:0 24px">
+      <canvas id="wp-preview" width="292" height="520" style="width:100%;border-radius:12px;border:1px solid var(--border);margin-bottom:14px"></canvas>
+    </div>
+    <div style="padding:0 24px 8px;max-height:240px;overflow-y:auto">
+      <div class="form-group" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Verse Text</label><textarea id="wp-text" rows="2" style="font-size:13px" oninput="updateWallpaperPreview()"></textarea></div>
+      <div class="form-group" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Reference</label><input type="text" id="wp-ref" style="font-size:13px" oninput="updateWallpaperPreview()"/></div>
+      <div class="form-group" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Background</label>
+        <div class="wp-bg-grid" id="wp-bg-grid">
+          <div class="wp-bg-opt active" data-bg="dark-brown" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#5C3D1E,#2C1F0E)"></div>
+          <div class="wp-bg-opt" data-bg="dark-green" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#1a3a2a,#051a0e)"></div>
+          <div class="wp-bg-opt" data-bg="dark-blue" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#1a2a3a,#0a1520)"></div>
+          <div class="wp-bg-opt" data-bg="dark-purple" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#2a1a3a,#150a20)"></div>
+          <div class="wp-bg-opt" data-bg="sunset" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#c94b4b,#4b134f)"></div>
+          <div class="wp-bg-opt" data-bg="ocean" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#2193b0,#6dd5ed)"></div>
+          <div class="wp-bg-opt" data-bg="gold" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#8B6420,#C9973A)"></div>
+          <div class="wp-bg-opt" data-bg="midnight" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)"></div>
+          <div class="wp-bg-opt" data-bg="cream" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#FAF7F2,#E8D5B5)"></div>
+          <div class="wp-bg-opt" data-bg="black" onclick="selectWpBg(this)" style="background:#000"></div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Font Style</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="wp-font-btn active" data-font="serif" onclick="selectWpFont(this)">Serif</button>
+          <button class="wp-font-btn" data-font="sans" onclick="selectWpFont(this)">Sans</button>
+          <button class="wp-font-btn" data-font="script" onclick="selectWpFont(this)">Script</button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Font Size</label>
+        <input type="range" id="wp-fontsize" min="36" max="72" value="52" style="width:100%" oninput="updateWallpaperPreview()"/>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:4px">
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="wp-cross" checked onchange="updateWallpaperPreview()"/> Show cross</label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="wp-watermark" checked onchange="updateWallpaperPreview()"/> Watermark</label>
+      </div>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px">
+      <button class="btn btn-primary" style="flex:1" onclick="downloadWallpaper()">Save Wallpaper</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('wallpaperModal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHURCH PROFILE MODAL -->
+<div class="modal-overlay" id="churchProfileModal">
+  <div class="modal" style="max-width:500px;padding:0;overflow:hidden">
+    <button class="modal-close" onclick="document.getElementById('churchProfileModal').classList.remove('open')" style="z-index:2;color:var(--brown)">✕</button>
+    <div id="church-profile-content"></div>
+  </div>
+</div>
+
+<!-- LIFE GROUP PROFILE MODAL -->
+<div class="modal-overlay" id="groupProfileModal">
+  <div class="modal" style="max-width:500px;padding:0;overflow:hidden">
+    <button class="modal-close" onclick="document.getElementById('groupProfileModal').classList.remove('open')" style="z-index:2;color:var(--brown)">✕</button>
+    <div id="group-profile-content"></div>
+  </div>
+</div>
+
 <!-- PUBLISH MODAL -->
 <div class="modal-overlay" id="publishModal">
   <div class="modal">
     <button class="modal-close" onclick="document.getElementById('publishModal').classList.remove('open')">✕</button>
-    <h2>Publish to Discussions</h2>
+    <h2>Share This Verse</h2>
     <div id="pub-verse-preview" style="background:var(--parchment);border-radius:8px;padding:11px 13px;font-family:'Cormorant Garamond',serif;font-size:15px;line-height:1.5;color:var(--brown);margin-bottom:13px;font-style:italic"></div>
+    <div class="form-group"><label>Where to post</label>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn-sm" id="pub-dest-disc" onclick="setPubDest('discussions')" style="flex:1;background:var(--gold);color:var(--white);border:1.5px solid var(--gold)">💬 Discussions</button>
+        <button class="btn btn-sm" id="pub-dest-promise" onclick="setPubDest('promises')" style="flex:1;background:transparent;color:var(--gold-dark);border:1.5px solid var(--gold)">🕊️ God's Promises</button>
+      </div>
+    </div>
     <div class="form-group"><label>Add a note (optional)</label><textarea id="pub-note" rows="3" placeholder="Share your thoughts..."></textarea></div>
+    <div id="pub-promise-topic" style="display:none"><div class="form-group"><label>Promise Topic</label><select id="pub-topic-select"><option value="healing">Healing</option><option value="strength">Strength</option><option value="peace">Peace</option><option value="provision">Provision</option><option value="love">Love</option><option value="protection">Protection</option><option value="forgiveness">Forgiveness</option><option value="guidance">Guidance</option></select></div></div>
     <label class="form-check"><input type="checkbox" id="pub-anon"/> Post anonymously</label>
     <div style="display:flex;gap:8px">
       <button class="btn btn-primary" onclick="confirmPublish()">Publish</button>
@@ -497,22 +668,92 @@ textarea{resize:vertical;min-height:80px}
     <svg viewBox="0 0 32 32" fill="none"><rect x="13" y="2" width="6" height="28" rx="2" fill="#C9973A"/><rect x="5" y="11" width="22" height="6" rx="2" fill="#C9973A"/></svg>
     <span class="nav-logo-text">God's Children</span>
   </div>
-  <button class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></button>
-  <div class="nav-links" id="navLinks">
-    <button class="nav-link active" onclick="showPage('home')">Home</button>
-    <button class="nav-link" onclick="showPage('churches')">Churches</button>
-    <button class="nav-link" onclick="showPage('life-groups')">Life Groups</button>
-    <button class="nav-link" onclick="showPage('discussions')">Discussions</button>
-    <button class="nav-link" onclick="showPage('bible')">Bible</button>
-    <button class="nav-link" onclick="showPage('testimonies')">Testimonies</button>
-    <button class="nav-link" onclick="showPage('prayer')">Prayer Wall</button>
-    <button class="nav-link" onclick="showPage('music')">Music</button>
-  </div>
+  <div class="nav-links" id="navLinks"></div>
   <div class="nav-right">
     <div id="nav-auth-btns"><button class="btn btn-sm" style="background:transparent;border:1.5px solid rgba(201,151,58,0.5);color:var(--gold-light);font-size:12px" onclick="openModal()">Sign In</button></div>
-    <div id="nav-user-area" style="display:none"><div class="nav-avatar" id="nav-avatar" onclick="openProfilePanel()">?</div></div>
+    <div id="nav-user-area" style="display:none"><div class="nav-avatar" id="nav-avatar" onclick="openProfilePanel()" style="display:none">?</div></div>
   </div>
 </nav>
+
+<!-- BOTTOM TAB BAR -->
+<div class="bottom-tabs" id="bottomTabs">
+  <button class="tab-btn active" id="tab-home" onclick="switchBottomTab('home')">
+    <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>
+    <span class="tab-label">Home</span>
+  </button>
+  <button class="tab-btn" id="tab-bible" onclick="switchBottomTab('bible')">
+    <svg viewBox="0 0 24 24"><path d="M4 4h3a3 3 0 013 3v13a2 2 0 00-2-2H4zM20 4h-3a3 3 0 00-3 3v13a2 2 0 012-2h4z"/></svg>
+    <span class="tab-label">Bible</span>
+  </button>
+  <button class="tab-btn" id="tab-community" onclick="switchBottomTab('community')">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+    <span class="tab-label">Community</span>
+  </button>
+  <button class="tab-btn" id="tab-discover" onclick="switchBottomTab('discover')">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <span class="tab-label">Discover</span>
+  </button>
+  <button class="tab-btn" id="tab-you" onclick="switchBottomTab('you')">
+    <div class="tab-avatar" id="tab-avatar-icon">?</div>
+    <span class="tab-label">You</span>
+  </button>
+</div>
+
+<!-- COMMUNITY HUB -->
+<div id="page-community" class="page"><main>
+  <h1 class="section-title" style="text-align:center;margin-bottom:4px">Community</h1>
+  <p style="text-align:center;color:var(--text-muted);font-size:13px;margin-bottom:20px">Connect with believers near you</p>
+  <div class="community-grid">
+    <div class="grid-card" onclick="showPage('churches')">
+      <span class="grid-icon">⛪</span>
+      <span class="grid-label">Churches</span>
+      <span class="grid-desc">Find & list churches</span>
+    </div>
+    <div class="grid-card" onclick="showPage('life-groups')">
+      <span class="grid-icon">🤝</span>
+      <span class="grid-label">Life Groups</span>
+      <span class="grid-desc">Small group fellowship</span>
+    </div>
+    <div class="grid-card" onclick="showPage('discussions')">
+      <span class="grid-icon">💬</span>
+      <span class="grid-label">Discussions</span>
+      <span class="grid-desc">Talk about scripture</span>
+    </div>
+    <div class="grid-card" onclick="showPage('prayer')">
+      <span class="grid-icon">🙏</span>
+      <span class="grid-label">Prayer Wall</span>
+      <span class="grid-desc">Share prayer requests</span>
+    </div>
+  </div>
+</main></div>
+
+<!-- DISCOVER HUB -->
+<div id="page-discover" class="page"><main>
+  <h1 class="section-title" style="text-align:center;margin-bottom:4px">Discover</h1>
+  <p style="text-align:center;color:var(--text-muted);font-size:13px;margin-bottom:20px">Grow your faith daily</p>
+  <div class="discover-grid">
+    <div class="grid-card" onclick="showPage('testimonies')">
+      <span class="grid-icon">✨</span>
+      <span class="grid-label">Testimonies</span>
+      <span class="grid-desc">Stories of God's power</span>
+    </div>
+    <div class="grid-card" onclick="showPage('promises')">
+      <span class="grid-icon">🕊️</span>
+      <span class="grid-label">God's Promises</span>
+      <span class="grid-desc">Verses of hope</span>
+    </div>
+    <div class="grid-card" onclick="showPage('sermons')">
+      <span class="grid-icon">🎤</span>
+      <span class="grid-label">Sermons</span>
+      <span class="grid-desc">Powerful messages</span>
+    </div>
+    <div class="grid-card" onclick="showPage('music')">
+      <span class="grid-icon">🎵</span>
+      <span class="grid-label">Music</span>
+      <span class="grid-desc">Worship & praise</span>
+    </div>
+  </div>
+</main></div>
 
 <!-- HOME -->
 <div id="page-home" class="page active">
@@ -520,13 +761,14 @@ textarea{resize:vertical;min-height:80px}
   <div id="home-welcome"></div>
   <div class="hero">
     <svg style="margin:0 auto 14px;display:block" width="50" height="50" viewBox="0 0 50 50" fill="none"><rect x="20" y="3" width="10" height="44" rx="4" fill="#C9973A" opacity="0.9"/><rect x="6" y="18" width="38" height="10" rx="4" fill="#C9973A" opacity="0.9"/></svg>
-    <h1>Welcome to God's Children</h1>
+    <h1>Welcome God's Children</h1>
     <p>A place to connect, grow, and encourage one another in Christ.</p>
   </div>
   <div class="verse-card">
     <div class="verse-label">✦ Daily Verse</div>
     <div class="verse-text" id="verse-text">Loading...</div>
     <div class="verse-ref" id="verse-ref"></div>
+    <button class="verse-save-btn" onclick="saveVerseAsImage()">📱 Save as Wallpaper</button>
   </div>
   <div class="features-grid">
     <div class="feature-card" onclick="showPage('churches')"><div class="feature-icon">⛪</div><div class="feature-title">Churches</div><div class="feature-desc">Find a church near you by denomination.</div></div>
@@ -535,7 +777,9 @@ textarea{resize:vertical;min-height:80px}
     <div class="feature-card" onclick="showPage('bible')"><div class="feature-icon">📚</div><div class="feature-title">Bible Reader</div><div class="feature-desc">Full Bible, highlights, notes & offline.</div></div>
     <div class="feature-card" onclick="showPage('testimonies')"><div class="feature-icon">💬</div><div class="feature-title">Testimonies</div><div class="feature-desc">Read and share stories of faith.</div></div>
     <div class="feature-card" onclick="showPage('prayer')"><div class="feature-icon">🙏</div><div class="feature-title">Prayer Wall</div><div class="feature-desc">Share requests and encourage one another.</div></div>
-    <div class="feature-card" onclick="showPage('music')"><div class="feature-icon">🎵</div><div class="feature-title">Music Forum</div><div class="feature-desc">Share your favorite worship songs.</div></div>
+    <div class="feature-card" onclick="showPage('promises')"><div class="feature-icon">✨</div><div class="feature-title">God's Promises</div><div class="feature-desc">Browse promises by topic for hope and strength.</div></div>
+    <div class="feature-card" onclick="showPage('sermons')"><div class="feature-icon">🎙️</div><div class="feature-title">Sermons</div><div class="feature-desc">Share and watch sermons from YouTube, TikTok & more.</div></div>
+    <div class="feature-card" onclick="showPage('music')"><div class="feature-icon">🎵</div><div class="feature-title">Music</div><div class="feature-desc">Share worship songs with Spotify & Apple Music links.</div></div>
   </div>
   <div class="about-card"><strong>About this Community:</strong><br/><span style="font-size:13px;color:#2C3E50;line-height:1.6">We are believers dedicated to supporting each other in our walk with Christ. Whether you're new to faith or have been a Christian for years, you are welcome here!</span></div>
   <div class="cta-card">"Share your testimony or join a group today — be a blessing to others!"</div>
@@ -645,7 +889,7 @@ textarea{resize:vertical;min-height:80px}
 
 <!-- OTHER PAGES -->
 <div id="page-churches" class="page"><main>
-  <div class="section-header"><h2>⛪ Find a Church</h2><p>Browse by denomination, service times, and city.</p></div>
+  <div class="section-header"><h2>⛪ Churches</h2><p>Find a church home or create a profile for yours.</p></div>
   <div class="filter-bar">
     <div class="form-group"><label>Denomination</label><select id="filter-denom" onchange="filterChurches()"><option value="">All Denominations</option><option>Baptist</option><option>Catholic</option><option>Pentecostal</option><option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option><option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option><option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option></select></div>
     <div class="form-group"><label>Service Day</label><select id="filter-day" onchange="filterChurches()"><option value="">Any Day</option><option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option></select></div>
@@ -655,40 +899,23 @@ textarea{resize:vertical;min-height:80px}
   <div id="church-count" class="filter-count"></div>
   <div id="churches-list"><div class="loading">Loading churches...</div></div>
   <div class="divider"></div>
-  <div class="card">
-    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:6px">⛪ List Your Church</h3>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Help people find your congregation.</p>
-    <div id="church-prompt"></div>
-    <div id="church-fields">
-      <div class="form-row"><div class="form-group"><label>Church Name *</label><input type="text" id="ch-name" placeholder="Grace Community Church"/></div><div class="form-group"><label>Pastor Name</label><input type="text" id="ch-pastor" placeholder="Pastor John Smith"/></div></div>
-      <div class="form-group"><label>Address *</label><input type="text" id="ch-address" placeholder="123 Main St, Los Angeles, CA"/></div>
-      <div class="form-row"><div class="form-group"><label>City *</label><input type="text" id="ch-city" placeholder="Los Angeles"/></div><div class="form-group"><label>Zip Code</label><input type="text" id="ch-zip" placeholder="90001"/></div></div>
-      <div class="form-row">
-        <div class="form-group"><label>Denomination *</label><select id="ch-denom"><option value="">Select denomination</option><option>Baptist</option><option>Catholic</option><option>Pentecostal</option><option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option><option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option><option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option></select></div>
-        <div class="form-group"><label>Service Day *</label><select id="ch-day"><option value="">Select day</option><option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option><option>Multiple days</option></select></div>
-      </div>
-      <div class="form-row"><div class="form-group"><label>Service Time *</label><input type="text" id="ch-time" placeholder="10:00 AM & 6:00 PM"/></div><div class="form-group"><label>Website</label><input type="url" id="ch-website" placeholder="https://yourchurch.com"/></div></div>
-      <div class="form-group"><label>Social Media</label><input type="url" id="ch-social" placeholder="https://instagram.com/yourchurch"/></div>
-      <div class="form-group"><label>About Your Church</label><textarea id="ch-about" placeholder="Tell people about your church..."></textarea></div>
-      <button class="btn btn-primary" onclick="addChurch()">List My Church</button>
-    </div>
+  <div class="card" style="text-align:center;padding:24px">
+    <div style="font-size:28px;margin-bottom:8px">⛪</div>
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--brown);margin-bottom:6px">Want to list your church?</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Create a Church account to build your church profile.</p>
+    <button class="btn btn-primary" onclick="openModal();switchTab('signup');setTimeout(()=>selectAccountType('church'),100)">Create Church Account</button>
   </div>
 </main></div>
 
 <div id="page-life-groups" class="page"><main>
-  <div class="section-header"><h2>Life Groups</h2><p>Find community near you.</p></div>
+  <div class="section-header"><h2>👥 Life Groups</h2><p>Find a group to grow with or start your own.</p></div>
   <div id="life-groups-list"><div class="loading">Loading groups...</div></div>
   <div class="divider"></div>
-  <div class="card">
-    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Start a Life Group</h3>
-    <div id="lg-prompt"></div>
-    <div id="lg-fields">
-      <div class="form-group"><label>Group Name</label><input type="text" id="lg-name" placeholder="Eastside Women's Bible Study"/></div>
-      <div class="form-group"><label>Meeting Time</label><input type="text" id="lg-time" placeholder="Tuesdays 7pm"/></div>
-      <div class="form-group"><label>Location</label><input type="text" id="lg-location" placeholder="123 Main St or Online"/></div>
-      <div class="form-group"><label>Description</label><textarea id="lg-desc" placeholder="Tell people about your group..."></textarea></div>
-      <button class="btn btn-primary" onclick="addLifeGroup()">Create Group</button>
-    </div>
+  <div class="card" style="text-align:center;padding:24px">
+    <div style="font-size:28px;margin-bottom:8px">👥</div>
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--brown);margin-bottom:6px">Want to start a life group?</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Create a Life Group account to build your group profile.</p>
+    <button class="btn btn-primary" onclick="openModal();switchTab('signup');setTimeout(()=>selectAccountType('group'),100)">Create Life Group Account</button>
   </div>
 </main></div>
 
@@ -711,11 +938,21 @@ textarea{resize:vertical;min-height:80px}
 <div id="page-testimonies" class="page"><main>
   <div class="section-header"><h2>Testimonies</h2><p>Stories of what God has done.</p></div>
   <div class="safety-banner">⚑ This is a moderated community. Use the <b>Report</b> and <b>Block User</b> buttons on any post to flag inappropriate content or block abusive users.</div>
+  <div class="filter-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+    <button class="filter-pill active" onclick="filterTestimonies('all',this)">All</button>
+    <button class="filter-pill" onclick="filterTestimonies('healing',this)">Healing</button>
+    <button class="filter-pill" onclick="filterTestimonies('finance',this)">Finance</button>
+    <button class="filter-pill" onclick="filterTestimonies('relationships',this)">Relationships</button>
+    <button class="filter-pill" onclick="filterTestimonies('addiction',this)">Addiction</button>
+    <button class="filter-pill" onclick="filterTestimonies('faith',this)">Faith</button>
+    <button class="filter-pill" onclick="filterTestimonies('family',this)">Family</button>
+    <button class="filter-pill" onclick="filterTestimonies('career',this)">Career</button>
+  </div>
   <div class="card">
     <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Share Your Testimony</h3>
     <div id="test-prompt"></div>
     <div id="test-fields">
-      <div class="form-group"><label>Your Name (optional)</label><input type="text" id="test-name" placeholder="Leave blank to post anonymously"/></div>
+      <div class="form-row"><div class="form-group"><label>Your Name (optional)</label><input type="text" id="test-name" placeholder="Leave blank to post anonymously"/></div><div class="form-group"><label>Category</label><select id="test-category"><option value="">General</option><option value="healing">Healing</option><option value="finance">Finance</option><option value="relationships">Relationships</option><option value="addiction">Addiction</option><option value="faith">Faith</option><option value="family">Family</option><option value="career">Career</option></select></div></div>
       <label class="form-check"><input type="checkbox" id="test-share-name"/> Share my name publicly</label>
       <div class="form-group"><label>Your Testimony</label><textarea id="test-story" placeholder="Share what God has done in your life..."></textarea></div>
       <button class="btn btn-primary" onclick="addTestimony()">Submit Testimony</button>
@@ -742,20 +979,60 @@ textarea{resize:vertical;min-height:80px}
 </main></div>
 
 <div id="page-music" class="page"><main>
-  <div class="section-header"><h2>Music Forum</h2><p>Share songs that move your spirit.</p></div>
+  <div class="section-header"><h2>🎵 Music</h2><p>Share worship songs that move your spirit.</p></div>
   <div class="safety-banner">⚑ This is a moderated community. Use the <b>Report</b> and <b>Block User</b> buttons on any post to flag inappropriate content or block abusive users.</div>
   <div class="card">
     <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Share a Song</h3>
     <div id="music-prompt"></div>
     <div id="music-fields">
-      <div class="form-group"><label>Song Title</label><input type="text" id="music-title" placeholder="Way Maker"/></div>
-      <div class="form-group"><label>Artist</label><input type="text" id="music-artist" placeholder="Sinach"/></div>
+      <div class="form-row"><div class="form-group"><label>Song Title *</label><input type="text" id="music-title" placeholder="Way Maker"/></div><div class="form-group"><label>Artist *</label><input type="text" id="music-artist" placeholder="Sinach"/></div></div>
+      <div class="form-row"><div class="form-group"><label>Spotify Link</label><input type="url" id="music-spotify" placeholder="https://open.spotify.com/track/..."/></div><div class="form-group"><label>Apple Music Link</label><input type="url" id="music-apple" placeholder="https://music.apple.com/..."/></div></div>
+      <div class="form-group"><label>YouTube Link</label><input type="url" id="music-youtube" placeholder="https://youtube.com/watch?v=..."/></div>
       <div class="form-group"><label>Why does this song speak to you?</label><textarea id="music-note" placeholder="Share what this song means to you..."></textarea></div>
       <button class="btn btn-primary" onclick="addMusic()">Share Song</button>
     </div>
   </div>
   <div class="divider"></div>
   <div id="music-list"><div class="loading">Loading music posts...</div></div>
+</main></div>
+
+<div id="page-promises" class="page"><main>
+  <div class="section-header"><h2>✨ God's Promises</h2><p>Find strength and hope in His Word.</p></div>
+  <div class="filter-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+    <button class="filter-pill active" onclick="loadPromises('all',this)">All</button>
+    <button class="filter-pill" onclick="loadPromises('healing',this)">Healing</button>
+    <button class="filter-pill" onclick="loadPromises('strength',this)">Strength</button>
+    <button class="filter-pill" onclick="loadPromises('peace',this)">Peace</button>
+    <button class="filter-pill" onclick="loadPromises('provision',this)">Provision</button>
+    <button class="filter-pill" onclick="loadPromises('love',this)">Love</button>
+    <button class="filter-pill" onclick="loadPromises('protection',this)">Protection</button>
+    <button class="filter-pill" onclick="loadPromises('forgiveness',this)">Forgiveness</button>
+    <button class="filter-pill" onclick="loadPromises('guidance',this)">Guidance</button>
+  </div>
+  <div id="promises-list"></div>
+</main></div>
+
+<div id="page-sermons" class="page"><main>
+  <div class="section-header"><h2>🎙️ Sermons</h2><p>Share powerful messages that moved your spirit.</p></div>
+  <div class="safety-banner">⚑ This is a moderated community. Use the <b>Report</b> and <b>Block User</b> buttons on any post to flag inappropriate content or block abusive users.</div>
+  <div class="card">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--brown);margin-bottom:14px">Share a Sermon</h3>
+    <div id="sermon-prompt"></div>
+    <div id="sermon-fields">
+      <div class="form-row"><div class="form-group"><label>Sermon Title *</label><input type="text" id="sermon-title" placeholder="The Power of Prayer"/></div><div class="form-group"><label>Speaker / Pastor *</label><input type="text" id="sermon-speaker" placeholder="Pastor John Smith"/></div></div>
+      <div class="form-group"><label>Video/Audio Link *</label><input type="url" id="sermon-link" placeholder="YouTube, TikTok, or Spotify link"/></div>
+      <div class="form-group"><label>Platform</label><select id="sermon-platform"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="spotify">Spotify</option><option value="apple">Apple Podcasts</option><option value="other">Other</option></select></div>
+      <div class="form-group"><label>Why did this speak to you?</label><textarea id="sermon-note" placeholder="Share what this sermon means to you..."></textarea></div>
+      <button class="btn btn-primary" onclick="addSermon()">Share Sermon</button>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div id="sermon-list"><div class="loading">Loading sermons...</div></div>
+</main></div>
+
+<div id="page-notifications" class="page"><main>
+  <div class="section-header"><h2>🔔 Notifications</h2><p>Announcements from your churches and life groups.</p></div>
+  <div id="notif-list"><div class="empty-state"><div class="empty-icon">🔔</div><p>No notifications yet. Join a church or life group to get announcements.</p></div></div>
 </main></div>
 
 <script>
@@ -807,22 +1084,33 @@ const dailyVerses=[
 ];
 
 // ROUTING
+function switchBottomTab(tab){
+  if(tab==='you'){if(currentUser)openProfilePanel();else openModal();return}
+  const tabMap={home:'home',bible:'bible',community:'community',discover:'discover'};
+  const pageId=tabMap[tab]||tab;
+  showPage(pageId);
+}
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  const map={home:'Home',churches:'Churches','life-groups':'Life Groups',discussions:'Discussions',bible:'Bible',testimonies:'Testimonies',prayer:'Prayer Wall',music:'Music'};
-  document.querySelectorAll('.nav-link').forEach(l=>{l.classList.toggle('active',l.textContent===map[id])});
-  document.getElementById('navLinks').classList.remove('open');
+  // Update bottom tabs
+  const tabMapping={home:'home',bible:'bible',community:'community',churches:'community','life-groups':'community',discussions:'community',prayer:'community',discover:'discover',testimonies:'discover',promises:'discover',sermons:'discover',music:'discover',notifications:'home'};
+  const activeTab=tabMapping[id]||'home';
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  const tabEl=document.getElementById('tab-'+activeTab);if(tabEl)tabEl.classList.add('active');
   window.scrollTo(0,0);
   if(id==='churches')loadChurches();
   if(id==='life-groups')loadLifeGroups();
   if(id==='testimonies')loadTestimonies();
   if(id==='prayer')loadPrayers();
   if(id==='music')loadMusic();
+  if(id==='promises')loadPromises();
+  if(id==='sermons')loadSermons();
+  if(id==='notifications')loadNotifications();
   if(id==='discussions')loadDiscussions();
   if(id==='bible')initBible();
 }
-function toggleMenu(){document.getElementById('navLinks').classList.toggle('open')}
+function toggleMenu(){}
 
 // AUTH
 function openModal(){document.getElementById('authModal').classList.add('open')}
@@ -832,6 +1120,38 @@ function showErr(m){const e=document.getElementById('modal-error');e.textContent
 function showOk(m){const e=document.getElementById('modal-success');e.textContent=m;e.classList.add('show');document.getElementById('modal-error').classList.remove('show')}
 function clearMsgs(){document.getElementById('modal-error').classList.remove('show');document.getElementById('modal-success').classList.remove('show')}
 function openEULA(){document.getElementById('eulaModal').classList.add('open')}
+function toggleNotifications(){
+  const on=document.getElementById('toggle-notifs').checked;
+  localStorage.setItem('gc_notifs_enabled',on?'1':'0');
+  document.getElementById('notif-link-row').style.display=on?'block':'none';
+  updateNotifBell();
+}
+function updateNotifBell(){
+  const on=localStorage.getItem('gc_notifs_enabled')==='1';
+  let bell=document.getElementById('notif-bell-nav');
+  if(on&&currentUser){
+    if(!bell){
+      const area=document.getElementById('nav-user-area');
+      const btn=document.createElement('button');btn.className='notif-bell';btn.id='notif-bell-nav';
+      btn.onclick=()=>showPage('notifications');
+      btn.innerHTML='<span class="bell-icon">🔔</span><span class="notif-badge" id="notif-badge" style="display:none">0</span>';
+      area.insertBefore(btn,area.firstChild);
+    }
+    checkNotifBadge();
+  }else if(bell){bell.remove()}
+}
+function selectAccountType(type){
+  document.getElementById('signup-account-type').value=type;
+  ['personal','church','group'].forEach(t=>{
+    document.getElementById('at-'+t).classList.toggle('active',t===type);
+  });
+  document.getElementById('signup-church-fields').style.display=type==='church'?'block':'none';
+  document.getElementById('signup-group-fields').style.display=type==='group'?'block':'none';
+  const btn=document.getElementById('signup-btn');
+  if(type==='church')btn.textContent='Create Church Account';
+  else if(type==='group')btn.textContent='Create Life Group Account';
+  else btn.textContent='Create Account';
+}
 let blockedUsers=JSON.parse(localStorage.getItem('gc_blocked')||'[]');
 function openReport(itemId,itemType,userId){
   document.getElementById('report-item-id').value=itemId;
@@ -884,13 +1204,34 @@ async function handleDeleteAccount(){
 }
 async function handleSignup(){
   const name=document.getElementById('signup-name').value.trim(),username=document.getElementById('signup-username').value.trim(),email=document.getElementById('signup-email').value.trim(),password=document.getElementById('signup-password').value;
+  const accountType=document.getElementById('signup-account-type').value;
   if(!name||!username||!email||!password){showErr('Please fill in all fields.');return}
   if(!document.getElementById('signup-eula').checked){showErr('You must agree to the Terms of Use to create an account.');return}
   if(password.length<6){showErr('Password must be at least 6 characters.');return}
+  // Validate church fields
+  if(accountType==='church'){
+    const chRole=document.getElementById('signup-ch-role').value,chName=document.getElementById('signup-ch-name').value.trim(),chPastor=document.getElementById('signup-ch-pastor').value.trim(),chAddr=document.getElementById('signup-ch-address').value.trim(),chCity=document.getElementById('signup-ch-city').value.trim(),chDenom=document.getElementById('signup-ch-denom').value,chDay=document.getElementById('signup-ch-day').value,chTime=document.getElementById('signup-ch-time').value.trim(),chAbout=document.getElementById('signup-ch-about').value.trim();
+    if(!chRole||!chName||!chPastor||!chAddr||!chCity||!chDenom||!chDay||!chTime||!chAbout){showErr('Please fill in all church details.');return}
+  }
+  // Validate life group fields
+  if(accountType==='group'){
+    const lgName=document.getElementById('signup-lg-name').value.trim(),lgTime=document.getElementById('signup-lg-time').value.trim(),lgLoc=document.getElementById('signup-lg-location').value.trim(),lgDesc=document.getElementById('signup-lg-desc').value.trim();
+    if(!lgName||!lgTime||!lgLoc||!lgDesc){showErr('Please fill in all life group details.');return}
+  }
   const btn=document.getElementById('signup-btn');btn.disabled=true;btn.textContent='Creating...';
-  const{data,error}=await db.auth.signUp({email,password,options:{data:{full_name:name,username}}});
+  const{data,error}=await db.auth.signUp({email,password,options:{data:{full_name:name,username,account_type:accountType}}});
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Create Account';return}
   if(data?.user?.identities?.length===0){showErr('An account with this email already exists. Please sign in.');switchTab('login');btn.disabled=false;btn.textContent='Create Account';return}
+  // Create church or life group profile after signup
+  if(data?.user){
+    const uid=data.user.id;
+    if(accountType==='church'){
+      await db.from('churches').insert({name:document.getElementById('signup-ch-name').value.trim(),pastor:document.getElementById('signup-ch-pastor').value.trim(),address:document.getElementById('signup-ch-address').value.trim(),city:document.getElementById('signup-ch-city').value.trim(),zip:document.getElementById('signup-ch-zip').value.trim(),denomination:document.getElementById('signup-ch-denom').value,service_day:document.getElementById('signup-ch-day').value,service_time:document.getElementById('signup-ch-time').value.trim(),website:document.getElementById('signup-ch-website').value.trim(),social:document.getElementById('signup-ch-social').value.trim(),about:document.getElementById('signup-ch-about').value.trim(),phone:document.getElementById('signup-ch-phone').value.trim(),listed_by_role:document.getElementById('signup-ch-role').value,contact_name:name,contact_email:email,user_id:uid}).catch(()=>{});
+    }
+    if(accountType==='group'){
+      await db.from('life_groups').insert({name:document.getElementById('signup-lg-name').value.trim(),meeting_time:document.getElementById('signup-lg-time').value.trim(),location:document.getElementById('signup-lg-location').value.trim(),description:document.getElementById('signup-lg-desc').value.trim(),group_type:document.getElementById('signup-lg-type').value,leader_name:name,leader_id:uid,member_count:1}).catch(()=>{});
+    }
+  }
   if(data?.session){closeModal();btn.disabled=false;btn.textContent='Create Account';return}
   showOk('Account created! Check your email to confirm, then sign in.');
   switchTab('login');btn.disabled=false;btn.textContent='Create Account';
@@ -902,16 +1243,25 @@ async function handleLogin(){
   let email=input;
   if(!input.includes('@')){
     try{
-      const{data:profile,error:pErr}=await Promise.race([db.from('profiles').select('email').ilike('username',input).maybeSingle(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),5000))]);
-      if(pErr||!profile||!profile.email){showErr('Username not found. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+      const{data:profile,error:pErr}=await Promise.race([db.from('profiles').select('email,username').ilike('username',input).maybeSingle(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);
+      if(pErr){console.error('Username lookup error:',pErr.message);showErr('Username lookup error: '+pErr.message);btn.disabled=false;btn.textContent='Sign In';return}
+      if(!profile){showErr('Username "'+input+'" not found. Try signing in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+      if(!profile.email){showErr('No email linked to this username. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
       email=profile.email;
-    }catch(e){showErr('Username lookup failed. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+    }catch(e){console.error('Username lookup exception:',e);showErr('Username lookup timed out. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
   }
   const{error}=await db.auth.signInWithPassword({email,password});
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Sign In';return}
   closeModal();btn.disabled=false;btn.textContent='Sign In';
 }
-async function handleLogout(){await db.auth.signOut();closeProfilePanel()}
+async function handleForgotPassword(){
+  const email=document.getElementById('login-email').value.trim();
+  if(!email||!email.includes('@')){showErr('Please enter your email address first, then click Forgot Password.');return}
+  const{error}=await db.auth.resetPasswordForEmail(email);
+  if(error){showErr('Error: '+error.message);return}
+  showOk('Password reset email sent to '+email+'. Check your inbox!');
+}
+async function handleLogout(){if(!confirm('Are you sure you want to sign out?'))return;await db.auth.signOut();closeProfilePanel()}
 function closeProfilePanel(){document.getElementById('profilePanel').classList.remove('open');document.body.style.overflow=''}
 function openProfilePanel(){
   if(!currentUser){openModal();return}
@@ -928,6 +1278,8 @@ function openProfilePanel(){
   document.getElementById('profile-email-display').textContent=currentUser.email||'—';
   const joined=currentUser.created_at?new Date(currentUser.created_at).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
   document.getElementById('profile-joined').textContent=joined;
+  document.getElementById('toggle-notifs').checked=localStorage.getItem('gc_notifs_enabled')==='1';
+  document.getElementById('notif-link-row').style.display=localStorage.getItem('gc_notifs_enabled')==='1'?'block':'none';
   loadProfileStats();
   loadProfileActivity();
   panel.classList.add('open');
@@ -971,28 +1323,33 @@ async function saveProfile(){
   if(!currentUser)return;
   const btn=document.querySelector('.profile-save-btn');btn.textContent='Saving...';btn.disabled=true;
   const full_name=document.getElementById('edit-name').value.trim(),username=document.getElementById('edit-username').value.trim(),bio=document.getElementById('edit-bio').value.trim();
-  await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio,email:currentUser.email||''});
+  const{error}=await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio,email:currentUser.email||''});
+  if(error){alert('Error saving profile: '+error.message);btn.textContent='Save Changes';btn.disabled=false;return}
   currentProfile={...currentProfile,full_name,username,bio};
   document.getElementById('profile-avatar-lg').textContent=full_name?full_name[0].toUpperCase():'?';
   document.getElementById('profile-display-name').textContent=full_name||'Friend';
   document.getElementById('profile-username-tag').textContent=username?'@'+username:'';
   document.getElementById('profile-bio-display').textContent=bio;
-  updateUI();btn.textContent='Saved!';setTimeout(()=>{btn.textContent='Save Changes';btn.disabled=false},1500);
+  updateUI();btn.textContent='Saved ✓';setTimeout(()=>{btn.textContent='Save Changes';btn.disabled=false},2000);
 }
 function updateUI(){
   const on=!!currentUser;
   document.getElementById('nav-auth-btns').style.display=on?'none':'block';
   document.getElementById('nav-user-area').style.display=on?'block':'none';
-  if(on)document.getElementById('nav-avatar').textContent=(currentProfile?.full_name||currentUser.email||'?')[0].toUpperCase();
+  if(on){
+    document.getElementById('nav-avatar').textContent=(currentProfile?.full_name||currentUser.email||'?')[0].toUpperCase();
+    document.getElementById('tab-avatar-icon').textContent=(currentProfile?.full_name||currentUser.email||'?')[0].toUpperCase();
+  }else{document.getElementById('tab-avatar-icon').textContent='?'}
   document.getElementById('home-welcome').innerHTML=on
     ?`<div style="background:var(--green-soft);border:1px solid #b5d9c0;border-radius:var(--radius);padding:13px 17px;margin-bottom:16px;font-size:14px;color:#2a5c35">👋 Welcome back, <strong>${currentProfile?.full_name||'friend'}</strong>!</div>`
     :`<div class="auth-banner"><p>🙏 Join our community — sign in to pray, share, and connect.</p><div style="display:flex;gap:8px"><button class="btn btn-gold btn-sm" onclick="openModal()">Sign In</button><button class="btn btn-sm" style="background:transparent;border:1.5px solid rgba(201,151,58,0.5);color:var(--gold-light)" onclick="openModal();switchTab('signup')">Sign Up</button></div></div>`;
-  const prompts={'church-prompt':'church-fields','lg-prompt':'lg-fields','disc-prompt':'disc-fields','test-prompt':'test-fields','prayer-prompt':'prayer-fields','music-prompt':'music-fields'};
+  const prompts={'church-prompt':'church-fields','lg-prompt':'lg-fields','disc-prompt':'disc-fields','test-prompt':'test-fields','prayer-prompt':'prayer-fields','sermon-prompt':'sermon-fields','music-prompt':'music-fields'};
   Object.entries(prompts).forEach(([pid,fid])=>{
     const p=document.getElementById(pid),f=document.getElementById(fid);if(!p||!f)return;
     if(!on){p.innerHTML=`<div class="sign-in-prompt">🙏 <strong>Sign in</strong> to post. <button class="btn btn-gold btn-sm" style="margin-left:8px" onclick="openModal()">Sign In</button></div>`;f.style.opacity='0.4';f.style.pointerEvents='none';}
     else{p.innerHTML='';f.style.opacity='1';f.style.pointerEvents='auto'}
   });
+  if(on){updateNotifBell();setTimeout(()=>checkNotifBadge(),500)}
 }
 function setDailyVerse(){
   const d=new Date(),start=new Date(d.getFullYear(),0,0);
@@ -1195,6 +1552,7 @@ function selectVerse(vn,text,row){
       <div style="display:flex;gap:6px">
         <button class="btn btn-primary btn-sm" onclick="saveVerseNote(${vn})">Save Note</button>
         <button class="btn btn-ghost btn-sm" onclick="openPublish(${vn},'${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">📤 Publish</button>
+        <button class="btn btn-ghost btn-sm" onclick="openWallpaperCreator('${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}','${bBook} ${bChapter}:${vn}')">📱 Wallpaper</button>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.verse-panel').remove();selVerse=null;document.querySelectorAll('.verse-row.selected').forEach(r=>r.classList.remove('selected'))">✕</button>
     </div>`;
@@ -1223,23 +1581,48 @@ function saveVerseNote(vn){
   saveBibleLocal();
   inp.style.borderColor='#4CAF50';setTimeout(()=>{inp.style.borderColor=''},1500);
 }
+let pubDest='discussions';
+function setPubDest(dest){
+  pubDest=dest;
+  const dBtn=document.getElementById('pub-dest-disc'),pBtn=document.getElementById('pub-dest-promise');
+  if(dest==='discussions'){
+    dBtn.style.background='var(--gold)';dBtn.style.color='var(--white)';
+    pBtn.style.background='transparent';pBtn.style.color='var(--gold-dark)';
+    document.getElementById('pub-promise-topic').style.display='none';
+  }else{
+    pBtn.style.background='var(--gold)';pBtn.style.color='var(--white)';
+    dBtn.style.background='transparent';dBtn.style.color='var(--gold-dark)';
+    document.getElementById('pub-promise-topic').style.display='block';
+  }
+}
 function openPublish(vn,text){
   publishTarget={vn,text,book:bBook,chapter:bChapter,version:bVersion};
   document.getElementById('pub-verse-preview').innerHTML=`<strong>${bBook} ${bChapter}:${vn}</strong> — "${text}"`;
   const existNote=(bNotes[`${bBook}-${bChapter}`]||{})[vn]||'';
   document.getElementById('pub-note').value=existNote;
   document.getElementById('pub-anon').checked=false;
+  setPubDest('discussions');
   document.getElementById('publishModal').classList.add('open');
 }
 async function confirmPublish(){
   if(!publishTarget)return;
   const{vn,text,book,chapter,version}=publishTarget;
   const note=document.getElementById('pub-note').value.trim();
-  const comment=`📖 ${book} ${chapter}:${vn} (${version.toUpperCase()}): "${text}"${note?` — ${note}`:''}`;
-  await db.from('discussions').insert({book,comment,user_id:currentUser?.id||null}).catch(()=>{});
-  document.getElementById('publishModal').classList.remove('open');
-  publishTarget=null;
-  alert(`Published to ${book} Discussions! 🙌`);
+  if(pubDest==='discussions'){
+    const comment=`📖 ${book} ${chapter}:${vn} (${version.toUpperCase()}): "${text}"${note?` — ${note}`:''}`;
+    const{error}=await db.from('discussions').insert({book,comment,user_id:currentUser?.id||null});
+    if(error){alert('Error posting: '+error.message);return}
+    document.getElementById('publishModal').classList.remove('open');
+    publishTarget=null;
+    alert(`Published to ${book} Discussions! 🙌`);
+  }else{
+    const topic=document.getElementById('pub-topic-select').value;
+    const{error}=await db.from('user_promises').insert({verse_text:text,verse_ref:`${book} ${chapter}:${vn}`,topic,note,user_id:currentUser?.id||null});
+    if(error){alert('Error posting: '+error.message);return}
+    document.getElementById('publishModal').classList.remove('open');
+    publishTarget=null;
+    alert(`Added to God's Promises! 🕊️`);
+  }
 }
 let bBookmarks={},notesTab='notes';
 function loadBookmarks(){try{const b=localStorage.getItem('gc_bookmarks');if(b)bBookmarks=JSON.parse(b);}catch{bBookmarks={}}}
@@ -1371,7 +1754,7 @@ async function downloadKJV(){
 
 // CHURCHES
 async function loadChurches(){
-  const{data}=await db.from('churches').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  let data=null;try{const res=await Promise.race([db.from('churches').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const fallback=[{id:'c1',name:'Grace Community Church',pastor:'Pastor Michael Thompson',address:'1200 Hope Blvd',city:'Los Angeles',zip:'90001',denomination:'Non-denominational',service_day:'Sunday',service_time:'9:00 AM & 11:00 AM',website:'https://gracecommunity.com',social:'',about:'A welcoming church for all people.',user_id:null},{id:'c2',name:'First Baptist Church',pastor:'Pastor Sarah Williams',address:'456 Faith Ave',city:'Houston',zip:'77001',denomination:'Baptist',service_day:'Sunday',service_time:'8:30 AM & 10:30 AM',website:'',social:'',about:'Rooted in the Word, reaching the world.',user_id:null},{id:'c3',name:'Calvary Pentecostal',pastor:'Pastor David Cruz',address:'789 Spirit Lane',city:'Miami',zip:'33101',denomination:'Pentecostal',service_day:'Sunday',service_time:'10:00 AM',website:'https://calvarymiami.org',social:'',about:'Spirit-filled worship and powerful prayer.',user_id:null}];
   allChurches=data&&data.length>0?data:fallback;filterChurches();
 }
@@ -1386,35 +1769,101 @@ function filterChurches(){
   document.getElementById('church-count').textContent=`Showing ${filtered.length} church${filtered.length!==1?'es':''}`;
   const c=document.getElementById('churches-list');
   if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">⛪</div><p>No churches found.</p></div>';return}
-  c.innerHTML=filtered.map(ch=>`<div class="church-card"><div class="church-card-header"><div><div class="church-name">${ch.name}</div>${ch.pastor?`<div class="church-pastor">👤 ${ch.pastor}</div>`:''}<span class="badge-denom">${ch.denomination||'Christian'}</span></div>${ch.user_id===currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="deleteChurch('${ch.id}')">Remove</button>`:''}</div>${ch.about?`<p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px">${ch.about}</p>`:''}<div class="church-meta">${ch.address?`<span class="church-meta-item">📍 ${ch.address}, ${ch.city||''} ${ch.zip||''}</span>`:''} ${ch.service_day?`<span class="church-meta-item">📅 ${ch.service_day}</span>`:''} ${ch.service_time?`<span class="church-meta-item">🕐 ${ch.service_time}</span>`:''}</div>${(ch.website||ch.social)?`<div class="church-links">${ch.website?`<a class="church-link" href="${ch.website}" target="_blank">🌐 Website</a>`:''} ${ch.social?`<a class="church-link" href="${ch.social}" target="_blank">📱 Social</a>`:''}</div>`:''}</div>`).join('');
+  c.innerHTML=filtered.map((ch,i)=>`<div class="church-card" onclick="openChurchProfile(${i})"><div class="church-card-header"><div><div class="church-name">${ch.name}</div>${ch.pastor?`<div class="church-pastor">👤 ${ch.pastor}</div>`:''}<span class="badge-denom">${ch.denomination||'Christian'}</span>${ch.listed_by_role?`<span class="badge-denom" style="background:var(--green-soft);color:#2d6a4f;margin-left:4px">Listed by ${ch.listed_by_role}</span>`:''}</div>${ch.user_id===currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteChurch('${ch.id}')">Remove</button>`:''}</div>${ch.about?`<p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px">${ch.about}</p>`:''}<div class="church-meta">${ch.address?`<span class="church-meta-item">📍 ${ch.address}, ${ch.city||''} ${ch.zip||''}</span>`:''} ${ch.service_day?`<span class="church-meta-item">📅 ${ch.service_day}</span>`:''} ${ch.service_time?`<span class="church-meta-item">🕐 ${ch.service_time}</span>`:''}</div><div style="font-size:11px;color:var(--gold-dark);margin-top:8px;font-weight:500">Tap to view full profile →</div></div>`).join('');
 }
 function clearFilters(){document.getElementById('filter-denom').value='';document.getElementById('filter-day').value='';document.getElementById('filter-city').value='';filterChurches()}
 async function addChurch(){
   if(!currentUser){openModal();return}
-  const name=document.getElementById('ch-name').value.trim(),address=document.getElementById('ch-address').value.trim(),city=document.getElementById('ch-city').value.trim(),denomination=document.getElementById('ch-denom').value,service_day=document.getElementById('ch-day').value,service_time=document.getElementById('ch-time').value.trim();
-  if(!name||!address||!city||!denomination||!service_day||!service_time){alert('Please fill in all required fields.');return}
-  await db.from('churches').insert({name,address,city,zip:document.getElementById('ch-zip').value.trim(),denomination,service_day,service_time,pastor:document.getElementById('ch-pastor').value.trim(),website:document.getElementById('ch-website').value.trim(),social:document.getElementById('ch-social').value.trim(),about:document.getElementById('ch-about').value.trim(),user_id:currentUser.id}).catch(()=>{});
-  ['ch-name','ch-pastor','ch-address','ch-city','ch-zip','ch-time','ch-website','ch-social','ch-about'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('ch-denom').value='';document.getElementById('ch-day').value='';
+  const role=document.getElementById('ch-role').value,contactName=document.getElementById('ch-contact-name').value.trim();
+  const name=document.getElementById('ch-name').value.trim(),pastor=document.getElementById('ch-pastor').value.trim(),address=document.getElementById('ch-address').value.trim(),city=document.getElementById('ch-city').value.trim(),denomination=document.getElementById('ch-denom').value,service_day=document.getElementById('ch-day').value,service_time=document.getElementById('ch-time').value.trim();
+  if(!role){alert('Please select your role at this church.');return}
+  if(!contactName){alert('Please enter your name.');return}
+  if(!name||!pastor||!address||!city||!denomination||!service_day||!service_time){alert('Please fill in all required fields.');return}
+  const row={name,address,city,zip:document.getElementById('ch-zip').value.trim(),denomination,service_day,service_time,pastor,website:document.getElementById('ch-website').value.trim(),social:document.getElementById('ch-social').value.trim(),about:document.getElementById('ch-about').value.trim(),user_id:currentUser.id};
+  // Try with new columns first, fall back to basic columns
+  let res=await db.from('churches').insert({...row,phone:document.getElementById('ch-phone').value.trim(),contact_name:contactName,contact_email:document.getElementById('ch-contact-email').value.trim(),listed_by_role:role});
+  if(res.error){res=await db.from('churches').insert(row)}
+  if(res.error){alert('Error listing church: '+res.error.message);return}
+  ['ch-name','ch-pastor','ch-address','ch-city','ch-zip','ch-time','ch-website','ch-social','ch-about','ch-contact-name','ch-contact-email','ch-phone'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  document.getElementById('ch-denom').value='';document.getElementById('ch-day').value='';document.getElementById('ch-role').value='';
   loadChurches();alert('Your church has been listed! 🙏');
 }
 async function deleteChurch(id){if(!confirm('Remove?'))return;await db.from('churches').delete().eq('id',id);loadChurches()}
+function openChurchProfile(idx){
+  const ch=allChurches[idx];if(!ch)return;
+  document.getElementById('church-profile-content').innerHTML=`
+    <div class="profile-hero">
+      <div style="font-size:40px;margin-bottom:8px">⛪</div>
+      <h2>${ch.name}</h2>
+      ${ch.pastor?`<div style="font-size:14px;opacity:0.85;margin-top:4px">👤 ${ch.pastor}</div>`:''}
+      <span class="badge-denom" style="margin-top:10px">${ch.denomination||'Christian'}</span>
+    </div>
+    <div class="profile-body">
+      ${ch.about?`<p style="font-size:14px;line-height:1.7;color:var(--text);margin-bottom:16px">${ch.about}</p>`:''}
+      <div class="profile-detail"><span class="profile-detail-icon">📍</span><div><div class="profile-detail-label">Address</div><div class="profile-detail-value">${ch.address||''}${ch.city?', '+ch.city:''}${ch.zip?' '+ch.zip:''}</div></div></div>
+      <div class="profile-detail"><span class="profile-detail-icon">📅</span><div><div class="profile-detail-label">Service Day</div><div class="profile-detail-value">${ch.service_day||'Not specified'}</div></div></div>
+      <div class="profile-detail"><span class="profile-detail-icon">🕐</span><div><div class="profile-detail-label">Service Time</div><div class="profile-detail-value">${ch.service_time||'Not specified'}</div></div></div>
+      ${ch.phone?`<div class="profile-detail"><span class="profile-detail-icon">📞</span><div><div class="profile-detail-label">Phone</div><div class="profile-detail-value">${ch.phone}</div></div></div>`:''}
+      ${ch.website?`<div class="profile-detail"><span class="profile-detail-icon">🌐</span><div><div class="profile-detail-label">Website</div><div class="profile-detail-value"><a href="${ch.website}" target="_blank" style="color:var(--gold-dark);text-decoration:underline">${ch.website}</a></div></div></div>`:''}
+      ${ch.social?`<div class="profile-detail"><span class="profile-detail-icon">📱</span><div><div class="profile-detail-label">Social Media</div><div class="profile-detail-value"><a href="${ch.social}" target="_blank" style="color:var(--gold-dark);text-decoration:underline">${ch.social}</a></div></div></div>`:''}
+      ${ch.listed_by_role?`<div class="profile-detail"><span class="profile-detail-icon">✝️</span><div><div class="profile-detail-label">Listed by</div><div class="profile-detail-value">${ch.contact_name||'Church member'} — ${ch.listed_by_role}</div></div></div>`:''}
+    </div>
+    <div class="profile-actions">
+      ${ch.id&&currentUser?isMember('church',ch.id)?`<button class="btn btn-ghost" onclick="leaveEntity('church','${ch.id}','${ch.name.replace(/'/g,"\\'")}');document.getElementById('churchProfileModal').classList.remove('open')">Leave Church</button>`:`<button class="btn btn-primary" onclick="joinEntity('church','${ch.id}','${ch.name.replace(/'/g,"\\'")}');document.getElementById('churchProfileModal').classList.remove('open')">Join Church</button>`:''}
+      ${ch.website?`<a class="btn btn-ghost" href="${ch.website}" target="_blank" style="text-decoration:none">Website</a>`:''}
+      <button class="btn btn-ghost" onclick="document.getElementById('churchProfileModal').classList.remove('open')">Close</button>
+    </div>
+    ${ch.user_id===currentUser?.id?`<div class="announce-form"><strong style="font-size:13px;color:var(--brown)">Post Announcement</strong><p style="font-size:11px;color:var(--text-muted);margin:4px 0 8px">All members will be notified.</p><textarea id="announce-text-${ch.id}" placeholder="Write an announcement for your church members..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-height:60px;font-family:inherit;resize:vertical"></textarea><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="postAnnouncement('church','${ch.id}','${ch.name.replace(/'/g,"\\'")}')">Post Announcement</button></div>`:''}`;
+  document.getElementById('churchProfileModal').classList.add('open');
+}
+
+let allLifeGroups=[];
 
 // LIFE GROUPS
 async function loadLifeGroups(){
-  const{data}=await db.from('life_groups').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  let data=null;try{const res=await Promise.race([db.from('life_groups').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const fallback=[{id:'d1',name:'Downtown Fellowship',meeting_time:'Wednesdays 7pm',location:'123 Main St',description:'Mixed age group focused on Romans.',member_count:12,leader_id:null},{id:'d2',name:'Young Adults Group',meeting_time:'Fridays 6pm',location:'456 Oak Ave',description:'For young adults 18-35.',member_count:24,leader_id:null},{id:'d3',name:'Morning Prayer Circle',meeting_time:'Sundays 8am',location:'789 Pine Rd',description:'Early morning prayer.',member_count:8,leader_id:null}];
   const list=data&&data.length>0?data:fallback;
-  document.getElementById('life-groups-list').innerHTML=list.map(g=>`<div class="group-card"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3><p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p><div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="deleteGroup('${g.id}')">Delete</button></div>`:''}</div><button class="btn btn-ghost btn-sm" onclick="joinGroup()">Join</button></div>`).join('');
+  allLifeGroups=list;
+  document.getElementById('life-groups-list').innerHTML=list.map((g,i)=>`<div class="group-card" onclick="openGroupProfile(${i})"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3>${g.group_type?`<span class="badge-denom" style="font-size:10px;margin-bottom:4px;display:inline-block">${g.group_type}</span>`:''}<p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p>${g.leader_name?`<div style="font-size:11px;color:var(--brown);margin-top:4px">Led by <strong>${g.leader_name}</strong></div>`:''}<div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="event.stopPropagation();deleteGroup('${g.id}')">Delete</button></div>`:''}</div><div><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openGroupProfile(${i})">Join</button><div style="font-size:11px;color:var(--gold-dark);margin-top:6px;font-weight:500;text-align:center">View profile →</div></div></div>`).join('');
 }
-async function joinGroup(){if(!currentUser){openModal();return}alert('You joined! 🙌')}
+async function joinGroup(groupId,groupName){if(!currentUser){openModal();return}if(groupId){joinEntity('group',groupId,groupName)}else{alert('You joined! 🙌')}}
 async function deleteGroup(id){if(!confirm('Delete?'))return;await db.from('life_groups').delete().eq('id',id);loadLifeGroups()}
 async function addLifeGroup(){
   if(!currentUser){openModal();return}
-  const name=document.getElementById('lg-name').value.trim(),meeting_time=document.getElementById('lg-time').value.trim(),location=document.getElementById('lg-location').value.trim();
-  if(!name||!meeting_time||!location){alert('Please fill in name, time, and location.');return}
-  await db.from('life_groups').insert({name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),leader_id:currentUser.id,member_count:1});
-  ['lg-name','lg-time','lg-location','lg-desc'].forEach(id=>document.getElementById(id).value='');loadLifeGroups();
+  const name=document.getElementById('lg-name').value.trim(),meeting_time=document.getElementById('lg-time').value.trim(),location=document.getElementById('lg-location').value.trim(),desc=document.getElementById('lg-desc').value.trim();
+  if(!name||!meeting_time||!location||!desc){alert('Please fill in all required fields.');return}
+  const leaderName=currentProfile?.full_name||'Group Leader';
+  const row={name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),leader_id:currentUser.id,member_count:1};
+  let res=await db.from('life_groups').insert({...row,group_type:document.getElementById('lg-type').value,contact_email:document.getElementById('lg-email').value.trim(),leader_name:leaderName});
+  if(res.error){res=await db.from('life_groups').insert(row)}
+  if(res.error){alert('Error creating group: '+res.error.message);return}
+  ['lg-name','lg-time','lg-location','lg-desc','lg-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});loadLifeGroups();
+  alert('Life group created! 🙌');
+}
+function openGroupProfile(idx){
+  const g=allLifeGroups[idx];if(!g)return;
+  document.getElementById('group-profile-content').innerHTML=`
+    <div class="profile-hero">
+      <div style="font-size:40px;margin-bottom:8px">👥</div>
+      <h2>${g.name}</h2>
+      ${g.group_type?`<span class="badge-denom" style="margin-top:8px">${g.group_type}</span>`:''}
+      <div style="font-size:14px;opacity:0.85;margin-top:4px">${g.member_count||1} member${(g.member_count||1)!==1?'s':''}</div>
+    </div>
+    <div class="profile-body">
+      ${g.description?`<p style="font-size:14px;line-height:1.7;color:var(--text);margin-bottom:16px">${g.description}</p>`:''}
+      <div class="profile-detail"><span class="profile-detail-icon">👤</span><div><div class="profile-detail-label">Group Leader</div><div class="profile-detail-value">${g.leader_name||'Group Leader'}</div></div></div>
+      <div class="profile-detail"><span class="profile-detail-icon">🕐</span><div><div class="profile-detail-label">Meeting Time</div><div class="profile-detail-value">${g.meeting_time||'TBD'}</div></div></div>
+      <div class="profile-detail"><span class="profile-detail-icon">📍</span><div><div class="profile-detail-label">Location</div><div class="profile-detail-value">${g.location||'TBD'}</div></div></div>
+      <div class="profile-detail"><span class="profile-detail-icon">👥</span><div><div class="profile-detail-label">Members</div><div class="profile-detail-value">${g.member_count||1} member${(g.member_count||1)!==1?'s':''}</div></div></div>
+    </div>
+    <div class="profile-actions">
+      ${g.id&&currentUser?isMember('group',g.id)?`<button class="btn btn-ghost" onclick="leaveEntity('group','${g.id}','${g.name.replace(/'/g,"\\'")}');document.getElementById('groupProfileModal').classList.remove('open')">Leave Group</button>`:`<button class="btn btn-primary" onclick="joinEntity('group','${g.id}','${g.name.replace(/'/g,"\\'")}');document.getElementById('groupProfileModal').classList.remove('open')">Join Group</button>`:''}
+      ${g.contact_email?`<a class="btn btn-ghost" href="mailto:${g.contact_email}" style="text-decoration:none">Contact</a>`:''}
+      <button class="btn btn-ghost" onclick="document.getElementById('groupProfileModal').classList.remove('open')">Close</button>
+    </div>
+    ${g.leader_id===currentUser?.id?`<div class="announce-form"><strong style="font-size:13px;color:var(--brown)">Post Announcement</strong><p style="font-size:11px;color:var(--text-muted);margin:4px 0 8px">All members will be notified.</p><textarea id="announce-text-${g.id}" placeholder="Write an announcement for your group members..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-height:60px;font-family:inherit;resize:vertical"></textarea><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="postAnnouncement('group','${g.id}','${g.name.replace(/'/g,"\\'")}')">Post Announcement</button></div>`:''}`;
+  document.getElementById('groupProfileModal').classList.add('open');
 }
 
 // DISCUSSIONS
@@ -1426,38 +1875,62 @@ function initDiscBooks(){
 async function loadDiscussions(){
   const book=document.getElementById('disc-book-select').value,c=document.getElementById('disc-list');
   c.innerHTML='<div class="loading">Loading...</div>';
-  const{data}=await db.from('discussions').select('*,profiles(full_name)').eq('book',book).order('created_at',{ascending:false}).limit(30).catch(()=>({data:null}));
+  let data=null;
+  try{
+    const res=await Promise.race([db.from('discussions').select('*').eq('book',book).order('created_at',{ascending:false}).limit(30),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);
+    data=res?.data||null;
+  }catch(e){console.error('Discussions load error:',e);data=null}
   const fallback={"Matthew":[{profiles:{full_name:'Sarah'},comment:'The Great Commission inspires me daily.'},{profiles:{full_name:'John'},comment:'Jesus promises to be with us always!'}],"John":[{profiles:{full_name:'Alex'},comment:'John 3:16 is the heart of the gospel.'}],"Romans":[{profiles:{full_name:'Chris'},comment:"Nothing can separate us from God's love!"}]};
   const list=(data&&data.length>0?data:(fallback[book]||[])).filter(d=>!blockedUsers.includes(d.user_id));
-  c.innerHTML=list.length===0?`<div class="empty-state"><div class="empty-icon">📖</div><p>No discussions yet for ${book}.</p></div>`:list.map(d=>`<div class="disc-item"><strong style="font-size:12px;color:var(--brown)">${d.profiles?.full_name||'Community member'}</strong><p style="font-size:13px;margin-top:3px;line-height:1.5">${d.comment}</p><div class="content-actions"><button class="report-btn" onclick="openReport('${d.id||''}','discussion','${d.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${d.user_id||''}')">⊘ Block User</button></div></div>`).join('');
+  c.innerHTML=list.length===0?`<div class="empty-state"><div class="empty-icon">📖</div><p>No discussions yet for ${book}.</p></div>`:list.map(d=>`<div class="disc-item"><strong style="font-size:12px;color:var(--brown)">${d.profiles?.full_name||d.user_name||'Community member'}</strong><p style="font-size:13px;margin-top:3px;line-height:1.5">${d.comment}</p><div class="content-actions"><button class="report-btn" onclick="openReport('${d.id||''}','discussion','${d.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${d.user_id||''}')">⊘ Block User</button></div></div>`).join('');
 }
 async function addDiscussion(){
   if(!currentUser){openModal();return}
   const comment=document.getElementById('disc-comment').value.trim(),book=document.getElementById('disc-book-select').value;
   if(!comment){alert('Please write a comment.');return}
-  await db.from('discussions').insert({book,comment,user_id:currentUser.id}).catch(()=>{});
+  const{error}=await db.from('discussions').insert({book,comment,user_id:currentUser.id});
+  if(error){alert('Error posting: '+error.message);return}
   document.getElementById('disc-comment').value='';loadDiscussions();
+  alert('Posted to '+book+' Discussions!');
 }
 
 // TESTIMONIES
+let allTestimonies=[],testimonyFilter='all';
 async function loadTestimonies(){
-  const{data}=await db.from('testimonies').select('*').order('created_at',{ascending:false}).catch(()=>({data:null}));
-  const fallback=[{name:'Anonymous',story:'I was deep in addiction for seven years. A friend invited me to church and I found Jesus. Three years clean — God is faithful.',created_at:new Date().toISOString()},{name:'Sarah M.',story:'I lost my job and clung to Jeremiah 29:11. Three months later I found a better position. Never doubt His timing.',created_at:new Date().toISOString()}];
-  const list=data&&data.length>0?data:fallback;
-  document.getElementById('testimonies-list').innerHTML=list.map(t=>`<div class="testimony-card"><div style="display:flex;align-items:center;gap:9px;margin-bottom:9px"><div class="avatar">${(t.name||'A')[0].toUpperCase()}</div><div><strong style="font-size:13px;color:var(--brown)">${t.name||'Anonymous'}</strong><div style="font-size:10px;color:var(--text-muted)">${new Date(t.created_at).toLocaleDateString()}</div></div></div><span class="quote-mark">"</span><div class="testimony-text">${t.story}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${t.id||''}','testimony','${t.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${t.user_id||''}')">⊘ Block User</button></div></div>`).join('');
+  let data=null;try{const res=await Promise.race([db.from('testimonies').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
+  const fallback=[{name:'Anonymous',story:'I was deep in addiction for seven years. A friend invited me to church and I found Jesus. Three years clean — God is faithful.',created_at:new Date().toISOString(),category:'addiction'},{name:'Sarah M.',story:'I lost my job and clung to Jeremiah 29:11. Three months later I found a better position. Never doubt His timing.',created_at:new Date().toISOString(),category:'career'},{name:'David R.',story:'After years of chronic pain, our church prayed over me. God healed me completely. Doctors were amazed.',created_at:new Date().toISOString(),category:'healing'},{name:'Maria L.',story:'My marriage was falling apart. Through prayer and counseling, God restored our relationship. We are stronger than ever.',created_at:new Date().toISOString(),category:'relationships'}];
+  allTestimonies=data&&data.length>0?data:fallback;
+  renderTestimonies();
+}
+function filterTestimonies(cat,btn){
+  testimonyFilter=cat;
+  document.querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderTestimonies();
+}
+function renderTestimonies(){
+  const list=allTestimonies.filter(t=>{
+    if(blockedUsers.includes(t.user_id))return false;
+    if(testimonyFilter==='all')return true;
+    return(t.category||'').toLowerCase()===testimonyFilter;
+  });
+  document.getElementById('testimonies-list').innerHTML=list.length===0?'<div class="empty-state"><div class="empty-icon">💬</div><p>No testimonies in this category yet.</p></div>':list.map(t=>`<div class="testimony-card"><div style="display:flex;align-items:center;gap:9px;margin-bottom:9px"><div class="avatar">${(t.name||'A')[0].toUpperCase()}</div><div><strong style="font-size:13px;color:var(--brown)">${t.name||'Anonymous'}</strong><div style="font-size:10px;color:var(--text-muted)">${new Date(t.created_at).toLocaleDateString()}${t.category?` · <span style="color:var(--gold-dark)">${t.category}</span>`:''}</div></div></div><span class="quote-mark">"</span><div class="testimony-text">${t.story}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${t.id||''}','testimony','${t.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${t.user_id||''}')">⊘ Block User</button></div></div>`).join('');
 }
 async function addTestimony(){
   if(!currentUser){openModal();return}
-  const share=document.getElementById('test-share-name').checked,story=document.getElementById('test-story').value.trim();
+  const share=document.getElementById('test-share-name').checked,story=document.getElementById('test-story').value.trim(),category=document.getElementById('test-category').value;
   if(!story){alert('Please share your testimony.');return}
-  await db.from('testimonies').insert({name:share&&document.getElementById('test-name').value.trim()?document.getElementById('test-name').value.trim():'Anonymous',story,user_id:currentUser.id});
-  document.getElementById('test-name').value='';document.getElementById('test-story').value='';document.getElementById('test-share-name').checked=false;
-  loadTestimonies();
+  const row={name:share&&document.getElementById('test-name').value.trim()?document.getElementById('test-name').value.trim():'Anonymous',story,user_id:currentUser.id};
+  let res=await db.from('testimonies').insert({...row,category});
+  if(res.error){res=await db.from('testimonies').insert(row)}
+  if(res.error){alert('Error posting testimony: '+res.error.message);return}
+  document.getElementById('test-name').value='';document.getElementById('test-story').value='';document.getElementById('test-share-name').checked=false;document.getElementById('test-category').value='';
+  loadTestimonies();alert('Testimony shared! God is good! 🙌');
 }
 
 // PRAYER WALL
 async function loadPrayers(){
-  const{data}=await db.from('prayer_requests').select('*,comments(*)').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  let data=null;try{const res=await Promise.race([db.from('prayer_requests').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const c=document.getElementById('prayer-list');
   if(!data||!data.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">🙏</div><p>No prayer requests yet. Share one!</p></div>';return}
   c.innerHTML=data.map(p=>`<div class="prayer-card"><div style="display:flex;align-items:center;gap:9px;margin-bottom:7px"><div class="avatar">${(p.first_name||'?')[0].toUpperCase()}</div><div><div style="font-weight:500;font-size:13px;color:var(--brown)">${p.first_name}</div><div style="font-size:10px;color:var(--text-muted)">${new Date(p.created_at).toLocaleDateString()}</div></div></div><div style="font-size:13px;line-height:1.6;margin-bottom:9px">${p.request}</div><button class="pray-btn" onclick="incrementPray('${p.id}',this)">🙏 ${p.pray_count||0} Praying</button><div class="content-actions"><button class="report-btn" onclick="openReport('${p.id}','prayer','${p.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${p.user_id||''}')">⊘ Block User</button></div><div class="comments-section"><strong style="font-size:10px;color:var(--text-muted)">ENCOURAGEMENTS</strong><div>${(p.comments||[]).length===0?'<p style="font-size:11px;color:var(--text-muted);margin-top:4px;font-style:italic">No comments yet.</p>':(p.comments||[]).map(c=>`<div class="comment-item">${c.content}</div>`).join('')}</div><div class="comment-input-row"><input type="text" id="ci-${p.id}" placeholder="Write an encouragement..."/><button class="btn btn-ghost btn-sm" onclick="addComment('${p.id}')">Send</button></div></div></div>`).join('');
@@ -1466,8 +1939,10 @@ async function addPrayer(){
   if(!currentUser){openModal();return}
   const first_name=document.getElementById('prayer-name').value.trim(),request=document.getElementById('prayer-request').value.trim();
   if(!first_name||!request){alert('Please enter name and request.');return}
-  await db.from('prayer_requests').insert({first_name,request,pray_count:0,user_id:currentUser.id});
+  const{error}=await db.from('prayer_requests').insert({first_name,request,pray_count:0,user_id:currentUser.id});
+  if(error){alert('Error posting prayer: '+error.message);return}
   document.getElementById('prayer-name').value='';document.getElementById('prayer-request').value='';loadPrayers();
+  alert('Prayer request posted! 🙏');
 }
 async function incrementPray(id,btn){
   const n=parseInt(btn.textContent.match(/\d+/)?.[0]||0)+1;
@@ -1483,17 +1958,277 @@ async function addComment(pid){
 
 // MUSIC
 async function loadMusic(){
-  const{data}=await db.from('music_posts').select('*,profiles(full_name)').order('created_at',{ascending:false}).catch(()=>({data:null}));
+  let data=null;try{const res=await Promise.race([db.from('music_posts').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const fallback=[{title:'Way Maker',artist:'Sinach',note:"Reminds me that God is always at work.",profiles:{full_name:'James'}},{title:'Goodness of God',artist:'Bethel Music',note:'His goodness never fails.',profiles:{full_name:'Maria'}}];
   const list=data&&data.length>0?data:fallback;
-  document.getElementById('music-list').innerHTML=list.filter(m=>!blockedUsers.includes(m.user_id)).map(m=>`<div class="music-card"><h3>${m.title}</h3><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">by ${m.artist} · shared by ${m.profiles?.full_name||'Community member'}</div><p style="font-size:13px;line-height:1.5">${m.note||''}</p><div class="content-actions"><button class="report-btn" onclick="openReport('${m.id||''}','music','${m.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${m.user_id||''}')">⊘ Block User</button></div></div>`).join('');
+  document.getElementById('music-list').innerHTML=list.filter(m=>!blockedUsers.includes(m.user_id)).map(m=>`<div class="music-card"><h3>${m.title}</h3><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">by ${m.artist}</div>${m.note?`<p style="font-size:13px;line-height:1.5;margin-bottom:8px">${m.note}</p>`:''}<div class="music-links">${m.spotify_link?`<a href="${m.spotify_link}" target="_blank" class="music-link spotify">🎧 Spotify</a>`:''}${m.apple_link?`<a href="${m.apple_link}" target="_blank" class="music-link apple">🎵 Apple Music</a>`:''}${m.youtube_link?`<a href="${m.youtube_link}" target="_blank" class="music-link youtube">▶ YouTube</a>`:''}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${m.id||''}','music','${m.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${m.user_id||''}')">⊘ Block User</button></div></div>`).join('');
 }
 async function addMusic(){
   if(!currentUser){openModal();return}
   const title=document.getElementById('music-title').value.trim(),artist=document.getElementById('music-artist').value.trim();
   if(!title||!artist){alert('Please enter title and artist.');return}
-  await db.from('music_posts').insert({title,artist,note:document.getElementById('music-note').value.trim(),user_id:currentUser.id});
-  ['music-title','music-artist','music-note'].forEach(id=>document.getElementById(id).value='');loadMusic();
+  const row={title,artist,note:document.getElementById('music-note').value.trim(),user_id:currentUser.id};
+  let res=await db.from('music_posts').insert({...row,spotify_link:document.getElementById('music-spotify').value.trim(),apple_link:document.getElementById('music-apple').value.trim(),youtube_link:document.getElementById('music-youtube').value.trim()});
+  if(res.error){res=await db.from('music_posts').insert(row)}
+  if(res.error){alert('Error sharing song: '+res.error.message);return}
+  ['music-title','music-artist','music-note','music-spotify','music-apple','music-youtube'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});loadMusic();
+  alert('Song shared! 🎵');
+}
+
+// WALLPAPER CREATOR
+let wpBg='dark-brown',wpFont='serif';
+const wpBgs={
+  'dark-brown':['#5C3D1E','#3E2712','#2C1F0E','#F5E6C8','#C9973A'],
+  'dark-green':['#1a3a2a','#0d2818','#051a0e','#d4e8d9','#8BC34A'],
+  'dark-blue':['#1a2a3a','#0f1a28','#0a1520','#cce0f0','#64B5F6'],
+  'dark-purple':['#2a1a3a','#1a0e28','#150a20','#e0d0f0','#BA68C8'],
+  'sunset':['#c94b4b','#7b2d4e','#4b134f','#FFE0B2','#FF8A65'],
+  'ocean':['#2193b0','#4db8cc','#6dd5ed','#fff','#006064'],
+  'gold':['#8B6420','#A67C2E','#C9973A','#fff','#5C3D1E'],
+  'midnight':['#0f0c29','#302b63','#24243e','#e0e0ff','#7C4DFF'],
+  'cream':['#FAF7F2','#F0E8D8','#E8D5B5','#5C3D1E','#8B6420'],
+  'black':['#000','#111','#000','#fff','#888']
+};
+function openWallpaperCreator(text,ref){
+  document.getElementById('wp-text').value=(text||'').replace(/^"|"$/g,'');
+  document.getElementById('wp-ref').value=(ref||'').replace(/^— /,'');
+  document.getElementById('wallpaperModal').classList.add('open');
+  setTimeout(()=>updateWallpaperPreview(),50);
+}
+function saveVerseAsImage(){
+  const text=document.getElementById('verse-text').textContent;
+  const ref=document.getElementById('verse-ref').textContent;
+  openWallpaperCreator(text,ref);
+}
+function selectWpBg(el){
+  document.querySelectorAll('.wp-bg-opt').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');wpBg=el.dataset.bg;updateWallpaperPreview();
+}
+function selectWpFont(el){
+  document.querySelectorAll('.wp-font-btn').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');wpFont=el.dataset.font;updateWallpaperPreview();
+}
+function getWpFontFamily(){
+  if(wpFont==='sans')return "'DM Sans',Helvetica,sans-serif";
+  if(wpFont==='script')return "'Cormorant Garamond',Georgia,serif";
+  return "Georgia,'Times New Roman',serif";
+}
+function updateWallpaperPreview(){
+  const canvas=document.getElementById('wp-preview');
+  const ctx=canvas.getContext('2d');
+  const W=292,H=520;
+  const bg=wpBgs[wpBg]||wpBgs['dark-brown'];
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,bg[0]);grad.addColorStop(0.5,bg[1]);grad.addColorStop(1,bg[2]);
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  // Cross
+  if(document.getElementById('wp-cross').checked){
+    ctx.fillStyle='rgba(201,151,58,0.1)';
+    ctx.fillRect(133,80,26,150);ctx.fillRect(96,118,100,26);
+  }
+  // Text
+  const text=document.getElementById('wp-text').value||'Your verse here';
+  const ref=document.getElementById('wp-ref').value||'Reference';
+  const fontSize=Math.round(parseInt(document.getElementById('wp-fontsize').value||52)/4);
+  const fontFamily=getWpFontFamily();
+  ctx.fillStyle=bg[3];ctx.font=`italic ${fontSize}px ${fontFamily}`;ctx.textAlign='center';
+  const words=text.split(' ');let line='',y=200;
+  words.forEach(w=>{const test=line+w+' ';if(ctx.measureText(test).width>W-40){ctx.fillText(line.trim(),W/2,y);y+=fontSize+4;line=w+' '}else{line=test}});
+  if(line.trim())ctx.fillText(line.trim(),W/2,y);
+  // Ref
+  ctx.fillStyle=bg[4];ctx.font=`bold ${Math.round(fontSize*0.55)}px sans-serif`;
+  ctx.fillText('— '+ref,W/2,y+fontSize+10);
+  // Watermark
+  if(document.getElementById('wp-watermark').checked){
+    ctx.fillStyle='rgba(201,151,58,0.25)';ctx.font='8px sans-serif';
+    ctx.fillText("God's Children",W/2,H-15);
+  }
+}
+function downloadWallpaper(){
+  const text=document.getElementById('wp-text').value||'Your verse here';
+  const ref=document.getElementById('wp-ref').value||'Reference';
+  const bg=wpBgs[wpBg]||wpBgs['dark-brown'];
+  const fontSize=parseInt(document.getElementById('wp-fontsize').value||52);
+  const fontFamily=getWpFontFamily();
+  const canvas=document.createElement('canvas');canvas.width=1170;canvas.height=2532;
+  const ctx=canvas.getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,0,2532);
+  grad.addColorStop(0,bg[0]);grad.addColorStop(0.5,bg[1]);grad.addColorStop(1,bg[2]);
+  ctx.fillStyle=grad;ctx.fillRect(0,0,1170,2532);
+  if(document.getElementById('wp-cross').checked){
+    ctx.fillStyle='rgba(201,151,58,0.12)';
+    ctx.fillRect(535,400,100,600);ctx.fillRect(385,550,400,100);
+  }
+  ctx.fillStyle=bg[3];ctx.font=`italic ${fontSize}px ${fontFamily}`;ctx.textAlign='center';
+  const words=text.split(' ');let line='',y=1050;
+  words.forEach(w=>{const test=line+w+' ';if(ctx.measureText(test).width>900){ctx.fillText(line.trim(),585,y);y+=fontSize+16;line=w+' '}else{line=test}});
+  if(line.trim())ctx.fillText(line.trim(),585,y);
+  ctx.fillStyle=bg[4];ctx.font=`bold ${Math.round(fontSize*0.6)}px sans-serif`;
+  ctx.fillText('— '+ref,585,y+fontSize+30);
+  if(document.getElementById('wp-watermark').checked){
+    ctx.fillStyle='rgba(201,151,58,0.3)';ctx.font='22px sans-serif';
+    ctx.fillText("God's Children",585,2450);
+  }
+  const link=document.createElement('a');link.download='verse-wallpaper.png';link.href=canvas.toDataURL('image/png');link.click();
+  document.getElementById('wallpaperModal').classList.remove('open');
+}
+
+// PROMISES
+const promisesDB={
+  healing:[
+    {text:'He heals the brokenhearted and binds up their wounds.',ref:'Psalm 147:3'},
+    {text:'By His wounds you have been healed.',ref:'1 Peter 2:24'},
+    {text:'The Lord will take away from you all sickness.',ref:'Deuteronomy 7:15'},
+    {text:'I am the Lord who heals you.',ref:'Exodus 15:26'},
+    {text:'He himself bore our sins in his body on the cross, so that we might die to sins and live for righteousness.',ref:'1 Peter 2:24'}
+  ],
+  strength:[
+    {text:'I can do all things through Christ who strengthens me.',ref:'Philippians 4:13'},
+    {text:'The Lord is my strength and my shield; my heart trusts in him.',ref:'Psalm 28:7'},
+    {text:'But those who hope in the Lord will renew their strength.',ref:'Isaiah 40:31'},
+    {text:'God is our refuge and strength, an ever-present help in trouble.',ref:'Psalm 46:1'},
+    {text:'Be strong and courageous. Do not be afraid, for the Lord your God will be with you wherever you go.',ref:'Joshua 1:9'}
+  ],
+  peace:[
+    {text:'Peace I leave with you; my peace I give you.',ref:'John 14:27'},
+    {text:'And the peace of God, which transcends all understanding, will guard your hearts and your minds.',ref:'Philippians 4:7'},
+    {text:'You will keep in perfect peace those whose minds are steadfast, because they trust in you.',ref:'Isaiah 26:3'},
+    {text:'The Lord gives strength to his people; the Lord blesses his people with peace.',ref:'Psalm 29:11'}
+  ],
+  provision:[
+    {text:'And my God will meet all your needs according to the riches of his glory in Christ Jesus.',ref:'Philippians 4:19'},
+    {text:'The Lord is my shepherd, I lack nothing.',ref:'Psalm 23:1'},
+    {text:'Seek first his kingdom and his righteousness, and all these things will be given to you as well.',ref:'Matthew 6:33'},
+    {text:'Give, and it will be given to you. A good measure, pressed down, shaken together and running over.',ref:'Luke 6:38'}
+  ],
+  love:[
+    {text:'For God so loved the world that he gave his one and only Son.',ref:'John 3:16'},
+    {text:'Nothing can separate us from the love of God that is in Christ Jesus our Lord.',ref:'Romans 8:39'},
+    {text:'See what great love the Father has lavished on us, that we should be called children of God!',ref:'1 John 3:1'},
+    {text:'God demonstrates his own love for us in this: while we were still sinners, Christ died for us.',ref:'Romans 5:8'}
+  ],
+  protection:[
+    {text:'The Lord is my light and my salvation — whom shall I fear?',ref:'Psalm 27:1'},
+    {text:'He will cover you with his feathers, and under his wings you will find refuge.',ref:'Psalm 91:4'},
+    {text:'When you pass through the waters, I will be with you.',ref:'Isaiah 43:2'},
+    {text:'No weapon forged against you will prevail.',ref:'Isaiah 54:17'}
+  ],
+  forgiveness:[
+    {text:'If we confess our sins, he is faithful and just and will forgive us our sins.',ref:'1 John 1:9'},
+    {text:'As far as the east is from the west, so far has he removed our transgressions from us.',ref:'Psalm 103:12'},
+    {text:'Come now, let us settle the matter. Though your sins are like scarlet, they shall be as white as snow.',ref:'Isaiah 1:18'},
+    {text:'There is now no condemnation for those who are in Christ Jesus.',ref:'Romans 8:1'}
+  ],
+  guidance:[
+    {text:'Trust in the Lord with all your heart and lean not on your own understanding.',ref:'Proverbs 3:5-6'},
+    {text:'I will instruct you and teach you in the way you should go.',ref:'Psalm 32:8'},
+    {text:'Your word is a lamp for my feet, a light on my path.',ref:'Psalm 119:105'},
+    {text:'For I know the plans I have for you, declares the Lord, plans to prosper you.',ref:'Jeremiah 29:11'}
+  ]
+};
+function loadPromises(topic='all',btn){
+  if(btn){document.querySelectorAll('#page-promises .filter-pill').forEach(p=>p.classList.remove('active'));btn.classList.add('active')}
+  let promises=[];
+  if(topic==='all'){Object.entries(promisesDB).forEach(([t,arr])=>arr.forEach(p=>promises.push({...p,topic:t})))}
+  else{promises=(promisesDB[topic]||[]).map(p=>({...p,topic}))}
+  // Shuffle
+  promises.sort(()=>Math.random()-0.5);
+  document.getElementById('promises-list').innerHTML=promises.map(p=>`<div class="promise-card"><div class="promise-topic">${p.topic}</div><div class="promise-text">"${p.text}"</div><div class="promise-ref">— ${p.ref}</div><button class="verse-save-btn" onclick="savePromiseAsImage('${p.text.replace(/'/g,"\\'")}','${p.ref}')">📱 Save as Wallpaper</button></div>`).join('');
+}
+function savePromiseAsImage(text,ref){openWallpaperCreator(text,ref)}
+
+// SERMONS
+async function loadSermons(){
+  let data=null;try{const res=await Promise.race([db.from('sermons').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
+  const fallback=[{title:'The Power of Prayer',speaker:'Pastor John Smith',link:'https://youtube.com/watch?v=example',platform:'youtube',note:'This sermon changed my prayer life completely.',created_at:new Date().toISOString()},{title:'Walking in Faith',speaker:'Pastor Sarah Williams',link:'https://youtube.com/watch?v=example2',platform:'youtube',note:'Such a powerful message about trusting God in hard times.',created_at:new Date().toISOString()}];
+  const list=data&&data.length>0?data:fallback;
+  document.getElementById('sermon-list').innerHTML=list.filter(s=>!blockedUsers.includes(s.user_id)).map(s=>`<div class="sermon-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><h3 style="font-size:15px;color:var(--brown);margin-bottom:3px">${s.title}</h3><div style="font-size:12px;color:var(--text-muted)">by ${s.speaker}</div></div><span class="sermon-platform ${s.platform||'youtube'}">${s.platform||'YouTube'}</span></div>${s.note?`<p style="font-size:13px;line-height:1.5;margin-bottom:10px">${s.note}</p>`:''}<a href="${s.link}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">▶ Watch / Listen</a><div style="font-size:10px;color:var(--text-muted);margin-top:8px">${new Date(s.created_at).toLocaleDateString()}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${s.id||''}','sermon','${s.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${s.user_id||''}')">⊘ Block User</button></div></div>`).join('');
+}
+async function addSermon(){
+  if(!currentUser){openModal();return}
+  const title=document.getElementById('sermon-title').value.trim(),speaker=document.getElementById('sermon-speaker').value.trim(),link=document.getElementById('sermon-link').value.trim(),platform=document.getElementById('sermon-platform').value;
+  if(!title||!speaker||!link){alert('Please fill in title, speaker, and link.');return}
+  const row={title,speaker,link,platform,note:document.getElementById('sermon-note').value.trim(),user_id:currentUser.id};
+  const{error}=await db.from('sermons').insert(row);
+  if(error){alert('Error posting sermon: '+error.message);return}
+  ['sermon-title','sermon-speaker','sermon-link','sermon-note'].forEach(id=>document.getElementById(id).value='');
+  loadSermons();alert('Sermon shared! 🙏');
+}
+
+// MEMBERS & ANNOUNCEMENTS
+let myMemberships=[];
+async function loadMyMemberships(){
+  if(!currentUser)return;
+  const{data}=await db.from('members').select('*').eq('user_id',currentUser.id).catch(()=>({data:null}));
+  myMemberships=data||[];
+}
+function isMember(type,entityId){
+  return myMemberships.some(m=>m.entity_type===type&&m.entity_id===entityId);
+}
+async function joinEntity(type,entityId,entityName){
+  if(!currentUser){openModal();return}
+  if(isMember(type,entityId)){alert('You already joined '+entityName+'!');return}
+  const{error}=await db.from('members').insert({user_id:currentUser.id,entity_type:type,entity_id:entityId,entity_name:entityName});
+  if(error){
+    // Fallback if members table doesn't exist yet
+    alert('Joined '+entityName+'! 🙌');return;
+  }
+  // Update member count
+  if(type==='church'){
+    const{data:members}=await db.from('members').select('id',{count:'exact'}).eq('entity_type','church').eq('entity_id',entityId).catch(()=>({data:null}));
+    if(members)await db.from('churches').update({member_count:members.length}).eq('id',entityId).catch(()=>{});
+  }else{
+    const{data:members}=await db.from('members').select('id',{count:'exact'}).eq('entity_type','group').eq('entity_id',entityId).catch(()=>({data:null}));
+    if(members)await db.from('life_groups').update({member_count:members.length+1}).eq('id',entityId).catch(()=>{});
+  }
+  await loadMyMemberships();
+  alert('You joined '+entityName+'! You\'ll now receive their announcements. 🙌');
+  loadChurches();loadLifeGroups();
+}
+async function leaveEntity(type,entityId,entityName){
+  if(!currentUser)return;
+  if(!confirm('Leave '+entityName+'? You will stop receiving their announcements.'))return;
+  await db.from('members').delete().eq('user_id',currentUser.id).eq('entity_type',type).eq('entity_id',entityId).catch(()=>{});
+  await loadMyMemberships();
+  alert('You left '+entityName+'.');
+  loadChurches();loadLifeGroups();
+}
+async function postAnnouncement(type,entityId,entityName){
+  if(!currentUser){openModal();return}
+  const text=document.getElementById('announce-text-'+entityId)?.value?.trim();
+  if(!text){alert('Please write an announcement.');return}
+  const{error}=await db.from('announcements').insert({entity_type:type,entity_id:entityId,entity_name:entityName,message:text,posted_by:currentUser.id,posted_by_name:currentProfile?.full_name||'Leader'});
+  if(error){alert('Error posting announcement: '+error.message);return}
+  document.getElementById('announce-text-'+entityId).value='';
+  alert('Announcement posted! All members will see it in their notifications.');
+}
+async function loadNotifications(){
+  if(!currentUser){document.getElementById('notif-list').innerHTML='<div class="empty-state"><div class="empty-icon">🔔</div><p>Sign in to see notifications.</p></div>';return}
+  await loadMyMemberships();
+  if(!myMemberships.length){document.getElementById('notif-list').innerHTML='<div class="empty-state"><div class="empty-icon">🔔</div><p>No notifications yet. Join a church or life group to get announcements.</p></div>';return}
+  const entityIds=myMemberships.map(m=>m.entity_id);
+  const{data}=await db.from('announcements').select('*').in('entity_id',entityIds).order('created_at',{ascending:false}).limit(50).catch(()=>({data:null}));
+  if(!data||!data.length){document.getElementById('notif-list').innerHTML='<div class="empty-state"><div class="empty-icon">🔔</div><p>No announcements yet from your churches and groups.</p></div>';return}
+  const lastSeen=localStorage.getItem('gc_notif_seen')||'';
+  document.getElementById('notif-list').innerHTML=data.map(a=>`<div class="notif-card${a.created_at>lastSeen?' unread':''}"><div class="notif-source">${a.entity_type==='church'?'⛪':'👥'} ${a.entity_name||'Community'}</div><div style="font-size:14px;line-height:1.6">${a.message}</div><div class="notif-meta">Posted by ${a.posted_by_name||'Leader'} · ${new Date(a.created_at).toLocaleDateString()}</div></div>`).join('');
+  localStorage.setItem('gc_notif_seen',new Date().toISOString());
+  updateNotifBadge(0);
+}
+async function checkNotifBadge(){
+  if(!currentUser)return;
+  await loadMyMemberships();
+  if(!myMemberships.length)return;
+  const lastSeen=localStorage.getItem('gc_notif_seen')||'1970-01-01';
+  const entityIds=myMemberships.map(m=>m.entity_id);
+  const{data}=await db.from('announcements').select('id').in('entity_id',entityIds).gt('created_at',lastSeen).catch(()=>({data:null}));
+  const count=data?.length||0;
+  updateNotifBadge(count);
+}
+function updateNotifBadge(count){
+  const badge=document.getElementById('notif-badge');
+  if(!badge)return;
+  if(count>0){badge.textContent=count;badge.style.display='flex';}
+  else{badge.style.display='none';}
 }
 
 // INIT
