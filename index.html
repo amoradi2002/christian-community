@@ -126,6 +126,17 @@ nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justi
 .account-type-card{border:1.5px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--white)}
 .account-type-card:hover{border-color:var(--gold)}
 .account-type-card.active{border-color:var(--gold);background:linear-gradient(135deg,var(--parchment),var(--gold-light));box-shadow:0 2px 8px rgba(201,151,58,0.2)}
+.signup-steps{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:18px}
+.signup-step{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:var(--border);color:var(--text-muted);transition:all 0.3s}
+.signup-step.active{background:var(--gold);color:var(--white);box-shadow:0 2px 8px rgba(201,151,58,0.3)}
+.signup-step.done{background:#4CAF50;color:var(--white)}
+.signup-step-line{width:20px;height:2px;background:var(--border);border-radius:2px;transition:background 0.3s}
+.signup-step-line.done{background:#4CAF50}
+.signup-step-content{transition:opacity 0.2s,transform 0.2s}
+.step-title{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--brown);margin-bottom:4px;text-align:center}
+.step-subtitle{font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:16px}
+.signup-nav{display:flex;gap:8px;margin-top:12px}
+.signup-nav .btn{flex:1}
 .at-icon{font-size:24px;margin-bottom:4px}
 .at-label{font-size:12px;font-weight:600;color:var(--brown)}
 .at-desc{font-size:10px;color:var(--text-muted);margin-top:2px}
@@ -430,40 +441,71 @@ textarea{resize:vertical;min-height:80px}
       <button type="button" style="background:none;border:none;color:var(--gold);font-size:12px;cursor:pointer;margin-top:10px;text-decoration:underline;display:block;text-align:center;width:100%" onclick="handleForgotPassword()">Forgot Password?</button>
     </div>
     <div id="form-signup" style="display:none">
-      <div class="form-group"><label style="font-weight:500;margin-bottom:8px">Account Type</label>
+      <input type="hidden" id="signup-account-type" value="personal"/>
+      <input type="hidden" id="signup-step" value="1"/>
+      <!-- Step indicators -->
+      <div class="signup-steps" id="signup-steps">
+        <div class="signup-step active" id="ss-1">1</div>
+        <div class="signup-step-line" id="sl-1"></div>
+        <div class="signup-step" id="ss-2">2</div>
+        <div class="signup-step-line" id="sl-2" style="display:none"></div>
+        <div class="signup-step" id="ss-3" style="display:none">3</div>
+      </div>
+      <!-- Step 1: Account Type -->
+      <div class="signup-step-content" id="step-1">
+        <div class="step-title">What brings you here?</div>
+        <div class="step-subtitle">Choose your account type</div>
         <div class="account-type-grid">
           <div class="account-type-card active" id="at-personal" onclick="selectAccountType('personal')"><div class="at-icon">👤</div><div class="at-label">Personal</div><div class="at-desc">Join the community</div></div>
           <div class="account-type-card" id="at-church" onclick="selectAccountType('church')"><div class="at-icon">⛪</div><div class="at-label">Church</div><div class="at-desc">List your church</div></div>
           <div class="account-type-card" id="at-group" onclick="selectAccountType('group')"><div class="at-icon">👥</div><div class="at-label">Life Group</div><div class="at-desc">Lead a group</div></div>
         </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="goSignupStep(2)">Continue</button>
       </div>
-      <input type="hidden" id="signup-account-type" value="personal"/>
-      <div class="form-group"><label>Full Name *</label><input type="text" id="signup-name" placeholder="Your full name"/></div>
-      <div class="form-group"><label>Username *</label><input type="text" id="signup-username" placeholder="username"/></div>
-      <div class="form-group"><label>Email *</label><input type="email" id="signup-email" placeholder="your@email.com"/></div>
-      <div class="form-group"><label>Password *</label><input type="password" id="signup-password" placeholder="Min 6 characters"/></div>
-      <!-- Church fields -->
-      <div id="signup-church-fields" style="display:none">
-        <div style="border-top:1.5px solid var(--border);margin:14px 0;position:relative"><span style="position:absolute;top:-10px;left:12px;background:var(--white);padding:0 8px;font-size:11px;color:var(--gold-dark);text-transform:uppercase;letter-spacing:0.5px;font-weight:500">Church Details</span></div>
-        <div class="form-group"><label>Your Role at Church *</label><select id="signup-ch-role"><option value="">Select your role</option><option value="Pastor">Pastor</option><option value="Associate Pastor">Associate Pastor</option><option value="Church Admin">Church Admin</option><option value="Ministry Leader">Ministry Leader</option><option value="Worship Leader">Worship Leader</option><option value="Deacon/Elder">Deacon / Elder</option></select></div>
-        <div class="form-group"><label>Church Name *</label><input type="text" id="signup-ch-name" placeholder="Grace Community Church"/></div>
-        <div class="form-group"><label>Pastor Name *</label><input type="text" id="signup-ch-pastor" placeholder="Pastor John Smith"/></div>
-        <div class="form-group"><label>Address *</label><input type="text" id="signup-ch-address" placeholder="123 Main St"/></div>
-        <div class="form-row"><div class="form-group"><label>City *</label><input type="text" id="signup-ch-city" placeholder="Los Angeles"/></div><div class="form-group"><label>Zip</label><input type="text" id="signup-ch-zip" placeholder="90001"/></div></div>
-        <div class="form-row"><div class="form-group"><label>Denomination *</label><select id="signup-ch-denom"><option value="">Select</option><option>Baptist</option><option>Catholic</option><option>Pentecostal</option><option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option><option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option><option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option></select></div><div class="form-group"><label>Service Day *</label><select id="signup-ch-day"><option value="">Select</option><option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option><option>Multiple days</option></select></div></div>
-        <div class="form-row"><div class="form-group"><label>Service Time *</label><input type="text" id="signup-ch-time" placeholder="10:00 AM & 6:00 PM"/></div><div class="form-group"><label>Phone</label><input type="tel" id="signup-ch-phone" placeholder="(555) 123-4567"/></div></div>
-        <div class="form-row"><div class="form-group"><label>Website</label><input type="url" id="signup-ch-website" placeholder="https://yourchurch.com"/></div><div class="form-group"><label>Social Media</label><input type="url" id="signup-ch-social" placeholder="https://instagram.com/church"/></div></div>
-        <div class="form-group"><label>About Your Church *</label><textarea id="signup-ch-about" placeholder="Tell people about your church, ministries, service style, and community..."></textarea></div>
+      <!-- Step 2: Personal Info -->
+      <div class="signup-step-content" id="step-2" style="display:none">
+        <div class="step-title">Create your account</div>
+        <div class="step-subtitle">Your personal info</div>
+        <div class="form-group"><label>Full Name *</label><input type="text" id="signup-name" placeholder="Your full name"/></div>
+        <div class="form-group"><label>Username *</label><input type="text" id="signup-username" placeholder="username"/></div>
+        <div class="form-group"><label>Email *</label><input type="email" id="signup-email" placeholder="your@email.com"/></div>
+        <div class="form-group"><label>Password *</label><input type="password" id="signup-password" placeholder="Min 6 characters"/></div>
+        <label class="form-check" style="font-size:12px;line-height:1.5;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px"><input type="checkbox" id="signup-eula" style="margin-top:3px"/> I agree to the <a href="#" onclick="event.preventDefault();openEULA()" style="color:var(--gold);text-decoration:underline">Terms of Use & Community Guidelines</a></label>
+        <div class="signup-nav">
+          <button class="btn btn-ghost" onclick="goSignupStep(1)">Back</button>
+          <button class="btn btn-primary" id="signup-btn-step2" onclick="goSignupStep(3)">Create Account</button>
+        </div>
       </div>
-      <!-- Life Group fields -->
-      <div id="signup-group-fields" style="display:none">
-        <div style="border-top:1.5px solid var(--border);margin:14px 0;position:relative"><span style="position:absolute;top:-10px;left:12px;background:var(--white);padding:0 8px;font-size:11px;color:var(--gold-dark);text-transform:uppercase;letter-spacing:0.5px;font-weight:500">Life Group Details</span></div>
-        <div class="form-row"><div class="form-group"><label>Group Name *</label><input type="text" id="signup-lg-name" placeholder="Eastside Women's Bible Study"/></div><div class="form-group"><label>Group Type *</label><select id="signup-lg-type"><option value="Bible Study">Bible Study</option><option value="Prayer Group">Prayer Group</option><option value="Youth Group">Youth Group</option><option value="Women's Group">Women's Group</option><option value="Men's Group">Men's Group</option><option value="Couples">Couples</option><option value="Young Adults">Young Adults</option><option value="Worship">Worship</option><option value="Fellowship">Fellowship</option><option value="Other">Other</option></select></div></div>
-        <div class="form-row"><div class="form-group"><label>Meeting Day & Time *</label><input type="text" id="signup-lg-time" placeholder="Tuesdays 7:00 PM"/></div><div class="form-group"><label>Location *</label><input type="text" id="signup-lg-location" placeholder="123 Main St or Online"/></div></div>
-        <div class="form-group"><label>About Your Group *</label><textarea id="signup-lg-desc" placeholder="What does your group study? Who is welcome? What can new members expect?"></textarea></div>
+      <!-- Step 3: Church or Life Group Details (only if not personal) -->
+      <div class="signup-step-content" id="step-3" style="display:none">
+        <!-- Church fields -->
+        <div id="signup-church-fields" style="display:none">
+          <div class="step-title">Your Church</div>
+          <div class="step-subtitle">Tell the community about your church</div>
+          <div class="form-group"><label>Your Role *</label><select id="signup-ch-role"><option value="">Select your role</option><option value="Pastor">Pastor</option><option value="Associate Pastor">Associate Pastor</option><option value="Church Admin">Church Admin</option><option value="Ministry Leader">Ministry Leader</option><option value="Worship Leader">Worship Leader</option><option value="Deacon/Elder">Deacon / Elder</option></select></div>
+          <div class="form-group"><label>Church Name *</label><input type="text" id="signup-ch-name" placeholder="Grace Community Church"/></div>
+          <div class="form-group"><label>Pastor Name *</label><input type="text" id="signup-ch-pastor" placeholder="Pastor John Smith"/></div>
+          <div class="form-group"><label>Address *</label><input type="text" id="signup-ch-address" placeholder="123 Main St"/></div>
+          <div class="form-row"><div class="form-group"><label>City *</label><input type="text" id="signup-ch-city" placeholder="Los Angeles"/></div><div class="form-group"><label>Zip</label><input type="text" id="signup-ch-zip" placeholder="90001"/></div></div>
+          <div class="form-row"><div class="form-group"><label>Denomination *</label><select id="signup-ch-denom"><option value="">Select</option><option>Baptist</option><option>Catholic</option><option>Pentecostal</option><option>Non-denominational</option><option>Methodist</option><option>Presbyterian</option><option>Lutheran</option><option>Anglican / Episcopal</option><option>Seventh-day Adventist</option><option>Church of Christ</option><option>Assembly of God</option><option>Orthodox</option><option>Other</option></select></div><div class="form-group"><label>Service Day *</label><select id="signup-ch-day"><option value="">Select</option><option>Sunday</option><option>Saturday</option><option>Wednesday</option><option>Friday</option><option>Multiple days</option></select></div></div>
+          <div class="form-row"><div class="form-group"><label>Service Time *</label><input type="text" id="signup-ch-time" placeholder="10:00 AM & 6:00 PM"/></div><div class="form-group"><label>Phone</label><input type="tel" id="signup-ch-phone" placeholder="(555) 123-4567"/></div></div>
+          <div class="form-row"><div class="form-group"><label>Website</label><input type="url" id="signup-ch-website" placeholder="https://yourchurch.com"/></div><div class="form-group"><label>Social Media</label><input type="url" id="signup-ch-social" placeholder="https://instagram.com/church"/></div></div>
+          <div class="form-group"><label>About Your Church *</label><textarea id="signup-ch-about" rows="3" placeholder="Tell people about your church, ministries, service style, and community..."></textarea></div>
+        </div>
+        <!-- Life Group fields -->
+        <div id="signup-group-fields" style="display:none">
+          <div class="step-title">Your Life Group</div>
+          <div class="step-subtitle">Help people find your group</div>
+          <div class="form-group"><label>Group Name *</label><input type="text" id="signup-lg-name" placeholder="Eastside Women's Bible Study"/></div>
+          <div class="form-group"><label>Group Type *</label><select id="signup-lg-type"><option value="Bible Study">Bible Study</option><option value="Prayer Group">Prayer Group</option><option value="Youth Group">Youth Group</option><option value="Women's Group">Women's Group</option><option value="Men's Group">Men's Group</option><option value="Couples">Couples</option><option value="Young Adults">Young Adults</option><option value="Worship">Worship</option><option value="Fellowship">Fellowship</option><option value="Other">Other</option></select></div>
+          <div class="form-row"><div class="form-group"><label>Meeting Day & Time *</label><input type="text" id="signup-lg-time" placeholder="Tuesdays 7:00 PM"/></div><div class="form-group"><label>Location *</label><input type="text" id="signup-lg-location" placeholder="123 Main St or Online"/></div></div>
+          <div class="form-group"><label>About Your Group *</label><textarea id="signup-lg-desc" rows="3" placeholder="What does your group study? Who is welcome? What can new members expect?"></textarea></div>
+        </div>
+        <div class="signup-nav">
+          <button class="btn btn-ghost" onclick="goSignupStep(2)">Back</button>
+          <button class="btn btn-primary" id="signup-btn" onclick="handleSignup()">Finish Setup</button>
+        </div>
       </div>
-      <label class="form-check" style="font-size:12px;line-height:1.5;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px"><input type="checkbox" id="signup-eula" style="margin-top:3px"/> I agree to the <a href="#" onclick="event.preventDefault();openEULA()" style="color:var(--gold);text-decoration:underline">Terms of Use & Community Guidelines</a></label>
-      <button class="btn btn-primary" style="width:100%" id="signup-btn" onclick="handleSignup()">Create Account</button>
     </div>
   </div>
 </div>
@@ -1130,7 +1172,7 @@ function toggleMenu(){}
 // AUTH
 function openModal(){document.getElementById('authModal').classList.add('open')}
 function closeModal(){document.getElementById('authModal').classList.remove('open');clearMsgs()}
-function switchTab(t){['login','signup'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('active',x===t);document.getElementById('form-'+x).style.display=x===t?'block':'none'});clearMsgs()}
+function switchTab(t){['login','signup'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('active',x===t);document.getElementById('form-'+x).style.display=x===t?'block':'none'});if(t==='signup')resetSignupSteps();clearMsgs()}
 function showErr(m){const e=document.getElementById('modal-error');e.textContent=m;e.classList.add('show');document.getElementById('modal-success').classList.remove('show')}
 function showOk(m){const e=document.getElementById('modal-success');e.textContent=m;e.classList.add('show');document.getElementById('modal-error').classList.remove('show')}
 function clearMsgs(){document.getElementById('modal-error').classList.remove('show');document.getElementById('modal-success').classList.remove('show')}
@@ -1160,12 +1202,47 @@ function selectAccountType(type){
   ['personal','church','group'].forEach(t=>{
     document.getElementById('at-'+t).classList.toggle('active',t===type);
   });
+  // Update step indicators for 2 or 3 steps
+  const has3=type!=='personal';
+  document.getElementById('ss-3').style.display=has3?'flex':'none';
+  document.getElementById('sl-2').style.display=has3?'block':'none';
   document.getElementById('signup-church-fields').style.display=type==='church'?'block':'none';
   document.getElementById('signup-group-fields').style.display=type==='group'?'block':'none';
-  const btn=document.getElementById('signup-btn');
-  if(type==='church')btn.textContent='Create Church Account';
-  else if(type==='group')btn.textContent='Create Life Group Account';
-  else btn.textContent='Create Account';
+}
+function goSignupStep(step){
+  const type=document.getElementById('signup-account-type').value;
+  const totalSteps=type==='personal'?2:3;
+  clearMsgs();
+  // Validate before advancing
+  if(step===2){/* step 1 is just account type, always valid */}
+  if(step===3&&type==='personal'){
+    // Personal accounts only have 2 steps; step 2 = create account
+    handleSignup();return;
+  }
+  if(step===3){
+    // Validate step 2 (personal info)
+    const name=document.getElementById('signup-name').value.trim(),username=document.getElementById('signup-username').value.trim(),email=document.getElementById('signup-email').value.trim(),password=document.getElementById('signup-password').value;
+    if(!name||!username||!email||!password){showErr('Please fill in all fields.');return}
+    if(password.length<6){showErr('Password must be at least 6 characters.');return}
+    if(!document.getElementById('signup-eula').checked){showErr('You must agree to the Terms of Use.');return}
+  }
+  // Update step indicators
+  for(let i=1;i<=3;i++){
+    const s=document.getElementById('ss-'+i);
+    if(i<step)s.className='signup-step done';
+    else if(i===step)s.className='signup-step active';
+    else s.className='signup-step';
+    const l=document.getElementById('sl-'+i);
+    if(l)l.className=i<step?'signup-step-line done':'signup-step-line';
+  }
+  // Show/hide step content
+  for(let i=1;i<=3;i++){
+    document.getElementById('step-'+i).style.display=i===step?'block':'none';
+  }
+  // Update button text on step 2 for personal accounts
+  const btn2=document.getElementById('signup-btn-step2');
+  if(btn2)btn2.textContent=type==='personal'?'Create Account':'Continue';
+  document.getElementById('signup-step').value=step;
 }
 let blockedUsers=JSON.parse(localStorage.getItem('gc_blocked')||'[]');
 function openReport(itemId,itemType,userId){
@@ -1235,21 +1312,27 @@ async function handleSignup(){
   }
   const btn=document.getElementById('signup-btn');btn.disabled=true;btn.textContent='Creating...';
   const{data,error}=await db.auth.signUp({email,password,options:{data:{full_name:name,username,account_type:accountType}}});
-  if(error){showErr(error.message);btn.disabled=false;btn.textContent='Create Account';return}
-  if(data?.user?.identities?.length===0){showErr('An account with this email already exists. Please sign in.');switchTab('login');btn.disabled=false;btn.textContent='Create Account';return}
+  if(error){showErr(error.message);btn.disabled=false;btn.textContent='Finish Setup';return}
+  if(data?.user?.identities?.length===0){showErr('An account with this email already exists. Please sign in.');switchTab('login');btn.disabled=false;btn.textContent='Finish Setup';return}
   // Create church or life group profile after signup
   if(data?.user){
     const uid=data.user.id;
     if(accountType==='church'){
-      await db.from('churches').insert({name:document.getElementById('signup-ch-name').value.trim(),pastor:document.getElementById('signup-ch-pastor').value.trim(),address:document.getElementById('signup-ch-address').value.trim(),city:document.getElementById('signup-ch-city').value.trim(),zip:document.getElementById('signup-ch-zip').value.trim(),denomination:document.getElementById('signup-ch-denom').value,service_day:document.getElementById('signup-ch-day').value,service_time:document.getElementById('signup-ch-time').value.trim(),website:document.getElementById('signup-ch-website').value.trim(),social:document.getElementById('signup-ch-social').value.trim(),about:document.getElementById('signup-ch-about').value.trim(),phone:document.getElementById('signup-ch-phone').value.trim(),listed_by_role:document.getElementById('signup-ch-role').value,contact_name:name,contact_email:email,user_id:uid}).catch(()=>{});
+      const res=await db.from('churches').insert({name:document.getElementById('signup-ch-name').value.trim(),pastor:document.getElementById('signup-ch-pastor').value.trim(),address:document.getElementById('signup-ch-address').value.trim(),city:document.getElementById('signup-ch-city').value.trim(),zip:document.getElementById('signup-ch-zip').value.trim(),denomination:document.getElementById('signup-ch-denom').value,service_day:document.getElementById('signup-ch-day').value,service_time:document.getElementById('signup-ch-time').value.trim(),website:document.getElementById('signup-ch-website').value.trim(),social:document.getElementById('signup-ch-social').value.trim(),about:document.getElementById('signup-ch-about').value.trim(),phone:document.getElementById('signup-ch-phone').value.trim(),listed_by_role:document.getElementById('signup-ch-role').value,contact_name:name,contact_email:email,user_id:uid});
+      if(res.error)console.warn('Church creation error:',res.error.message);
     }
     if(accountType==='group'){
-      await db.from('life_groups').insert({name:document.getElementById('signup-lg-name').value.trim(),meeting_time:document.getElementById('signup-lg-time').value.trim(),location:document.getElementById('signup-lg-location').value.trim(),description:document.getElementById('signup-lg-desc').value.trim(),group_type:document.getElementById('signup-lg-type').value,leader_name:name,leader_id:uid,member_count:1}).catch(()=>{});
+      const res=await db.from('life_groups').insert({name:document.getElementById('signup-lg-name').value.trim(),meeting_time:document.getElementById('signup-lg-time').value.trim(),location:document.getElementById('signup-lg-location').value.trim(),description:document.getElementById('signup-lg-desc').value.trim(),group_type:document.getElementById('signup-lg-type').value,leader_name:name,leader_id:uid,member_count:1});
+      if(res.error)console.warn('Life group creation error:',res.error.message);
     }
   }
-  if(data?.session){closeModal();btn.disabled=false;btn.textContent='Create Account';return}
+  if(data?.session){closeModal();resetSignupSteps();btn.disabled=false;btn.textContent='Finish Setup';return}
   showOk('Account created! Check your email to confirm, then sign in.');
-  switchTab('login');btn.disabled=false;btn.textContent='Create Account';
+  switchTab('login');resetSignupSteps();btn.disabled=false;btn.textContent='Finish Setup';
+}
+function resetSignupSteps(){
+  goSignupStep(1);
+  selectAccountType('personal');
 }
 async function handleLogin(){
   const input=document.getElementById('login-email').value.trim(),password=document.getElementById('login-password').value;
@@ -1338,8 +1421,18 @@ function timeAgo(d){const s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)re
 function escHTML(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 async function saveProfile(){
   if(!currentUser)return;
-  const btn=document.querySelector('.profile-save-btn');btn.textContent='Saving...';btn.disabled=true;
   const full_name=document.getElementById('edit-name').value.trim(),username=document.getElementById('edit-username').value.trim(),bio=document.getElementById('edit-bio').value.trim();
+  if(!full_name){alert('Name cannot be empty.');return}
+  // Check what changed
+  const changes=[];
+  if(full_name!==(currentProfile?.full_name||''))changes.push(`Name: "${currentProfile?.full_name||'(none)'}\" → "${full_name}"`);
+  if(username!==(currentProfile?.username||''))changes.push(`Username: "@${currentProfile?.username||'(none)'}\" → "@${username}"`);
+  if(bio!==(currentProfile?.bio||''))changes.push('Bio updated');
+  if(changes.length===0){alert('No changes to save.');return}
+  // Confirm changes
+  const msg='Confirm profile changes?\n\n'+changes.join('\n');
+  if(!confirm(msg))return;
+  const btn=document.querySelector('.profile-save-btn');btn.textContent='Saving...';btn.disabled=true;
   const{error}=await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio,email:currentUser.email||''});
   if(error){alert('Error saving profile: '+error.message);btn.textContent='Save Changes';btn.disabled=false;return}
   currentProfile={...currentProfile,full_name,username,bio};
