@@ -130,6 +130,12 @@ main{max-width:900px;margin:0 auto;padding:28px 20px}
 .verse-ref{font-size:12px;color:var(--text-muted);font-weight:500}
 .verse-save-btn{background:none;border:1px solid var(--border);color:var(--gold-dark);font-size:11px;padding:6px 12px;border-radius:8px;cursor:pointer;margin-top:10px;font-family:'DM Sans',sans-serif;transition:all 0.2s}
 .verse-save-btn:hover{background:var(--gold);color:var(--white);border-color:var(--gold)}
+.wp-bg-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.wp-bg-opt{width:100%;aspect-ratio:1;border-radius:10px;cursor:pointer;border:2.5px solid transparent;transition:all 0.15s}
+.wp-bg-opt:hover{transform:scale(1.08)}
+.wp-bg-opt.active{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,151,58,0.3)}
+.wp-font-btn{background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.wp-font-btn:hover,.wp-font-btn.active{background:var(--brown);color:var(--gold-light);border-color:var(--brown)}
 .sermon-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
 .sermon-platform{display:inline-block;font-size:10px;padding:3px 8px;border-radius:12px;font-weight:600;text-transform:uppercase}
 .sermon-platform.youtube{background:#fce4ec;color:#c62828}.sermon-platform.tiktok{background:#e8eaf6;color:#283593}.sermon-platform.spotify{background:#e8f5e9;color:#2e7d32}.sermon-platform.apple{background:#fff3e0;color:#e65100}
@@ -530,6 +536,56 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- WALLPAPER CREATOR -->
+<div class="modal-overlay" id="wallpaperModal">
+  <div class="modal" style="max-width:420px;padding:0;overflow:hidden">
+    <button class="modal-close" onclick="document.getElementById('wallpaperModal').classList.remove('open')" style="z-index:2">✕</button>
+    <div style="padding:20px 24px 0">
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--brown);margin-bottom:4px">Create Wallpaper</h2>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Customize and save to your phone</p>
+    </div>
+    <div style="padding:0 24px">
+      <canvas id="wp-preview" width="292" height="520" style="width:100%;border-radius:12px;border:1px solid var(--border);margin-bottom:14px"></canvas>
+    </div>
+    <div style="padding:0 24px 8px;max-height:240px;overflow-y:auto">
+      <div class="form-group" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Verse Text</label><textarea id="wp-text" rows="2" style="font-size:13px" oninput="updateWallpaperPreview()"></textarea></div>
+      <div class="form-group" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Reference</label><input type="text" id="wp-ref" style="font-size:13px" oninput="updateWallpaperPreview()"/></div>
+      <div class="form-group" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Background</label>
+        <div class="wp-bg-grid" id="wp-bg-grid">
+          <div class="wp-bg-opt active" data-bg="dark-brown" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#5C3D1E,#2C1F0E)"></div>
+          <div class="wp-bg-opt" data-bg="dark-green" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#1a3a2a,#051a0e)"></div>
+          <div class="wp-bg-opt" data-bg="dark-blue" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#1a2a3a,#0a1520)"></div>
+          <div class="wp-bg-opt" data-bg="dark-purple" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#2a1a3a,#150a20)"></div>
+          <div class="wp-bg-opt" data-bg="sunset" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#c94b4b,#4b134f)"></div>
+          <div class="wp-bg-opt" data-bg="ocean" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#2193b0,#6dd5ed)"></div>
+          <div class="wp-bg-opt" data-bg="gold" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#8B6420,#C9973A)"></div>
+          <div class="wp-bg-opt" data-bg="midnight" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)"></div>
+          <div class="wp-bg-opt" data-bg="cream" onclick="selectWpBg(this)" style="background:linear-gradient(135deg,#FAF7F2,#E8D5B5)"></div>
+          <div class="wp-bg-opt" data-bg="black" onclick="selectWpBg(this)" style="background:#000"></div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Font Style</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="wp-font-btn active" data-font="serif" onclick="selectWpFont(this)">Serif</button>
+          <button class="wp-font-btn" data-font="sans" onclick="selectWpFont(this)">Sans</button>
+          <button class="wp-font-btn" data-font="script" onclick="selectWpFont(this)">Script</button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Font Size</label>
+        <input type="range" id="wp-fontsize" min="36" max="72" value="52" style="width:100%" oninput="updateWallpaperPreview()"/>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:4px">
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="wp-cross" checked onchange="updateWallpaperPreview()"/> Show cross</label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="wp-watermark" checked onchange="updateWallpaperPreview()"/> Watermark</label>
+      </div>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px">
+      <button class="btn btn-primary" style="flex:1" onclick="downloadWallpaper()">Save Wallpaper</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('wallpaperModal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- CHURCH PROFILE MODAL -->
 <div class="modal-overlay" id="churchProfileModal">
   <div class="modal" style="max-width:500px;padding:0;overflow:hidden">
@@ -608,7 +664,7 @@ textarea{resize:vertical;min-height:80px}
   <div id="home-welcome"></div>
   <div class="hero">
     <svg style="margin:0 auto 14px;display:block" width="50" height="50" viewBox="0 0 50 50" fill="none"><rect x="20" y="3" width="10" height="44" rx="4" fill="#C9973A" opacity="0.9"/><rect x="6" y="18" width="38" height="10" rx="4" fill="#C9973A" opacity="0.9"/></svg>
-    <h1>Welcome to God's Children</h1>
+    <h1>Welcome God's Children</h1>
     <p>A place to connect, grow, and encourage one another in Christ.</p>
   </div>
   <div class="verse-card">
@@ -1366,6 +1422,7 @@ function selectVerse(vn,text,row){
       <div style="display:flex;gap:6px">
         <button class="btn btn-primary btn-sm" onclick="saveVerseNote(${vn})">Save Note</button>
         <button class="btn btn-ghost btn-sm" onclick="openPublish(${vn},'${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">📤 Publish</button>
+        <button class="btn btn-ghost btn-sm" onclick="openWallpaperCreator('${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}','${bBook} ${bChapter}:${vn}')">📱 Wallpaper</button>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.verse-panel').remove();selVerse=null;document.querySelectorAll('.verse-row.selected').forEach(r=>r.classList.remove('selected'))">✕</button>
     </div>`;
@@ -1763,33 +1820,102 @@ async function addMusic(){
   alert('Song shared! 🎵');
 }
 
-// SAVE VERSE AS WALLPAPER
+// WALLPAPER CREATOR
+let wpBg='dark-brown',wpFont='serif';
+const wpBgs={
+  'dark-brown':['#5C3D1E','#3E2712','#2C1F0E','#F5E6C8','#C9973A'],
+  'dark-green':['#1a3a2a','#0d2818','#051a0e','#d4e8d9','#8BC34A'],
+  'dark-blue':['#1a2a3a','#0f1a28','#0a1520','#cce0f0','#64B5F6'],
+  'dark-purple':['#2a1a3a','#1a0e28','#150a20','#e0d0f0','#BA68C8'],
+  'sunset':['#c94b4b','#7b2d4e','#4b134f','#FFE0B2','#FF8A65'],
+  'ocean':['#2193b0','#4db8cc','#6dd5ed','#fff','#006064'],
+  'gold':['#8B6420','#A67C2E','#C9973A','#fff','#5C3D1E'],
+  'midnight':['#0f0c29','#302b63','#24243e','#e0e0ff','#7C4DFF'],
+  'cream':['#FAF7F2','#F0E8D8','#E8D5B5','#5C3D1E','#8B6420'],
+  'black':['#000','#111','#000','#fff','#888']
+};
+function openWallpaperCreator(text,ref){
+  document.getElementById('wp-text').value=(text||'').replace(/^"|"$/g,'');
+  document.getElementById('wp-ref').value=(ref||'').replace(/^— /,'');
+  document.getElementById('wallpaperModal').classList.add('open');
+  setTimeout(()=>updateWallpaperPreview(),50);
+}
 function saveVerseAsImage(){
   const text=document.getElementById('verse-text').textContent;
   const ref=document.getElementById('verse-ref').textContent;
-  const canvas=document.createElement('canvas');
-  canvas.width=1170;canvas.height=2532;
+  openWallpaperCreator(text,ref);
+}
+function selectWpBg(el){
+  document.querySelectorAll('.wp-bg-opt').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');wpBg=el.dataset.bg;updateWallpaperPreview();
+}
+function selectWpFont(el){
+  document.querySelectorAll('.wp-font-btn').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');wpFont=el.dataset.font;updateWallpaperPreview();
+}
+function getWpFontFamily(){
+  if(wpFont==='sans')return "'DM Sans',Helvetica,sans-serif";
+  if(wpFont==='script')return "'Cormorant Garamond',Georgia,serif";
+  return "Georgia,'Times New Roman',serif";
+}
+function updateWallpaperPreview(){
+  const canvas=document.getElementById('wp-preview');
   const ctx=canvas.getContext('2d');
-  // Background gradient
-  const grad=ctx.createLinearGradient(0,0,0,2532);
-  grad.addColorStop(0,'#5C3D1E');grad.addColorStop(0.5,'#3E2712');grad.addColorStop(1,'#2C1F0E');
-  ctx.fillStyle=grad;ctx.fillRect(0,0,1170,2532);
+  const W=292,H=520;
+  const bg=wpBgs[wpBg]||wpBgs['dark-brown'];
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,bg[0]);grad.addColorStop(0.5,bg[1]);grad.addColorStop(1,bg[2]);
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   // Cross
-  ctx.fillStyle='rgba(201,151,58,0.15)';
-  ctx.fillRect(535,400,100,600);ctx.fillRect(385,550,400,100);
-  // Verse text
-  ctx.fillStyle='#F5E6C8';ctx.font='italic 54px Georgia,serif';ctx.textAlign='center';
-  const words=text.replace(/"/g,'').split(' ');let line='',y=1050;
-  words.forEach(w=>{const test=line+w+' ';if(ctx.measureText(test).width>900){ctx.fillText(line.trim(),585,y);y+=70;line=w+' '}else{line=test}});
-  if(line.trim())ctx.fillText(line.trim(),585,y);
-  // Reference
-  ctx.fillStyle='#C9973A';ctx.font='bold 32px sans-serif';
-  ctx.fillText(ref,585,y+100);
+  if(document.getElementById('wp-cross').checked){
+    ctx.fillStyle='rgba(201,151,58,0.1)';
+    ctx.fillRect(133,80,26,150);ctx.fillRect(96,118,100,26);
+  }
+  // Text
+  const text=document.getElementById('wp-text').value||'Your verse here';
+  const ref=document.getElementById('wp-ref').value||'Reference';
+  const fontSize=Math.round(parseInt(document.getElementById('wp-fontsize').value||52)/4);
+  const fontFamily=getWpFontFamily();
+  ctx.fillStyle=bg[3];ctx.font=`italic ${fontSize}px ${fontFamily}`;ctx.textAlign='center';
+  const words=text.split(' ');let line='',y=200;
+  words.forEach(w=>{const test=line+w+' ';if(ctx.measureText(test).width>W-40){ctx.fillText(line.trim(),W/2,y);y+=fontSize+4;line=w+' '}else{line=test}});
+  if(line.trim())ctx.fillText(line.trim(),W/2,y);
+  // Ref
+  ctx.fillStyle=bg[4];ctx.font=`bold ${Math.round(fontSize*0.55)}px sans-serif`;
+  ctx.fillText('— '+ref,W/2,y+fontSize+10);
   // Watermark
-  ctx.fillStyle='rgba(201,151,58,0.3)';ctx.font='22px sans-serif';
-  ctx.fillText("God's Children",585,2450);
-  // Download
+  if(document.getElementById('wp-watermark').checked){
+    ctx.fillStyle='rgba(201,151,58,0.25)';ctx.font='8px sans-serif';
+    ctx.fillText("God's Children",W/2,H-15);
+  }
+}
+function downloadWallpaper(){
+  const text=document.getElementById('wp-text').value||'Your verse here';
+  const ref=document.getElementById('wp-ref').value||'Reference';
+  const bg=wpBgs[wpBg]||wpBgs['dark-brown'];
+  const fontSize=parseInt(document.getElementById('wp-fontsize').value||52);
+  const fontFamily=getWpFontFamily();
+  const canvas=document.createElement('canvas');canvas.width=1170;canvas.height=2532;
+  const ctx=canvas.getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,0,2532);
+  grad.addColorStop(0,bg[0]);grad.addColorStop(0.5,bg[1]);grad.addColorStop(1,bg[2]);
+  ctx.fillStyle=grad;ctx.fillRect(0,0,1170,2532);
+  if(document.getElementById('wp-cross').checked){
+    ctx.fillStyle='rgba(201,151,58,0.12)';
+    ctx.fillRect(535,400,100,600);ctx.fillRect(385,550,400,100);
+  }
+  ctx.fillStyle=bg[3];ctx.font=`italic ${fontSize}px ${fontFamily}`;ctx.textAlign='center';
+  const words=text.split(' ');let line='',y=1050;
+  words.forEach(w=>{const test=line+w+' ';if(ctx.measureText(test).width>900){ctx.fillText(line.trim(),585,y);y+=fontSize+16;line=w+' '}else{line=test}});
+  if(line.trim())ctx.fillText(line.trim(),585,y);
+  ctx.fillStyle=bg[4];ctx.font=`bold ${Math.round(fontSize*0.6)}px sans-serif`;
+  ctx.fillText('— '+ref,585,y+fontSize+30);
+  if(document.getElementById('wp-watermark').checked){
+    ctx.fillStyle='rgba(201,151,58,0.3)';ctx.font='22px sans-serif';
+    ctx.fillText("God's Children",585,2450);
+  }
   const link=document.createElement('a');link.download='verse-wallpaper.png';link.href=canvas.toDataURL('image/png');link.click();
+  document.getElementById('wallpaperModal').classList.remove('open');
 }
 
 // PROMISES
@@ -1854,20 +1980,7 @@ function loadPromises(topic='all',btn){
   promises.sort(()=>Math.random()-0.5);
   document.getElementById('promises-list').innerHTML=promises.map(p=>`<div class="promise-card"><div class="promise-topic">${p.topic}</div><div class="promise-text">"${p.text}"</div><div class="promise-ref">— ${p.ref}</div><button class="verse-save-btn" onclick="savePromiseAsImage('${p.text.replace(/'/g,"\\'")}','${p.ref}')">📱 Save as Wallpaper</button></div>`).join('');
 }
-function savePromiseAsImage(text,ref){
-  const canvas=document.createElement('canvas');canvas.width=1170;canvas.height=2532;
-  const ctx=canvas.getContext('2d');
-  const grad=ctx.createLinearGradient(0,0,0,2532);grad.addColorStop(0,'#1a3a2a');grad.addColorStop(0.5,'#0d2818');grad.addColorStop(1,'#051a0e');
-  ctx.fillStyle=grad;ctx.fillRect(0,0,1170,2532);
-  ctx.fillStyle='rgba(201,151,58,0.12)';ctx.fillRect(535,400,100,600);ctx.fillRect(385,550,400,100);
-  ctx.fillStyle='#F5E6C8';ctx.font='italic 52px Georgia,serif';ctx.textAlign='center';
-  const words=text.split(' ');let line='',y=1050;
-  words.forEach(w=>{const test=line+w+' ';if(ctx.measureText(test).width>900){ctx.fillText(line.trim(),585,y);y+=68;line=w+' '}else{line=test}});
-  if(line.trim())ctx.fillText(line.trim(),585,y);
-  ctx.fillStyle='#C9973A';ctx.font='bold 30px sans-serif';ctx.fillText('— '+ref,585,y+90);
-  ctx.fillStyle='rgba(201,151,58,0.3)';ctx.font='22px sans-serif';ctx.fillText("God's Children",585,2450);
-  const link=document.createElement('a');link.download='promise-wallpaper.png';link.href=canvas.toDataURL('image/png');link.click();
-}
+function savePromiseAsImage(text,ref){openWallpaperCreator(text,ref)}
 
 // SERMONS
 async function loadSermons(){
