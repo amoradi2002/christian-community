@@ -292,8 +292,22 @@ textarea{resize:vertical;min-height:80px}
 .bible-icon-btn{background:none;border:none;color:var(--gold-light);cursor:pointer;padding:8px;border-radius:10px;font-size:16px;transition:all 0.15s;opacity:0.8}
 .bible-icon-btn:hover{background:rgba(255,255,255,0.12);opacity:1}
 .bible-icon-btn.active{background:rgba(201,151,58,0.3);opacity:1}
-.bible-version-pill{background:rgba(255,255,255,0.12);border:1px solid rgba(245,230,200,0.2);border-radius:8px;padding:5px 10px;color:var(--gold-light);font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:0.5px;outline:none;-webkit-appearance:none}
-.bible-version-pill option{color:var(--text);background:var(--white)}
+.bible-filter-pill{background:rgba(255,255,255,0.12);border:1px solid rgba(245,230,200,0.2);border-radius:8px;padding:5px 10px;color:var(--gold-light);font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:0.5px;outline:none;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.bible-filter-pill svg{width:8px;height:8px;flex-shrink:0}
+.bible-filter-popup{display:none;position:fixed;inset:0;background:rgba(44,31,14,0.7);z-index:300;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:flex-end;justify-content:center}
+.bible-filter-popup.open{display:flex}
+@media(min-width:600px){.bible-filter-popup.open{align-items:center}}
+.bible-filter-sheet{background:var(--white);width:100%;max-width:420px;max-height:70vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;animation:slideUp 0.3s ease;overflow:hidden}
+@media(min-width:600px){.bible-filter-sheet{border-radius:20px}}
+.bible-filter-header{padding:16px 20px 12px;border-bottom:1px solid rgba(44,31,14,0.08);display:flex;align-items:center;justify-content:space-between}
+.bible-filter-header h3{margin:0;font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text)}
+.bible-filter-header button{background:none;border:none;font-size:22px;color:var(--text-muted);cursor:pointer;padding:4px}
+.bible-filter-list{overflow-y:auto;padding:8px 12px 20px;display:flex;flex-direction:column;gap:2px}
+.bible-filter-item{padding:12px 16px;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);transition:background 0.15s;display:flex;align-items:center;justify-content:space-between}
+.bible-filter-item:hover{background:rgba(201,151,58,0.08)}
+.bible-filter-item.active{background:rgba(201,151,58,0.15);font-weight:600;color:var(--brown)}
+.bible-filter-item .bf-check{display:none;color:var(--gold)}
+.bible-filter-item.active .bf-check{display:inline}
 
 /* BOOK PICKER OVERLAY */
 .book-picker-overlay{display:none;position:fixed;inset:0;background:rgba(44,31,14,0.7);z-index:200;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
@@ -889,118 +903,14 @@ textarea{resize:vertical;min-height:80px}
         </div>
       </div>
       <div class="bible-top-right">
-        <select class="bible-version-pill" id="b-version" onchange="loadBibleChapter()">
-          <optgroup label="English">
-            <option value="kjv">KJV</option>
-            <option value="web" selected>WEB</option>
-            <option value="asv">ASV</option>
-            <option value="bbe">BBE</option>
-            <option value="gb:akjv">American KJV</option>
-            <option value="gb:ukjv">Updated KJV</option>
-            <option value="gb:mkjv">Modern KJV</option>
-            <option value="gb:douayrheims">Douay-Rheims</option>
-            <option value="gb:drb">Darby</option>
-            <option value="gb:webster">Webster</option>
-            <option value="gb:ylt">Young's Literal</option>
-            <option value="gb:litv">Green's Literal</option>
-            <option value="gb:gb">Geneva 1599</option>
-            <option value="gb:webbe">WEB British</option>
-          </optgroup>
-          <optgroup label="Español (Spanish)">
-            <option value="gb:valera">Reina-Valera 1909</option>
-            <option value="gb:sse">Sagradas Escrituras</option>
-          </optgroup>
-          <optgroup label="Français (French)">
-            <option value="gb:ls1910">Louis Segond 1910</option>
-            <option value="gb:martin">Martin 1744</option>
-            <option value="gb:ostervald">Ostervald</option>
-          </optgroup>
-          <optgroup label="Deutsch (German)">
-            <option value="gb:luther1545">Luther 1545</option>
-            <option value="gb:elberfelder">Elberfelder 1871</option>
-            <option value="gb:elberfelder1905">Elberfelder 1905</option>
-            <option value="gb:schlachter">Schlachter</option>
-          </optgroup>
-          <optgroup label="Português (Portuguese)">
-            <option value="gb:almeida">Almeida</option>
-          </optgroup>
-          <optgroup label="Italiano (Italian)">
-            <option value="gb:giovanni">Diodati 1649</option>
-            <option value="gb:riveduta">Riveduta 1927</option>
-          </optgroup>
-          <optgroup label="Русский (Russian)">
-            <option value="gb:synodal">Synodal 1876</option>
-          </optgroup>
-          <optgroup label="中文 (Chinese)">
-            <option value="gb:cus">Union Simplified</option>
-            <option value="gb:cut">Union Traditional</option>
-          </optgroup>
-          <optgroup label="한국어 (Korean)">
-            <option value="gb:korean">Korean</option>
-          </optgroup>
-          <optgroup label="العربية (Arabic)">
-            <option value="gb:arabicsv">Smith & Van Dyke</option>
-          </optgroup>
-          <optgroup label="Tagalog">
-            <option value="gb:tagalog">Ang Dating Biblia</option>
-          </optgroup>
-          <optgroup label="Tiếng Việt (Vietnamese)">
-            <option value="gb:vietnamese">Vietnamese 1934</option>
-          </optgroup>
-          <optgroup label="Українська (Ukrainian)">
-            <option value="gb:ukrainian">Ivan Ogienko</option>
-          </optgroup>
-          <optgroup label="Română (Romanian)">
-            <option value="gb:cornilescu">Cornilescu</option>
-          </optgroup>
-          <optgroup label="Magyar (Hungarian)">
-            <option value="gb:karoli">Karoli</option>
-          </optgroup>
-          <optgroup label="Čeština (Czech)">
-            <option value="gb:bkr">Bible Kralicka</option>
-          </optgroup>
-          <optgroup label="Български (Bulgarian)">
-            <option value="gb:bulgarian1940">Bulgarian 1940</option>
-          </optgroup>
-          <optgroup label="Hrvatski (Croatian)">
-            <option value="gb:croatia">Croatian</option>
-          </optgroup>
-          <optgroup label="Dansk (Danish)">
-            <option value="gb:danish">Danish</option>
-          </optgroup>
-          <optgroup label="Nederlands (Dutch)">
-            <option value="gb:statenvertaling">Statenvertaling</option>
-          </optgroup>
-          <optgroup label="Suomi (Finnish)">
-            <option value="gb:finnish1776">Finnish 1776</option>
-            <option value="gb:pyharaamattu1933">Pyhä Raamattu 1933</option>
-          </optgroup>
-          <optgroup label="Norsk (Norwegian)">
-            <option value="gb:bibelselskap">Bibelen 1930</option>
-          </optgroup>
-          <optgroup label="Svenska (Swedish)">
-            <option value="gb:swedish">Swedish 1917</option>
-          </optgroup>
-          <optgroup label="Afrikaans">
-            <option value="gb:aov">Ou Vertaling</option>
-          </optgroup>
-          <optgroup label="Shqip (Albanian)">
-            <option value="gb:albanian">Albanian</option>
-          </optgroup>
-          <optgroup label="Malagasy">
-            <option value="gb:malagasy">Malagasy</option>
-          </optgroup>
-          <optgroup label="Latin">
-            <option value="gb:vulgate">Vulgate</option>
-            <option value="gb:clementine">Clementine Vulgate</option>
-          </optgroup>
-          <optgroup label="עברית (Hebrew)">
-            <option value="gb:modernhebrew">Modern Hebrew</option>
-          </optgroup>
-          <optgroup label="Ελληνικά (Greek)">
-            <option value="gb:moderngreek">Modern Greek</option>
-          </optgroup>
-        </select>
+        <button class="bible-filter-pill" id="lang-pill" onclick="openBibleFilter('lang')">
+          <span id="lang-pill-label">English</span>
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        </button>
+        <button class="bible-filter-pill" id="ver-pill" onclick="openBibleFilter('ver')">
+          <span id="ver-pill-label">WEB</span>
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        </button>
         <button class="bible-icon-btn" onclick="toggleHLBar()" title="Highlight">🖍</button>
         <button class="bible-icon-btn" onclick="toggleBookmark()" id="bookmark-btn" title="Bookmark">🔖</button>
         <button class="bible-icon-btn" onclick="openNotesDrawer()" title="Notes">📝</button>
@@ -1056,6 +966,17 @@ textarea{resize:vertical;min-height:80px}
     </div>
     <div class="book-picker-list" id="book-picker-list"></div>
     <div class="ch-picker" id="ch-picker"></div>
+  </div>
+</div>
+
+<!-- BIBLE FILTER POPUP -->
+<div class="bible-filter-popup" id="bibleFilterPopup" onclick="if(event.target===this)closeBibleFilter()">
+  <div class="bible-filter-sheet">
+    <div class="bible-filter-header">
+      <h3 id="bible-filter-title">Language</h3>
+      <button onclick="closeBibleFilter()">✕</button>
+    </div>
+    <div class="bible-filter-list" id="bible-filter-list"></div>
   </div>
 </div>
 
@@ -1236,6 +1157,78 @@ let currentUser=null,currentProfile=null,allChurches=[];
 
 // BIBLE STATE
 let bBook='Genesis',bChapter=1,bVersion='web',bHL=null,bHighlights={},bNotes={},offlineKJV=null,publishTarget=null,selVerse=null;
+let bLang='English';
+const BIBLE_LANGS={
+  'English':[{v:'kjv',n:'KJV'},{v:'web',n:'WEB'},{v:'asv',n:'ASV'},{v:'bbe',n:'BBE'},{v:'gb:akjv',n:'American KJV'},{v:'gb:ukjv',n:'Updated KJV'},{v:'gb:mkjv',n:'Modern KJV'},{v:'gb:douayrheims',n:'Douay-Rheims'},{v:'gb:drb',n:'Darby'},{v:'gb:webster',n:'Webster'},{v:'gb:ylt',n:"Young's Literal"},{v:'gb:litv',n:"Green's Literal"},{v:'gb:gb',n:'Geneva 1599'},{v:'gb:webbe',n:'WEB British'}],
+  'Español':[{v:'gb:valera',n:'Reina-Valera 1909'},{v:'gb:sse',n:'Sagradas Escrituras'}],
+  'Français':[{v:'gb:ls1910',n:'Louis Segond 1910'},{v:'gb:martin',n:'Martin 1744'},{v:'gb:ostervald',n:'Ostervald'}],
+  'Deutsch':[{v:'gb:luther1545',n:'Luther 1545'},{v:'gb:elberfelder',n:'Elberfelder 1871'},{v:'gb:elberfelder1905',n:'Elberfelder 1905'},{v:'gb:schlachter',n:'Schlachter'}],
+  'Português':[{v:'gb:almeida',n:'Almeida'}],
+  'Italiano':[{v:'gb:giovanni',n:'Diodati 1649'},{v:'gb:riveduta',n:'Riveduta 1927'}],
+  'Русский':[{v:'gb:synodal',n:'Synodal 1876'}],
+  '中文':[{v:'gb:cus',n:'Union Simplified'},{v:'gb:cut',n:'Union Traditional'}],
+  '한국어':[{v:'gb:korean',n:'Korean'}],
+  'العربية':[{v:'gb:arabicsv',n:'Smith & Van Dyke'}],
+  'Tagalog':[{v:'gb:tagalog',n:'Ang Dating Biblia'}],
+  'Tiếng Việt':[{v:'gb:vietnamese',n:'Vietnamese 1934'}],
+  'Українська':[{v:'gb:ukrainian',n:'Ivan Ogienko'}],
+  'Română':[{v:'gb:cornilescu',n:'Cornilescu'}],
+  'Magyar':[{v:'gb:karoli',n:'Karoli'}],
+  'Čeština':[{v:'gb:bkr',n:'Bible Kralicka'}],
+  'Български':[{v:'gb:bulgarian1940',n:'Bulgarian 1940'}],
+  'Hrvatski':[{v:'gb:croatia',n:'Croatian'}],
+  'Dansk':[{v:'gb:danish',n:'Danish'}],
+  'Nederlands':[{v:'gb:statenvertaling',n:'Statenvertaling'}],
+  'Suomi':[{v:'gb:finnish1776',n:'Finnish 1776'},{v:'gb:pyharaamattu1933',n:'Pyhä Raamattu 1933'}],
+  'Norsk':[{v:'gb:bibelselskap',n:'Bibelen 1930'}],
+  'Svenska':[{v:'gb:swedish',n:'Swedish 1917'}],
+  'Afrikaans':[{v:'gb:aov',n:'Ou Vertaling'}],
+  'Shqip':[{v:'gb:albanian',n:'Albanian'}],
+  'Malagasy':[{v:'gb:malagasy',n:'Malagasy'}],
+  'Latin':[{v:'gb:vulgate',n:'Vulgate'},{v:'gb:clementine',n:'Clementine Vulgate'}],
+  'עברית':[{v:'gb:modernhebrew',n:'Modern Hebrew'}],
+  'Ελληνικά':[{v:'gb:moderngreek',n:'Modern Greek'}],
+  'Հայերեն':[{v:'gb:easternarmenian',n:'Eastern Armenian'}],
+  'فارسی':[{v:'fcb',n:'FCB (Farsi Contemporary)'}]
+};
+let bFilterMode=null;
+function openBibleFilter(mode){
+  bFilterMode=mode;
+  const popup=document.getElementById('bibleFilterPopup');
+  const title=document.getElementById('bible-filter-title');
+  const list=document.getElementById('bible-filter-list');
+  if(mode==='lang'){
+    title.textContent='Select Language';
+    list.innerHTML=Object.keys(BIBLE_LANGS).map(lang=>`<div class="bible-filter-item${lang===bLang?' active':''}" onclick="selectBibleLang('${lang.replace(/'/g,"\\'")}')">${lang}<span class="bf-check">✓</span></div>`).join('');
+  }else{
+    title.textContent='Select Translation';
+    const versions=BIBLE_LANGS[bLang]||[];
+    list.innerHTML=versions.map(t=>`<div class="bible-filter-item${t.v===bVersion?' active':''}" onclick="selectBibleVer('${t.v.replace(/'/g,"\\'")}')">${t.n}<span class="bf-check">✓</span></div>`).join('');
+  }
+  popup.classList.add('open');
+}
+function closeBibleFilter(){document.getElementById('bibleFilterPopup').classList.remove('open');bFilterMode=null}
+function selectBibleLang(lang){
+  bLang=lang;
+  document.getElementById('lang-pill-label').textContent=lang;
+  const versions=BIBLE_LANGS[lang]||[];
+  bVersion=versions[0].v;
+  document.getElementById('ver-pill-label').textContent=versions[0].n;
+  closeBibleFilter();
+  if(versions.length===1){
+    loadBibleChapter();
+  }else{
+    openBibleFilter('ver');
+  }
+}
+function selectBibleVer(ver){
+  bVersion=ver;
+  const versions=BIBLE_LANGS[bLang]||[];
+  const found=versions.find(t=>t.v===ver);
+  if(found)document.getElementById('ver-pill-label').textContent=found.n;
+  closeBibleFilter();
+  loadBibleChapter();
+}
 
 const OT=[{name:"Genesis",ch:50},{name:"Exodus",ch:40},{name:"Leviticus",ch:27},{name:"Numbers",ch:36},{name:"Deuteronomy",ch:34},{name:"Joshua",ch:24},{name:"Judges",ch:21},{name:"Ruth",ch:4},{name:"1 Samuel",ch:31},{name:"2 Samuel",ch:24},{name:"1 Kings",ch:22},{name:"2 Kings",ch:25},{name:"1 Chronicles",ch:29},{name:"2 Chronicles",ch:36},{name:"Ezra",ch:10},{name:"Nehemiah",ch:13},{name:"Esther",ch:10},{name:"Job",ch:42},{name:"Psalms",ch:150},{name:"Proverbs",ch:31},{name:"Ecclesiastes",ch:12},{name:"Song of Solomon",ch:8},{name:"Isaiah",ch:66},{name:"Jeremiah",ch:52},{name:"Lamentations",ch:5},{name:"Ezekiel",ch:48},{name:"Daniel",ch:12},{name:"Hosea",ch:14},{name:"Joel",ch:3},{name:"Amos",ch:9},{name:"Obadiah",ch:1},{name:"Jonah",ch:4},{name:"Micah",ch:7},{name:"Nahum",ch:3},{name:"Habakkuk",ch:3},{name:"Zephaniah",ch:3},{name:"Haggai",ch:2},{name:"Zechariah",ch:14},{name:"Malachi",ch:4}];
 const NT=[{name:"Matthew",ch:28},{name:"Mark",ch:16},{name:"Luke",ch:24},{name:"John",ch:21},{name:"Acts",ch:28},{name:"Romans",ch:16},{name:"1 Corinthians",ch:16},{name:"2 Corinthians",ch:13},{name:"Galatians",ch:6},{name:"Ephesians",ch:6},{name:"Philippians",ch:4},{name:"Colossians",ch:4},{name:"1 Thessalonians",ch:5},{name:"2 Thessalonians",ch:3},{name:"1 Timothy",ch:6},{name:"2 Timothy",ch:4},{name:"Titus",ch:3},{name:"Philemon",ch:1},{name:"Hebrews",ch:13},{name:"James",ch:5},{name:"1 Peter",ch:5},{name:"2 Peter",ch:3},{name:"1 John",ch:5},{name:"2 John",ch:1},{name:"3 John",ch:1},{name:"Jude",ch:1},{name:"Revelation",ch:22}];
@@ -1790,9 +1783,8 @@ function getBookNumber(bookName){
   const map={'Genesis':1,'Exodus':2,'Leviticus':3,'Numbers':4,'Deuteronomy':5,'Joshua':6,'Judges':7,'Ruth':8,'1 Samuel':9,'2 Samuel':10,'1 Kings':11,'2 Kings':12,'1 Chronicles':13,'2 Chronicles':14,'Ezra':15,'Nehemiah':16,'Esther':17,'Job':18,'Psalms':19,'Proverbs':20,'Ecclesiastes':21,'Song of Solomon':22,'Isaiah':23,'Jeremiah':24,'Lamentations':25,'Ezekiel':26,'Daniel':27,'Hosea':28,'Joel':29,'Amos':30,'Obadiah':31,'Jonah':32,'Micah':33,'Nahum':34,'Habakkuk':35,'Zephaniah':36,'Haggai':37,'Zechariah':38,'Malachi':39,'Matthew':40,'Mark':41,'Luke':42,'John':43,'Acts':44,'Romans':45,'1 Corinthians':46,'2 Corinthians':47,'Galatians':48,'Ephesians':49,'Philippians':50,'Colossians':51,'1 Thessalonians':52,'2 Thessalonians':53,'1 Timothy':54,'2 Timothy':55,'Titus':56,'Philemon':57,'Hebrews':58,'James':59,'1 Peter':60,'2 Peter':61,'1 John':62,'2 John':63,'3 John':64,'Jude':65,'Revelation':66};
   return map[bookName]||ALL_BOOKS.findIndex(b=>b.name===bookName)+1;
 }
-function getVersionLabel(){const v=document.getElementById('b-version').value;return v.startsWith('gb:')?v.split(':')[1].toUpperCase():v.toUpperCase()}
+function getVersionLabel(){return bVersion.startsWith('gb:')?bVersion.split(':')[1].toUpperCase():bVersion.toUpperCase()}
 async function loadBibleChapter(){
-  bVersion=document.getElementById('b-version').value;
   updateBibleLabel();
   const area=document.getElementById('verse-area');
   const vLabel=getVersionLabel();
@@ -1805,7 +1797,27 @@ async function loadBibleChapter(){
   if(offlineKJV&&offlineKJV[bBook]&&offlineKJV[bBook][bChapter]&&(bVersion==='kjv')){renderBibleVerses(offlineKJV[bBook][bChapter],area);return}
   try{
     let verses,fallbackUsed=false;
-    if(bVersion.startsWith('gb:')){
+    if(bVersion==='fcb'){
+      // Persian (Farsi Contemporary Bible) via bolls.life API
+      const booksMap={'Genesis':1,'Exodus':2,'Leviticus':3,'Numbers':4,'Deuteronomy':5,'Joshua':6,'Judges':7,'Ruth':8,'1 Samuel':9,'2 Samuel':10,'1 Kings':11,'2 Kings':12,'1 Chronicles':13,'2 Chronicles':14,'Ezra':15,'Nehemiah':16,'Esther':17,'Job':18,'Psalms':19,'Proverbs':20,'Ecclesiastes':21,'Song of Solomon':22,'Isaiah':23,'Jeremiah':24,'Lamentations':25,'Ezekiel':26,'Daniel':27,'Hosea':28,'Joel':29,'Amos':30,'Obadiah':31,'Jonah':32,'Micah':33,'Nahum':34,'Habakkuk':35,'Zephaniah':36,'Haggai':37,'Zechariah':38,'Malachi':39,'Matthew':40,'Mark':41,'Luke':42,'John':43,'Acts':44,'Romans':45,'1 Corinthians':46,'2 Corinthians':47,'Galatians':48,'Ephesians':49,'Philippians':50,'Colossians':51,'1 Thessalonians':52,'2 Thessalonians':53,'1 Timothy':54,'2 Timothy':55,'Titus':56,'Philemon':57,'Hebrews':58,'James':59,'1 Peter':60,'2 Peter':61,'1 John':62,'2 John':63,'3 John':64,'Jude':65,'Revelation':66};
+      const bookId=booksMap[bBook]||1;
+      try{
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),12000);
+        const res=await fetch(`https://bolls.life/get-chapter/FCB/${bookId}/${bChapter}/`,{signal:controller.signal});
+        clearTimeout(timer);
+        if(res.ok){
+          const data=await res.json();
+          if(Array.isArray(data)&&data.length>0){
+            verses=data.map(v=>({verse:v.verse,text:(v.text||'').replace(/<[^>]*>/g,' ').trim()}));
+          }
+        }
+      }catch(e){console.warn('Persian Bible error:',e.message)}
+      if(!verses){
+        try{const r2=await fetch(`https://bible-api.com/${encodeURIComponent(bBook)}+${bChapter}?translation=web`);const d2=await r2.json();if(d2.verses){verses=d2.verses;fallbackUsed=true}}catch{}
+      }
+      if(!verses){area.innerHTML=`<div class="bk-ch-title">${bBook} ${bChapter}</div><div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-style:italic;font-size:15px">Could not load Persian translation.</div>`;return}
+    }else if(bVersion.startsWith('gb:')){
       const trans=bVersion.split(':')[1];
       const bookNum=getBookNumber(bBook);
       let ok=false;
