@@ -7,6 +7,8 @@
 <title>God's Children — Christian Community</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -61,7 +63,16 @@ nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justi
 .profile-cover{height:120px;background:linear-gradient(135deg,var(--brown) 0%,#5c3d1e 50%,var(--gold) 100%);position:relative}
 .profile-cover::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--white))}
 .profile-avatar-wrap{display:flex;justify-content:center;margin-top:-45px;position:relative;z-index:5}
-.profile-avatar-lg{width:90px;height:90px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:var(--white);border:4px solid var(--white);box-shadow:0 4px 15px rgba(0,0,0,0.15);font-family:'Cormorant Garamond',serif}
+.profile-avatar-lg{width:90px;height:90px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:var(--white);border:4px solid var(--white);box-shadow:0 4px 15px rgba(0,0,0,0.15);font-family:'Cormorant Garamond',serif;position:relative;overflow:hidden;background-size:cover;background-position:center}
+.avatar-letter{position:relative;z-index:1}
+.avatar-upload-btn{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.55);color:#fff;font-size:10px;text-align:center;padding:4px 0;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:0.3px;backdrop-filter:blur(4px)}
+.avatar-upload-btn:hover{background:rgba(0,0,0,0.7)}
+.avatar-scanning{position:absolute;inset:0;background:rgba(0,0,0,0.6);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-size:10px;gap:4px}
+.avatar-scanning .spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pic-avatar{width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;inset:0}
+.nav-avatar-pic{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.tab-avatar-pic{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .profile-display-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--brown);text-align:center;margin:10px 0 2px}
 .profile-username-tag{font-size:14px;color:var(--gold);text-align:center;margin-bottom:8px;font-weight:500}
 .profile-bio-display{font-size:13px;color:var(--text-muted);text-align:center;padding:0 30px;margin-bottom:16px;line-height:1.5}
@@ -463,7 +474,11 @@ textarea{resize:vertical;min-height:80px}
     <button class="profile-panel-close" onclick="closeProfilePanel()">✕</button>
     <div class="profile-cover"></div>
     <div class="profile-avatar-wrap">
-      <div class="profile-avatar-lg" id="profile-avatar-lg">?</div>
+      <div class="profile-avatar-lg" id="profile-avatar-lg">
+        <span class="avatar-letter" id="avatar-letter">?</span>
+        <div class="avatar-upload-btn" onclick="document.getElementById('avatar-file-input').click()">📷 Edit</div>
+      </div>
+      <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(this)"/>
     </div>
     <h2 class="profile-display-name" id="profile-display-name">—</h2>
     <p class="profile-username-tag" id="profile-username-tag">@username</p>
@@ -1271,7 +1286,9 @@ function openProfilePanel(){
   document.getElementById('edit-bio').value=currentProfile?.bio||'';
   const name=currentProfile?.full_name||'Friend';
   const uname=currentProfile?.username||'';
-  document.getElementById('profile-avatar-lg').textContent=name[0].toUpperCase();
+  document.getElementById('avatar-letter').textContent=name[0].toUpperCase();
+  const avatarUrl=currentProfile?.avatar_url||localStorage.getItem('gc_avatar_'+currentUser.id);
+  if(avatarUrl)setAvatarImage(avatarUrl);
   document.getElementById('profile-display-name').textContent=name;
   document.getElementById('profile-username-tag').textContent=uname?'@'+uname:'';
   document.getElementById('profile-bio-display').textContent=currentProfile?.bio||'';
@@ -1326,20 +1343,116 @@ async function saveProfile(){
   const{error}=await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio,email:currentUser.email||''});
   if(error){alert('Error saving profile: '+error.message);btn.textContent='Save Changes';btn.disabled=false;return}
   currentProfile={...currentProfile,full_name,username,bio};
-  document.getElementById('profile-avatar-lg').textContent=full_name?full_name[0].toUpperCase():'?';
+  document.getElementById('avatar-letter').textContent=full_name?full_name[0].toUpperCase():'?';
   document.getElementById('profile-display-name').textContent=full_name||'Friend';
   document.getElementById('profile-username-tag').textContent=username?'@'+username:'';
   document.getElementById('profile-bio-display').textContent=bio;
   updateUI();btn.textContent='Saved ✓';setTimeout(()=>{btn.textContent='Save Changes';btn.disabled=false},2000);
+}
+let nsfwModel=null;
+async function loadNSFWModel(){
+  if(nsfwModel)return nsfwModel;
+  if(typeof nsfwjs==='undefined'){await new Promise(r=>setTimeout(r,1000));if(typeof nsfwjs==='undefined')throw new Error('AI moderation not loaded yet. Please try again.')}
+  nsfwModel=await nsfwjs.load();
+  return nsfwModel;
+}
+async function handleAvatarUpload(input){
+  if(!input.files||!input.files[0])return;
+  if(!currentUser){alert('Please sign in first.');return}
+  const file=input.files[0];
+  if(file.size>5*1024*1024){alert('Image too large. Please use a photo under 5MB.');input.value='';return}
+  const avatarEl=document.getElementById('profile-avatar-lg');
+  // Show scanning indicator
+  let scanDiv=avatarEl.querySelector('.avatar-scanning');
+  if(!scanDiv){scanDiv=document.createElement('div');scanDiv.className='avatar-scanning';avatarEl.appendChild(scanDiv)}
+  scanDiv.innerHTML='<div class="spinner"></div>AI Scanning...';
+  scanDiv.style.display='flex';
+  try{
+    // Load image
+    const imgUrl=URL.createObjectURL(file);
+    const img=new Image();
+    await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=imgUrl});
+    // AI Moderation check
+    const model=await loadNSFWModel();
+    const predictions=await model.classify(img);
+    const pred={};predictions.forEach(p=>{pred[p.className]=p.probability});
+    const pornScore=(pred['Porn']||0);
+    const hentaiScore=(pred['Hentai']||0);
+    const sexyScore=(pred['Sexy']||0);
+    if(pornScore>0.15||hentaiScore>0.15||sexyScore>0.4){
+      scanDiv.style.display='none';
+      URL.revokeObjectURL(imgUrl);
+      input.value='';
+      alert('⚠️ This image was flagged as potentially inappropriate by our AI content filter.\n\nPlease choose a different photo that follows our community guidelines.');
+      return;
+    }
+    // Resize to 200x200
+    const canvas=document.createElement('canvas');
+    canvas.width=200;canvas.height=200;
+    const ctx=canvas.getContext('2d');
+    const size=Math.min(img.width,img.height);
+    const sx=(img.width-size)/2,sy=(img.height-size)/2;
+    ctx.drawImage(img,sx,sy,size,size,0,0,200,200);
+    const dataUrl=canvas.toDataURL('image/jpeg',0.85);
+    URL.revokeObjectURL(imgUrl);
+    // Save to profile
+    scanDiv.innerHTML='<div class="spinner"></div>Saving...';
+    const{error}=await db.from('profiles').upsert({id:currentUser.id,avatar_url:dataUrl,email:currentUser.email||''});
+    if(error){
+      // If avatar_url column doesn't exist, try without it and store locally
+      console.warn('Avatar save error:',error.message);
+      localStorage.setItem('gc_avatar_'+currentUser.id,dataUrl);
+    }else{
+      currentProfile={...currentProfile,avatar_url:dataUrl};
+    }
+    // Update all avatar displays
+    setAvatarImage(dataUrl);
+    scanDiv.style.display='none';
+    input.value='';
+  }catch(e){
+    console.error('Avatar upload error:',e);
+    scanDiv.style.display='none';
+    input.value='';
+    alert('Error processing image: '+e.message);
+  }
+}
+function setAvatarImage(url){
+  if(!url)return;
+  // Profile panel large avatar
+  const lgAvatar=document.getElementById('profile-avatar-lg');
+  let lgImg=lgAvatar.querySelector('.pic-avatar');
+  if(!lgImg){lgImg=document.createElement('img');lgImg.className='pic-avatar';lgAvatar.insertBefore(lgImg,lgAvatar.firstChild)}
+  lgImg.src=url;
+  const letter=document.getElementById('avatar-letter');if(letter)letter.style.display='none';
+  // Nav avatar
+  const navAvatar=document.getElementById('nav-avatar');
+  if(navAvatar){navAvatar.innerHTML='';const ni=document.createElement('img');ni.className='nav-avatar-pic';ni.src=url;navAvatar.appendChild(ni)}
+  // Bottom tab avatar
+  const tabAvatar=document.getElementById('tab-avatar-icon');
+  if(tabAvatar){tabAvatar.innerHTML='';const ti=document.createElement('img');ti.className='tab-avatar-pic';ti.src=url;tabAvatar.appendChild(ti)}
+}
+function clearAvatarImages(){
+  const lgAvatar=document.getElementById('profile-avatar-lg');
+  const lgImg=lgAvatar?.querySelector('.pic-avatar');if(lgImg)lgImg.remove();
+  const letter=document.getElementById('avatar-letter');if(letter)letter.style.display='';
+  const navAvatar=document.getElementById('nav-avatar');
+  if(navAvatar){navAvatar.innerHTML='';navAvatar.textContent='?'}
+  const tabAvatar=document.getElementById('tab-avatar-icon');
+  if(tabAvatar){tabAvatar.innerHTML='';tabAvatar.textContent='?'}
 }
 function updateUI(){
   const on=!!currentUser;
   document.getElementById('nav-auth-btns').style.display=on?'none':'block';
   document.getElementById('nav-user-area').style.display=on?'block':'none';
   if(on){
-    document.getElementById('nav-avatar').textContent=(currentProfile?.full_name||currentUser.email||'?')[0].toUpperCase();
-    document.getElementById('tab-avatar-icon').textContent=(currentProfile?.full_name||currentUser.email||'?')[0].toUpperCase();
-  }else{document.getElementById('tab-avatar-icon').textContent='?'}
+    const initial=(currentProfile?.full_name||currentUser.email||'?')[0].toUpperCase();
+    document.getElementById('nav-avatar').textContent=initial;
+    document.getElementById('tab-avatar-icon').textContent=initial;
+    // Load avatar pic
+    const avatarUrl=currentProfile?.avatar_url||localStorage.getItem('gc_avatar_'+currentUser.id);
+    if(avatarUrl)setAvatarImage(avatarUrl);
+    else clearAvatarImages();
+  }else{document.getElementById('tab-avatar-icon').textContent='?';clearAvatarImages()}
   document.getElementById('home-welcome').innerHTML=on
     ?`<div style="background:var(--green-soft);border:1px solid #b5d9c0;border-radius:var(--radius);padding:13px 17px;margin-bottom:16px;font-size:14px;color:#2a5c35">👋 Welcome back, <strong>${currentProfile?.full_name||'friend'}</strong>!</div>`
     :`<div class="auth-banner"><p>🙏 Join our community — sign in to pray, share, and connect.</p><div style="display:flex;gap:8px"><button class="btn btn-gold btn-sm" onclick="openModal()">Sign In</button><button class="btn btn-sm" style="background:transparent;border:1.5px solid rgba(201,151,58,0.5);color:var(--gold-light)" onclick="openModal();switchTab('signup')">Sign Up</button></div></div>`;
