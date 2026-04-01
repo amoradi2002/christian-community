@@ -18,24 +18,32 @@
   --hl-yellow:rgba(255,236,100,0.55);--hl-green:rgba(100,220,130,0.45);
   --hl-blue:rgba(100,170,255,0.45);--hl-pink:rgba(255,120,170,0.45);--hl-orange:rgba(255,165,60,0.5);
 }
-body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;min-height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);-webkit-text-size-adjust:100%}
-nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;height:58px;box-shadow:0 2px 12px rgba(44,31,14,0.25)}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;min-height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);padding-bottom:72px;-webkit-text-size-adjust:100%}
+nav{background:var(--brown);padding:0 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;height:50px;box-shadow:0 2px 12px rgba(44,31,14,0.25)}
 .nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer}
-.nav-logo svg{width:30px;height:30px}
-.nav-logo-text{font-family:'Cormorant Garamond',serif;color:var(--gold-light);font-size:19px;font-weight:600}
+.nav-logo svg{width:26px;height:26px}
+.nav-logo-text{font-family:'Cormorant Garamond',serif;color:var(--gold-light);font-size:18px;font-weight:600}
 .nav-right{display:flex;align-items:center;gap:8px}
-.nav-links{display:flex;gap:2px;flex-wrap:wrap}
-.nav-link{background:none;border:none;color:rgba(240,232,216,0.75);padding:7px 9px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11.5px;transition:all 0.2s;white-space:nowrap}
-.nav-link:hover,.nav-link.active{color:var(--gold-light);background:rgba(255,255,255,0.1)}
+.nav-links{display:none}
+.nav-link{display:none}
 .nav-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--white);cursor:pointer;border:2px solid var(--gold-light)}
-.hamburger{display:none;background:none;border:none;cursor:pointer;flex-direction:column;gap:5px;padding:8px}
+.hamburger{display:none}
 .hamburger span{width:20px;height:2px;background:var(--gold-light);border-radius:2px}
-@media(max-width:750px){
-  .nav-links{display:none;position:absolute;top:58px;left:0;right:0;background:var(--brown);flex-direction:column;padding:10px;gap:2px;box-shadow:0 8px 20px rgba(0,0,0,0.3)}
-  .nav-links.open{display:flex}
-  .hamburger{display:flex}
-  .nav-link{font-size:14px;padding:10px 14px}
-}
+.bottom-tabs{position:fixed;bottom:0;left:0;right:0;background:var(--brown);display:flex;align-items:center;justify-content:space-around;z-index:100;padding:6px 0 calc(6px + env(safe-area-inset-bottom));box-shadow:0 -2px 12px rgba(44,31,14,0.3);border-top:1px solid rgba(201,151,58,0.15)}
+.tab-btn{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 12px;color:rgba(240,232,216,0.5);transition:color 0.2s;min-width:56px}
+.tab-btn svg,.tab-btn .tab-icon{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab-btn .tab-label{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;letter-spacing:0.3px}
+.tab-btn.active{color:var(--gold-light)}
+.tab-btn.active svg,.tab-btn.active .tab-icon{stroke:var(--gold-light)}
+.tab-avatar{width:24px;height:24px;border-radius:50%;border:2px solid rgba(240,232,216,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:rgba(240,232,216,0.5);transition:all 0.2s}
+.tab-btn.active .tab-avatar{border-color:var(--gold-light);color:var(--gold-light)}
+.community-grid,.discover-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:0;max-width:500px;margin:0 auto}
+.grid-card{background:var(--white);border-radius:var(--radius);padding:20px 16px;text-align:center;cursor:pointer;border:1.5px solid var(--border);transition:all 0.2s;display:flex;flex-direction:column;align-items:center;gap:8px}
+.grid-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 4px 12px rgba(44,31,14,0.1)}
+.grid-card .grid-icon{font-size:28px}
+.grid-card .grid-label{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--brown)}
+.grid-card .grid-desc{font-size:11px;color:var(--text-muted);line-height:1.3}
+@media(max-width:750px){body{padding-bottom:70px}}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(44,31,14,0.6);z-index:200;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.open{display:flex}
 .modal{background:var(--white);border-radius:var(--radius);padding:30px;width:100%;max-width:400px;position:relative;max-height:90vh;overflow-y:auto}
@@ -130,6 +138,12 @@ main{max-width:900px;margin:0 auto;padding:28px 20px}
 .verse-ref{font-size:12px;color:var(--text-muted);font-weight:500}
 .verse-save-btn{background:none;border:1px solid var(--border);color:var(--gold-dark);font-size:11px;padding:6px 12px;border-radius:8px;cursor:pointer;margin-top:10px;font-family:'DM Sans',sans-serif;transition:all 0.2s}
 .verse-save-btn:hover{background:var(--gold);color:var(--white);border-color:var(--gold)}
+.toggle-switch{position:relative;width:44px;height:24px;display:inline-block}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#ccc;border-radius:24px;cursor:pointer;transition:0.3s}
+.toggle-slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s}
+.toggle-switch input:checked+.toggle-slider{background:var(--gold)}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px)}
 .wp-bg-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .wp-bg-opt{width:100%;aspect-ratio:1;border-radius:10px;cursor:pointer;border:2.5px solid transparent;transition:all 0.15s}
 .wp-bg-opt:hover{transform:scale(1.08)}
@@ -475,6 +489,14 @@ textarea{resize:vertical;min-height:80px}
       </div>
     </div>
     <div class="profile-section">
+      <h3 class="profile-section-title">Settings</h3>
+      <div class="account-row" style="justify-content:space-between;display:flex;align-items:center">
+        <div><span class="account-label" style="font-weight:500">Notifications</span><div style="font-size:11px;color:var(--text-muted)">Show bell icon for announcements</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="toggle-notifs" onchange="toggleNotifications()"/><span class="toggle-slider"></span></label>
+      </div>
+      <div id="notif-link-row" style="display:none;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="closeProfilePanel();showPage('notifications')" style="width:100%">View Notifications</button></div>
+    </div>
+    <div class="profile-section">
       <h3 class="profile-section-title">Account</h3>
       <div class="profile-account-info">
         <div class="account-row"><span class="account-label">Email</span><span class="account-value" id="profile-email-display">—</span></div>
@@ -606,9 +628,16 @@ textarea{resize:vertical;min-height:80px}
 <div class="modal-overlay" id="publishModal">
   <div class="modal">
     <button class="modal-close" onclick="document.getElementById('publishModal').classList.remove('open')">✕</button>
-    <h2>Publish to Discussions</h2>
+    <h2>Share This Verse</h2>
     <div id="pub-verse-preview" style="background:var(--parchment);border-radius:8px;padding:11px 13px;font-family:'Cormorant Garamond',serif;font-size:15px;line-height:1.5;color:var(--brown);margin-bottom:13px;font-style:italic"></div>
+    <div class="form-group"><label>Where to post</label>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn-sm" id="pub-dest-disc" onclick="setPubDest('discussions')" style="flex:1;background:var(--gold);color:var(--white);border:1.5px solid var(--gold)">💬 Discussions</button>
+        <button class="btn btn-sm" id="pub-dest-promise" onclick="setPubDest('promises')" style="flex:1;background:transparent;color:var(--gold-dark);border:1.5px solid var(--gold)">🕊️ God's Promises</button>
+      </div>
+    </div>
     <div class="form-group"><label>Add a note (optional)</label><textarea id="pub-note" rows="3" placeholder="Share your thoughts..."></textarea></div>
+    <div id="pub-promise-topic" style="display:none"><div class="form-group"><label>Promise Topic</label><select id="pub-topic-select"><option value="healing">Healing</option><option value="strength">Strength</option><option value="peace">Peace</option><option value="provision">Provision</option><option value="love">Love</option><option value="protection">Protection</option><option value="forgiveness">Forgiveness</option><option value="guidance">Guidance</option></select></div></div>
     <label class="form-check"><input type="checkbox" id="pub-anon"/> Post anonymously</label>
     <div style="display:flex;gap:8px">
       <button class="btn btn-primary" onclick="confirmPublish()">Publish</button>
@@ -639,24 +668,92 @@ textarea{resize:vertical;min-height:80px}
     <svg viewBox="0 0 32 32" fill="none"><rect x="13" y="2" width="6" height="28" rx="2" fill="#C9973A"/><rect x="5" y="11" width="22" height="6" rx="2" fill="#C9973A"/></svg>
     <span class="nav-logo-text">God's Children</span>
   </div>
-  <button class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></button>
-  <div class="nav-links" id="navLinks">
-    <button class="nav-link active" onclick="showPage('home')">Home</button>
-    <button class="nav-link" onclick="showPage('churches')">Churches</button>
-    <button class="nav-link" onclick="showPage('life-groups')">Life Groups</button>
-    <button class="nav-link" onclick="showPage('discussions')">Discussions</button>
-    <button class="nav-link" onclick="showPage('bible')">Bible</button>
-    <button class="nav-link" onclick="showPage('testimonies')">Testimonies</button>
-    <button class="nav-link" onclick="showPage('prayer')">Prayer Wall</button>
-    <button class="nav-link" onclick="showPage('promises')">Promises</button>
-    <button class="nav-link" onclick="showPage('sermons')">Sermons</button>
-    <button class="nav-link" onclick="showPage('music')">Music</button>
-  </div>
+  <div class="nav-links" id="navLinks"></div>
   <div class="nav-right">
     <div id="nav-auth-btns"><button class="btn btn-sm" style="background:transparent;border:1.5px solid rgba(201,151,58,0.5);color:var(--gold-light);font-size:12px" onclick="openModal()">Sign In</button></div>
-    <div id="nav-user-area" style="display:none"><button class="notif-bell" id="notif-bell" onclick="showPage('notifications')"><span class="bell-icon">🔔</span><span class="notif-badge" id="notif-badge" style="display:none">0</span></button><div class="nav-avatar" id="nav-avatar" onclick="openProfilePanel()">?</div></div>
+    <div id="nav-user-area" style="display:none"><div class="nav-avatar" id="nav-avatar" onclick="openProfilePanel()" style="display:none">?</div></div>
   </div>
 </nav>
+
+<!-- BOTTOM TAB BAR -->
+<div class="bottom-tabs" id="bottomTabs">
+  <button class="tab-btn active" id="tab-home" onclick="switchBottomTab('home')">
+    <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>
+    <span class="tab-label">Home</span>
+  </button>
+  <button class="tab-btn" id="tab-bible" onclick="switchBottomTab('bible')">
+    <svg viewBox="0 0 24 24"><path d="M4 4h3a3 3 0 013 3v13a2 2 0 00-2-2H4zM20 4h-3a3 3 0 00-3 3v13a2 2 0 012-2h4z"/></svg>
+    <span class="tab-label">Bible</span>
+  </button>
+  <button class="tab-btn" id="tab-community" onclick="switchBottomTab('community')">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+    <span class="tab-label">Community</span>
+  </button>
+  <button class="tab-btn" id="tab-discover" onclick="switchBottomTab('discover')">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <span class="tab-label">Discover</span>
+  </button>
+  <button class="tab-btn" id="tab-you" onclick="switchBottomTab('you')">
+    <div class="tab-avatar" id="tab-avatar-icon">?</div>
+    <span class="tab-label">You</span>
+  </button>
+</div>
+
+<!-- COMMUNITY HUB -->
+<div id="page-community" class="page"><main>
+  <h1 class="section-title" style="text-align:center;margin-bottom:4px">Community</h1>
+  <p style="text-align:center;color:var(--text-muted);font-size:13px;margin-bottom:20px">Connect with believers near you</p>
+  <div class="community-grid">
+    <div class="grid-card" onclick="showPage('churches')">
+      <span class="grid-icon">⛪</span>
+      <span class="grid-label">Churches</span>
+      <span class="grid-desc">Find & list churches</span>
+    </div>
+    <div class="grid-card" onclick="showPage('life-groups')">
+      <span class="grid-icon">🤝</span>
+      <span class="grid-label">Life Groups</span>
+      <span class="grid-desc">Small group fellowship</span>
+    </div>
+    <div class="grid-card" onclick="showPage('discussions')">
+      <span class="grid-icon">💬</span>
+      <span class="grid-label">Discussions</span>
+      <span class="grid-desc">Talk about scripture</span>
+    </div>
+    <div class="grid-card" onclick="showPage('prayer')">
+      <span class="grid-icon">🙏</span>
+      <span class="grid-label">Prayer Wall</span>
+      <span class="grid-desc">Share prayer requests</span>
+    </div>
+  </div>
+</main></div>
+
+<!-- DISCOVER HUB -->
+<div id="page-discover" class="page"><main>
+  <h1 class="section-title" style="text-align:center;margin-bottom:4px">Discover</h1>
+  <p style="text-align:center;color:var(--text-muted);font-size:13px;margin-bottom:20px">Grow your faith daily</p>
+  <div class="discover-grid">
+    <div class="grid-card" onclick="showPage('testimonies')">
+      <span class="grid-icon">✨</span>
+      <span class="grid-label">Testimonies</span>
+      <span class="grid-desc">Stories of God's power</span>
+    </div>
+    <div class="grid-card" onclick="showPage('promises')">
+      <span class="grid-icon">🕊️</span>
+      <span class="grid-label">God's Promises</span>
+      <span class="grid-desc">Verses of hope</span>
+    </div>
+    <div class="grid-card" onclick="showPage('sermons')">
+      <span class="grid-icon">🎤</span>
+      <span class="grid-label">Sermons</span>
+      <span class="grid-desc">Powerful messages</span>
+    </div>
+    <div class="grid-card" onclick="showPage('music')">
+      <span class="grid-icon">🎵</span>
+      <span class="grid-label">Music</span>
+      <span class="grid-desc">Worship & praise</span>
+    </div>
+  </div>
+</main></div>
 
 <!-- HOME -->
 <div id="page-home" class="page active">
@@ -987,12 +1084,20 @@ const dailyVerses=[
 ];
 
 // ROUTING
+function switchBottomTab(tab){
+  if(tab==='you'){if(currentUser)openProfilePanel();else openModal();return}
+  const tabMap={home:'home',bible:'bible',community:'community',discover:'discover'};
+  const pageId=tabMap[tab]||tab;
+  showPage(pageId);
+}
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  const map={home:'Home',churches:'Churches','life-groups':'Life Groups',discussions:'Discussions',bible:'Bible',testimonies:'Testimonies',prayer:'Prayer Wall',promises:'Promises',sermons:'Sermons',music:'Music',notifications:'Notifications'};
-  document.querySelectorAll('.nav-link').forEach(l=>{l.classList.toggle('active',l.textContent===map[id])});
-  document.getElementById('navLinks').classList.remove('open');
+  // Update bottom tabs
+  const tabMapping={home:'home',bible:'bible',community:'community',churches:'community','life-groups':'community',discussions:'community',prayer:'community',discover:'discover',testimonies:'discover',promises:'discover',sermons:'discover',music:'discover',notifications:'home'};
+  const activeTab=tabMapping[id]||'home';
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  const tabEl=document.getElementById('tab-'+activeTab);if(tabEl)tabEl.classList.add('active');
   window.scrollTo(0,0);
   if(id==='churches')loadChurches();
   if(id==='life-groups')loadLifeGroups();
@@ -1005,7 +1110,7 @@ function showPage(id){
   if(id==='discussions')loadDiscussions();
   if(id==='bible')initBible();
 }
-function toggleMenu(){document.getElementById('navLinks').classList.toggle('open')}
+function toggleMenu(){}
 
 // AUTH
 function openModal(){document.getElementById('authModal').classList.add('open')}
@@ -1015,6 +1120,26 @@ function showErr(m){const e=document.getElementById('modal-error');e.textContent
 function showOk(m){const e=document.getElementById('modal-success');e.textContent=m;e.classList.add('show');document.getElementById('modal-error').classList.remove('show')}
 function clearMsgs(){document.getElementById('modal-error').classList.remove('show');document.getElementById('modal-success').classList.remove('show')}
 function openEULA(){document.getElementById('eulaModal').classList.add('open')}
+function toggleNotifications(){
+  const on=document.getElementById('toggle-notifs').checked;
+  localStorage.setItem('gc_notifs_enabled',on?'1':'0');
+  document.getElementById('notif-link-row').style.display=on?'block':'none';
+  updateNotifBell();
+}
+function updateNotifBell(){
+  const on=localStorage.getItem('gc_notifs_enabled')==='1';
+  let bell=document.getElementById('notif-bell-nav');
+  if(on&&currentUser){
+    if(!bell){
+      const area=document.getElementById('nav-user-area');
+      const btn=document.createElement('button');btn.className='notif-bell';btn.id='notif-bell-nav';
+      btn.onclick=()=>showPage('notifications');
+      btn.innerHTML='<span class="bell-icon">🔔</span><span class="notif-badge" id="notif-badge" style="display:none">0</span>';
+      area.insertBefore(btn,area.firstChild);
+    }
+    checkNotifBadge();
+  }else if(bell){bell.remove()}
+}
 function selectAccountType(type){
   document.getElementById('signup-account-type').value=type;
   ['personal','church','group'].forEach(t=>{
@@ -1153,6 +1278,8 @@ function openProfilePanel(){
   document.getElementById('profile-email-display').textContent=currentUser.email||'—';
   const joined=currentUser.created_at?new Date(currentUser.created_at).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
   document.getElementById('profile-joined').textContent=joined;
+  document.getElementById('toggle-notifs').checked=localStorage.getItem('gc_notifs_enabled')==='1';
+  document.getElementById('notif-link-row').style.display=localStorage.getItem('gc_notifs_enabled')==='1'?'block':'none';
   loadProfileStats();
   loadProfileActivity();
   panel.classList.add('open');
@@ -1209,7 +1336,10 @@ function updateUI(){
   const on=!!currentUser;
   document.getElementById('nav-auth-btns').style.display=on?'none':'block';
   document.getElementById('nav-user-area').style.display=on?'block':'none';
-  if(on)document.getElementById('nav-avatar').textContent=(currentProfile?.full_name||currentUser.email||'?')[0].toUpperCase();
+  if(on){
+    document.getElementById('nav-avatar').textContent=(currentProfile?.full_name||currentUser.email||'?')[0].toUpperCase();
+    document.getElementById('tab-avatar-icon').textContent=(currentProfile?.full_name||currentUser.email||'?')[0].toUpperCase();
+  }else{document.getElementById('tab-avatar-icon').textContent='?'}
   document.getElementById('home-welcome').innerHTML=on
     ?`<div style="background:var(--green-soft);border:1px solid #b5d9c0;border-radius:var(--radius);padding:13px 17px;margin-bottom:16px;font-size:14px;color:#2a5c35">👋 Welcome back, <strong>${currentProfile?.full_name||'friend'}</strong>!</div>`
     :`<div class="auth-banner"><p>🙏 Join our community — sign in to pray, share, and connect.</p><div style="display:flex;gap:8px"><button class="btn btn-gold btn-sm" onclick="openModal()">Sign In</button><button class="btn btn-sm" style="background:transparent;border:1.5px solid rgba(201,151,58,0.5);color:var(--gold-light)" onclick="openModal();switchTab('signup')">Sign Up</button></div></div>`;
@@ -1219,7 +1349,7 @@ function updateUI(){
     if(!on){p.innerHTML=`<div class="sign-in-prompt">🙏 <strong>Sign in</strong> to post. <button class="btn btn-gold btn-sm" style="margin-left:8px" onclick="openModal()">Sign In</button></div>`;f.style.opacity='0.4';f.style.pointerEvents='none';}
     else{p.innerHTML='';f.style.opacity='1';f.style.pointerEvents='auto'}
   });
-  if(on)setTimeout(()=>checkNotifBadge(),500);
+  if(on){updateNotifBell();setTimeout(()=>checkNotifBadge(),500)}
 }
 function setDailyVerse(){
   const d=new Date(),start=new Date(d.getFullYear(),0,0);
@@ -1451,23 +1581,48 @@ function saveVerseNote(vn){
   saveBibleLocal();
   inp.style.borderColor='#4CAF50';setTimeout(()=>{inp.style.borderColor=''},1500);
 }
+let pubDest='discussions';
+function setPubDest(dest){
+  pubDest=dest;
+  const dBtn=document.getElementById('pub-dest-disc'),pBtn=document.getElementById('pub-dest-promise');
+  if(dest==='discussions'){
+    dBtn.style.background='var(--gold)';dBtn.style.color='var(--white)';
+    pBtn.style.background='transparent';pBtn.style.color='var(--gold-dark)';
+    document.getElementById('pub-promise-topic').style.display='none';
+  }else{
+    pBtn.style.background='var(--gold)';pBtn.style.color='var(--white)';
+    dBtn.style.background='transparent';dBtn.style.color='var(--gold-dark)';
+    document.getElementById('pub-promise-topic').style.display='block';
+  }
+}
 function openPublish(vn,text){
   publishTarget={vn,text,book:bBook,chapter:bChapter,version:bVersion};
   document.getElementById('pub-verse-preview').innerHTML=`<strong>${bBook} ${bChapter}:${vn}</strong> — "${text}"`;
   const existNote=(bNotes[`${bBook}-${bChapter}`]||{})[vn]||'';
   document.getElementById('pub-note').value=existNote;
   document.getElementById('pub-anon').checked=false;
+  setPubDest('discussions');
   document.getElementById('publishModal').classList.add('open');
 }
 async function confirmPublish(){
   if(!publishTarget)return;
   const{vn,text,book,chapter,version}=publishTarget;
   const note=document.getElementById('pub-note').value.trim();
-  const comment=`📖 ${book} ${chapter}:${vn} (${version.toUpperCase()}): "${text}"${note?` — ${note}`:''}`;
-  await db.from('discussions').insert({book,comment,user_id:currentUser?.id||null}).catch(()=>{});
-  document.getElementById('publishModal').classList.remove('open');
-  publishTarget=null;
-  alert(`Published to ${book} Discussions! 🙌`);
+  if(pubDest==='discussions'){
+    const comment=`📖 ${book} ${chapter}:${vn} (${version.toUpperCase()}): "${text}"${note?` — ${note}`:''}`;
+    const{error}=await db.from('discussions').insert({book,comment,user_id:currentUser?.id||null});
+    if(error){alert('Error posting: '+error.message);return}
+    document.getElementById('publishModal').classList.remove('open');
+    publishTarget=null;
+    alert(`Published to ${book} Discussions! 🙌`);
+  }else{
+    const topic=document.getElementById('pub-topic-select').value;
+    const{error}=await db.from('user_promises').insert({verse_text:text,verse_ref:`${book} ${chapter}:${vn}`,topic,note,user_id:currentUser?.id||null});
+    if(error){alert('Error posting: '+error.message);return}
+    document.getElementById('publishModal').classList.remove('open');
+    publishTarget=null;
+    alert(`Added to God's Promises! 🕊️`);
+  }
 }
 let bBookmarks={},notesTab='notes';
 function loadBookmarks(){try{const b=localStorage.getItem('gc_bookmarks');if(b)bBookmarks=JSON.parse(b);}catch{bBookmarks={}}}
