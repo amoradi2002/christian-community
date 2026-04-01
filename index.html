@@ -2339,6 +2339,11 @@ function getWpFontFamily(){
   if(wpFont==='script')return "Georgia,'Times New Roman',serif";
   return "Georgia,'Times New Roman',serif";
 }
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
 function wrapText(ctx,text,maxWidth){
   const words=text.split(' ');const lines=[];let line='';
   for(const w of words){
@@ -2376,12 +2381,43 @@ function renderWallpaper(canvas,W,H){
   }
   // Cross
   if(document.getElementById('wp-cross').checked){
-    ctx.fillStyle='rgba(201,151,58,0.12)';
-    const cw=Math.round(80*s),ch=Math.round(500*s);
-    const cx=Math.round(W/2-cw/2),cy=Math.round(H*0.18);
-    ctx.fillRect(cx,cy,cw,ch);
-    const bw=Math.round(320*s),bh=cw;
-    ctx.fillRect(Math.round(W/2-bw/2),Math.round(cy+ch*0.28),bw,bh);
+    ctx.save();
+    const cx=W/2,cy=H*0.38;
+    // Soft outer glow
+    const glowR=Math.round(220*s);
+    const glow=ctx.createRadialGradient(cx,cy,0,cx,cy,glowR);
+    glow.addColorStop(0,'rgba(201,151,58,0.18)');
+    glow.addColorStop(0.5,'rgba(201,151,58,0.06)');
+    glow.addColorStop(1,'rgba(201,151,58,0)');
+    ctx.fillStyle=glow;ctx.fillRect(cx-glowR,cy-glowR,glowR*2,glowR*2);
+    // Light rays
+    ctx.globalAlpha=0.06;
+    for(let i=0;i<6;i++){
+      ctx.save();ctx.translate(cx,cy);ctx.rotate((i*Math.PI)/3);
+      ctx.fillStyle='#C9973A';
+      ctx.beginPath();ctx.moveTo(-2*s,0);ctx.lineTo(2*s,0);ctx.lineTo(8*s,-300*s);ctx.lineTo(-8*s,-300*s);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha=1;
+    // Cross shape with rounded ends
+    const vw=Math.round(18*s),vh=Math.round(200*s);
+    const hw=Math.round(130*s),hh=vw;
+    const armY=cy-vh*0.2;
+    // Vertical beam
+    const vGrad=ctx.createLinearGradient(cx,cy-vh/2,cx,cy+vh/2);
+    vGrad.addColorStop(0,'rgba(201,151,58,0.25)');vGrad.addColorStop(0.5,'rgba(201,151,58,0.15)');vGrad.addColorStop(1,'rgba(201,151,58,0.05)');
+    ctx.fillStyle=vGrad;
+    roundRect(ctx,cx-vw/2,cy-vh/2,vw,vh,Math.round(8*s));ctx.fill();
+    // Horizontal beam
+    const hGrad=ctx.createLinearGradient(cx-hw/2,armY,cx+hw/2,armY);
+    hGrad.addColorStop(0,'rgba(201,151,58,0.05)');hGrad.addColorStop(0.5,'rgba(201,151,58,0.2)');hGrad.addColorStop(1,'rgba(201,151,58,0.05)');
+    ctx.fillStyle=hGrad;
+    roundRect(ctx,cx-hw/2,armY-hh/2,hw,hh,Math.round(8*s));ctx.fill();
+    // Center glow point
+    const cGlow=ctx.createRadialGradient(cx,armY,0,cx,armY,Math.round(30*s));
+    cGlow.addColorStop(0,'rgba(255,235,180,0.2)');cGlow.addColorStop(1,'rgba(255,235,180,0)');
+    ctx.fillStyle=cGlow;ctx.fillRect(cx-30*s,armY-30*s,60*s,60*s);
+    ctx.restore();
   }
   // Text
   const text=document.getElementById('wp-text').value||'Your verse here';
