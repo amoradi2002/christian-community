@@ -1446,11 +1446,19 @@ async function handleLogin(){
   let email=input;
   if(!input.includes('@')){
     try{
-      const{data:profile,error:pErr}=await Promise.race([db.from('profiles').select('email,username').ilike('username',input).maybeSingle(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);
+      const{data:profile,error:pErr}=await Promise.race([db.from('profiles').select('id,email,username').ilike('username',input).maybeSingle(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);
       if(pErr){console.error('Username lookup error:',pErr.message);showErr('Username lookup error: '+pErr.message);btn.disabled=false;btn.textContent='Sign In';return}
-      if(!profile){showErr('Username "'+input+'" not found. Try signing in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
-      if(!profile.email){showErr('No email linked to this username. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
-      email=profile.email;
+      if(!profile){
+        // Also try exact case match
+        const{data:p2}=await db.from('profiles').select('id,email,username').eq('username',input).maybeSingle().catch(()=>({data:null}));
+        if(p2&&p2.email){email=p2.email}
+        else{showErr('Username "'+input+'" not found. Try signing in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+      }else
+      if(profile.email){email=profile.email}
+      else{
+        // Profile exists but email column is empty — look up from auth users via admin or ask user
+        showErr('No email linked to username "'+input+'". Please sign in with your email address and we\'ll fix this.');btn.disabled=false;btn.textContent='Sign In';return
+      }
     }catch(e){console.error('Username lookup exception:',e);showErr('Username lookup timed out. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
   }
   const{error}=await db.auth.signInWithPassword({email,password});
