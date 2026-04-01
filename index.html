@@ -722,7 +722,7 @@ textarea{resize:vertical;min-height:80px}
 
 <nav>
   <div class="nav-logo" onclick="showPage('home')">
-    <svg viewBox="0 0 32 32" fill="none"><rect x="13" y="2" width="6" height="28" rx="2" fill="#C9973A"/><rect x="5" y="11" width="22" height="6" rx="2" fill="#C9973A"/></svg>
+    <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="#C9973A" stroke-width="2"/><path d="M16 7v18M10 16h12" stroke="#C9973A" stroke-width="2.5" stroke-linecap="round"/><path d="M8 10c3 2 5 5 5 9M24 10c-3 2-5 5-5 9" stroke="#C9973A" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/><circle cx="16" cy="6" r="1.5" fill="#C9973A"/></svg>
     <span class="nav-logo-text">God's Children</span>
   </div>
   <div class="nav-links" id="navLinks"></div>
@@ -2196,10 +2196,10 @@ const wpBgs={
   'black':['#000','#111','#000','#fff','#888']
 };
 function openWallpaperCreator(text,ref){
-  document.getElementById('wp-text').value=(text||'').replace(/^"|"$/g,'');
+  document.getElementById('wp-text').value=(text||'').replace(/^"|"$/g,'').replace(/^"/,'').replace(/"$/,'');
   document.getElementById('wp-ref').value=(ref||'').replace(/^— /,'');
   document.getElementById('wallpaperModal').classList.add('open');
-  setTimeout(()=>updateWallpaperPreview(),50);
+  setTimeout(()=>updateWallpaperPreview(),100);
 }
 function saveVerseAsImage(){
   const text=document.getElementById('verse-text').textContent;
@@ -2215,68 +2215,90 @@ function selectWpFont(el){
   el.classList.add('active');wpFont=el.dataset.font;updateWallpaperPreview();
 }
 function getWpFontFamily(){
-  if(wpFont==='sans')return "'DM Sans',Helvetica,sans-serif";
-  if(wpFont==='script')return "'Cormorant Garamond',Georgia,serif";
+  if(wpFont==='sans')return "Helvetica,Arial,sans-serif";
+  if(wpFont==='script')return "Georgia,'Times New Roman',serif";
   return "Georgia,'Times New Roman',serif";
 }
-function updateWallpaperPreview(){
-  const canvas=document.getElementById('wp-preview');
+function wrapText(ctx,text,maxWidth){
+  const words=text.split(' ');const lines=[];let line='';
+  for(const w of words){
+    const test=line+(line?' ':'')+w;
+    if(ctx.measureText(test).width>maxWidth&&line){lines.push(line);line=w}
+    else{line=test}
+  }
+  if(line)lines.push(line);
+  return lines;
+}
+function renderWallpaper(canvas,W,H){
   const ctx=canvas.getContext('2d');
-  const W=292,H=520;
+  canvas.width=W;canvas.height=H;
   const bg=wpBgs[wpBg]||wpBgs['dark-brown'];
+  const s=W/1170; // scale factor (1170 is reference width)
+  // Background gradient
   const grad=ctx.createLinearGradient(0,0,0,H);
   grad.addColorStop(0,bg[0]);grad.addColorStop(0.5,bg[1]);grad.addColorStop(1,bg[2]);
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   // Cross
   if(document.getElementById('wp-cross').checked){
     ctx.fillStyle='rgba(201,151,58,0.1)';
-    ctx.fillRect(133,80,26,150);ctx.fillRect(96,118,100,26);
+    const cw=Math.round(80*s),ch=Math.round(500*s);
+    const cx=Math.round(W/2-cw/2),cy=Math.round(H*0.18);
+    ctx.fillRect(cx,cy,cw,ch);
+    const bw=Math.round(320*s),bh=cw;
+    ctx.fillRect(Math.round(W/2-bw/2),Math.round(cy+ch*0.28),bw,bh);
   }
   // Text
   const text=document.getElementById('wp-text').value||'Your verse here';
   const ref=document.getElementById('wp-ref').value||'Reference';
-  const fontSize=Math.round(parseInt(document.getElementById('wp-fontsize').value||52)/4);
+  const baseFontSize=parseInt(document.getElementById('wp-fontsize').value||52);
+  const fontSize=Math.round(baseFontSize*s);
   const fontFamily=getWpFontFamily();
-  ctx.fillStyle=bg[3];ctx.font=`italic ${fontSize}px ${fontFamily}`;ctx.textAlign='center';
-  const words=text.split(' ');let line='',y=200;
-  words.forEach(w=>{const test=line+w+' ';if(ctx.measureText(test).width>W-40){ctx.fillText(line.trim(),W/2,y);y+=fontSize+4;line=w+' '}else{line=test}});
-  if(line.trim())ctx.fillText(line.trim(),W/2,y);
-  // Ref
-  ctx.fillStyle=bg[4];ctx.font=`bold ${Math.round(fontSize*0.55)}px sans-serif`;
-  ctx.fillText('— '+ref,W/2,y+fontSize+10);
+  const lineHeight=Math.round(fontSize*1.4);
+  const maxTextWidth=Math.round(W*0.78);
+  ctx.font=`italic ${fontSize}px ${fontFamily}`;
+  ctx.textAlign='center';ctx.fillStyle=bg[3];
+  const lines=wrapText(ctx,text,maxTextWidth);
+  const totalTextH=lines.length*lineHeight;
+  let y=Math.round(H/2-totalTextH/2);
+  for(const ln of lines){ctx.fillText(ln,W/2,y);y+=lineHeight}
+  // Reference
+  const refSize=Math.round(fontSize*0.55);
+  ctx.fillStyle=bg[4];ctx.font=`bold ${refSize}px Helvetica,Arial,sans-serif`;
+  ctx.fillText('— '+ref,W/2,y+Math.round(20*s));
   // Watermark
   if(document.getElementById('wp-watermark').checked){
-    ctx.fillStyle='rgba(201,151,58,0.25)';ctx.font='8px sans-serif';
-    ctx.fillText("God's Children",W/2,H-15);
+    const wmSize=Math.round(18*s);
+    ctx.fillStyle='rgba(201,151,58,0.3)';ctx.font=`${wmSize}px Helvetica,Arial,sans-serif`;
+    ctx.fillText("God's Children",W/2,H-Math.round(40*s));
   }
 }
+function updateWallpaperPreview(){
+  const canvas=document.getElementById('wp-preview');
+  renderWallpaper(canvas,292,520);
+}
 function downloadWallpaper(){
-  const text=document.getElementById('wp-text').value||'Your verse here';
-  const ref=document.getElementById('wp-ref').value||'Reference';
-  const bg=wpBgs[wpBg]||wpBgs['dark-brown'];
-  const fontSize=parseInt(document.getElementById('wp-fontsize').value||52);
-  const fontFamily=getWpFontFamily();
-  const canvas=document.createElement('canvas');canvas.width=1170;canvas.height=2532;
-  const ctx=canvas.getContext('2d');
-  const grad=ctx.createLinearGradient(0,0,0,2532);
-  grad.addColorStop(0,bg[0]);grad.addColorStop(0.5,bg[1]);grad.addColorStop(1,bg[2]);
-  ctx.fillStyle=grad;ctx.fillRect(0,0,1170,2532);
-  if(document.getElementById('wp-cross').checked){
-    ctx.fillStyle='rgba(201,151,58,0.12)';
-    ctx.fillRect(535,400,100,600);ctx.fillRect(385,550,400,100);
+  try{
+    const canvas=document.createElement('canvas');
+    renderWallpaper(canvas,1170,2532);
+    // Try multiple download methods for iOS compatibility
+    canvas.toBlob(function(blob){
+      if(!blob){alert('Error creating wallpaper. Please try again.');return}
+      const url=URL.createObjectURL(blob);
+      // Method 1: Open in new tab (works best on iOS WebView)
+      const win=window.open(url,'_blank');
+      if(!win){
+        // Method 2: Create download link
+        const a=document.createElement('a');a.href=url;a.download='verse-wallpaper.png';
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
+        setTimeout(()=>URL.revokeObjectURL(url),5000);
+      }else{
+        setTimeout(()=>URL.revokeObjectURL(url),30000);
+      }
+      document.getElementById('wallpaperModal').classList.remove('open');
+    },'image/png');
+  }catch(e){
+    alert('Error saving wallpaper: '+e.message);
   }
-  ctx.fillStyle=bg[3];ctx.font=`italic ${fontSize}px ${fontFamily}`;ctx.textAlign='center';
-  const words=text.split(' ');let line='',y=1050;
-  words.forEach(w=>{const test=line+w+' ';if(ctx.measureText(test).width>900){ctx.fillText(line.trim(),585,y);y+=fontSize+16;line=w+' '}else{line=test}});
-  if(line.trim())ctx.fillText(line.trim(),585,y);
-  ctx.fillStyle=bg[4];ctx.font=`bold ${Math.round(fontSize*0.6)}px sans-serif`;
-  ctx.fillText('— '+ref,585,y+fontSize+30);
-  if(document.getElementById('wp-watermark').checked){
-    ctx.fillStyle='rgba(201,151,58,0.3)';ctx.font='22px sans-serif';
-    ctx.fillText("God's Children",585,2450);
-  }
-  const link=document.createElement('a');link.download='verse-wallpaper.png';link.href=canvas.toDataURL('image/png');link.click();
-  document.getElementById('wallpaperModal').classList.remove('open');
 }
 
 // PROMISES
