@@ -515,6 +515,7 @@ textarea{resize:vertical;min-height:80px}
           <div class="form-row"><div class="form-group"><label>Service Time *</label><input type="text" id="signup-ch-time" placeholder="10:00 AM & 6:00 PM"/></div><div class="form-group"><label>Phone</label><input type="tel" id="signup-ch-phone" placeholder="(555) 123-4567"/></div></div>
           <div class="form-row"><div class="form-group"><label>Website</label><input type="url" id="signup-ch-website" placeholder="https://yourchurch.com"/></div><div class="form-group"><label>Social Media</label><input type="url" id="signup-ch-social" placeholder="https://instagram.com/church"/></div></div>
           <div class="form-group"><label>About Your Church *</label><textarea id="signup-ch-about" rows="3" placeholder="Tell people about your church, ministries, service style, and community..."></textarea></div>
+          <div class="form-group"><label>Welcome Recording (optional)</label><p style="font-size:11px;color:var(--text-muted);margin:0 0 6px">Record a short welcome message for visitors.</p><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-ghost btn-sm" id="ch-rec-btn" onclick="toggleRecording('ch')">🎙️ Record</button><span id="ch-rec-status" style="font-size:11px;color:var(--text-muted)"></span></div><audio id="ch-rec-preview" style="display:none;width:100%;margin-top:8px" controls></audio></div>
         </div>
         <!-- Life Group fields -->
         <div id="signup-group-fields" style="display:none">
@@ -524,6 +525,7 @@ textarea{resize:vertical;min-height:80px}
           <div class="form-group"><label>Group Type *</label><select id="signup-lg-type"><option value="Bible Study">Bible Study</option><option value="Prayer Group">Prayer Group</option><option value="Youth Group">Youth Group</option><option value="Women's Group">Women's Group</option><option value="Men's Group">Men's Group</option><option value="Couples">Couples</option><option value="Young Adults">Young Adults</option><option value="Worship">Worship</option><option value="Fellowship">Fellowship</option><option value="Other">Other</option></select></div>
           <div class="form-row"><div class="form-group"><label>Meeting Day & Time *</label><input type="text" id="signup-lg-time" placeholder="Tuesdays 7:00 PM"/></div><div class="form-group"><label>Location *</label><input type="text" id="signup-lg-location" placeholder="123 Main St or Online"/></div></div>
           <div class="form-group"><label>About Your Group *</label><textarea id="signup-lg-desc" rows="3" placeholder="What does your group study? Who is welcome? What can new members expect?"></textarea></div>
+          <div class="form-group"><label>Welcome Recording (optional)</label><p style="font-size:11px;color:var(--text-muted);margin:0 0 6px">Record a short welcome for new members.</p><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-ghost btn-sm" id="signup-lg-rec-btn" onclick="toggleRecording('signup-lg')">🎙️ Record</button><span id="signup-lg-rec-status" style="font-size:11px;color:var(--text-muted)"></span></div><audio id="signup-lg-rec-preview" style="display:none;width:100%;margin-top:8px" controls></audio></div>
         </div>
         <div class="signup-nav">
           <button class="btn btn-ghost" onclick="goSignupStep(2)">Back</button>
@@ -1004,11 +1006,19 @@ textarea{resize:vertical;min-height:80px}
   <div class="section-header"><h2>👥 Life Groups</h2><p>Find a group to grow with or start your own.</p></div>
   <div id="life-groups-list"><div class="loading">Loading groups...</div></div>
   <div class="divider"></div>
-  <div class="card" style="text-align:center;padding:24px">
-    <div style="font-size:28px;margin-bottom:8px">👥</div>
-    <h3 style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--brown);margin-bottom:6px">Want to start a life group?</h3>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Create a Life Group account to build your group profile.</p>
-    <button class="btn btn-primary" onclick="openModal();switchTab('signup');setTimeout(()=>selectAccountType('group'),100)">Create Life Group Account</button>
+  <div class="card">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--brown);margin-bottom:6px">Start a Life Group</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Fill out the details below to create your group.</p>
+    <div id="lg-create-prompt"></div>
+    <div id="lg-create-fields">
+      <div class="form-group"><label>Group Name *</label><input type="text" id="lg-name" placeholder="Eastside Women's Bible Study"/></div>
+      <div class="form-group"><label>Group Type *</label><select id="lg-type"><option value="Bible Study">Bible Study</option><option value="Prayer Group">Prayer Group</option><option value="Youth Group">Youth Group</option><option value="Women's Group">Women's Group</option><option value="Men's Group">Men's Group</option><option value="Couples">Couples</option><option value="Young Adults">Young Adults</option><option value="Worship">Worship</option><option value="Fellowship">Fellowship</option><option value="Other">Other</option></select></div>
+      <div class="form-row"><div class="form-group"><label>Meeting Day & Time *</label><input type="text" id="lg-time" placeholder="Tuesdays 7:00 PM"/></div><div class="form-group"><label>Location *</label><input type="text" id="lg-location" placeholder="123 Main St or Online"/></div></div>
+      <div class="form-group"><label>About Your Group *</label><textarea id="lg-desc" rows="3" placeholder="What does your group study? Who is welcome?"></textarea></div>
+      <div class="form-group"><label>Contact Email</label><input type="email" id="lg-email" placeholder="yourname@email.com"/></div>
+      <div class="form-group"><label>Welcome Recording (optional)</label><p style="font-size:11px;color:var(--text-muted);margin:0 0 6px">Record a short welcome message for new members.</p><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-ghost btn-sm" id="lg-rec-btn" onclick="toggleRecording('lg')">🎙️ Record</button><span id="lg-rec-status" style="font-size:11px;color:var(--text-muted)"></span></div><audio id="lg-rec-preview" style="display:none;width:100%;margin-top:8px" controls></audio></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="addLifeGroup()">Create Life Group</button>
+    </div>
   </div>
 </main></div>
 
@@ -1091,18 +1101,27 @@ textarea{resize:vertical;min-height:80px}
 
 <div id="page-promises" class="page"><main>
   <div class="section-header"><h2>✨ God's Promises</h2><p>Find strength and hope in His Word.</p></div>
-  <div class="filter-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-    <button class="filter-pill active" onclick="loadPromises('all',this)">All</button>
-    <button class="filter-pill" onclick="loadPromises('healing',this)">Healing</button>
-    <button class="filter-pill" onclick="loadPromises('strength',this)">Strength</button>
-    <button class="filter-pill" onclick="loadPromises('peace',this)">Peace</button>
-    <button class="filter-pill" onclick="loadPromises('provision',this)">Provision</button>
-    <button class="filter-pill" onclick="loadPromises('love',this)">Love</button>
-    <button class="filter-pill" onclick="loadPromises('protection',this)">Protection</button>
-    <button class="filter-pill" onclick="loadPromises('forgiveness',this)">Forgiveness</button>
-    <button class="filter-pill" onclick="loadPromises('guidance',this)">Guidance</button>
+  <div style="display:flex;gap:8px;margin-bottom:14px">
+    <button class="btn btn-primary btn-sm" id="promises-tab-all" onclick="switchPromisesTab('all')" style="flex:1">All Promises</button>
+    <button class="btn btn-ghost btn-sm" id="promises-tab-mine" onclick="switchPromisesTab('mine')" style="flex:1">My Promises</button>
   </div>
-  <div id="promises-list"></div>
+  <div id="promises-tab-all-content">
+    <div class="filter-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="filter-pill active" onclick="loadPromises('all',this)">All</button>
+      <button class="filter-pill" onclick="loadPromises('healing',this)">Healing</button>
+      <button class="filter-pill" onclick="loadPromises('strength',this)">Strength</button>
+      <button class="filter-pill" onclick="loadPromises('peace',this)">Peace</button>
+      <button class="filter-pill" onclick="loadPromises('provision',this)">Provision</button>
+      <button class="filter-pill" onclick="loadPromises('love',this)">Love</button>
+      <button class="filter-pill" onclick="loadPromises('protection',this)">Protection</button>
+      <button class="filter-pill" onclick="loadPromises('forgiveness',this)">Forgiveness</button>
+      <button class="filter-pill" onclick="loadPromises('guidance',this)">Guidance</button>
+    </div>
+    <div id="promises-list"></div>
+  </div>
+  <div id="promises-tab-mine-content" style="display:none">
+    <div id="my-promises-list"></div>
+  </div>
 </main></div>
 
 <div id="page-sermons" class="page"><main>
@@ -1423,11 +1442,17 @@ async function handleSignup(){
   if(data?.user){
     const uid=data.user.id;
     if(accountType==='church'){
-      const res=await db.from('churches').insert({name:document.getElementById('signup-ch-name').value.trim(),pastor:document.getElementById('signup-ch-pastor').value.trim(),address:document.getElementById('signup-ch-address').value.trim(),city:document.getElementById('signup-ch-city').value.trim(),zip:document.getElementById('signup-ch-zip').value.trim(),denomination:document.getElementById('signup-ch-denom').value,service_day:document.getElementById('signup-ch-day').value,service_time:document.getElementById('signup-ch-time').value.trim(),website:document.getElementById('signup-ch-website').value.trim(),social:document.getElementById('signup-ch-social').value.trim(),about:document.getElementById('signup-ch-about').value.trim(),phone:document.getElementById('signup-ch-phone').value.trim(),listed_by_role:document.getElementById('signup-ch-role').value,contact_name:name,contact_email:email,user_id:uid});
+      const chAudio=await getRecordingBase64('ch');
+      const chRow={name:document.getElementById('signup-ch-name').value.trim(),pastor:document.getElementById('signup-ch-pastor').value.trim(),address:document.getElementById('signup-ch-address').value.trim(),city:document.getElementById('signup-ch-city').value.trim(),zip:document.getElementById('signup-ch-zip').value.trim(),denomination:document.getElementById('signup-ch-denom').value,service_day:document.getElementById('signup-ch-day').value,service_time:document.getElementById('signup-ch-time').value.trim(),website:document.getElementById('signup-ch-website').value.trim(),social:document.getElementById('signup-ch-social').value.trim(),about:document.getElementById('signup-ch-about').value.trim(),phone:document.getElementById('signup-ch-phone').value.trim(),listed_by_role:document.getElementById('signup-ch-role').value,contact_name:name,contact_email:email,user_id:uid};
+      let res=await db.from('churches').insert({...chRow,welcome_audio:chAudio});
+      if(res.error){res=await db.from('churches').insert(chRow)}
       if(res.error)console.warn('Church creation error:',res.error.message);
     }
     if(accountType==='group'){
-      const res=await db.from('life_groups').insert({name:document.getElementById('signup-lg-name').value.trim(),meeting_time:document.getElementById('signup-lg-time').value.trim(),location:document.getElementById('signup-lg-location').value.trim(),description:document.getElementById('signup-lg-desc').value.trim(),group_type:document.getElementById('signup-lg-type').value,leader_name:name,leader_id:uid,member_count:1});
+      const lgAudio=await getRecordingBase64('signup-lg');
+      const lgRow={name:document.getElementById('signup-lg-name').value.trim(),meeting_time:document.getElementById('signup-lg-time').value.trim(),location:document.getElementById('signup-lg-location').value.trim(),description:document.getElementById('signup-lg-desc').value.trim(),group_type:document.getElementById('signup-lg-type').value,leader_name:name,leader_id:uid,member_count:1};
+      let res=await db.from('life_groups').insert({...lgRow,welcome_audio:lgAudio});
+      if(res.error){res=await db.from('life_groups').insert(lgRow)}
       if(res.error)console.warn('Life group creation error:',res.error.message);
     }
   }
@@ -1910,6 +1935,7 @@ function selectVerse(vn,text,row){
       <div style="display:flex;gap:6px">
         <button class="btn btn-primary btn-sm" onclick="saveVerseNote(${vn})">Save Note</button>
         <button class="btn btn-ghost btn-sm" onclick="openPublish(${vn},'${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">📤 Publish</button>
+        <button class="btn btn-ghost btn-sm" onclick="saveToMyPromises('${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}','${bBook} ${bChapter}:${vn}','saved')">❤️ Save</button>
         <button class="btn btn-ghost btn-sm" onclick="openWallpaperCreator('${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}','${bBook} ${bChapter}:${vn}')">📱 Wallpaper</button>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.verse-panel').remove();selVerse=null;document.querySelectorAll('.verse-row.selected').forEach(r=>r.classList.remove('selected'))">✕</button>
@@ -2158,6 +2184,7 @@ function openChurchProfile(idx){
     </div>
     <div class="profile-body">
       ${ch.about?`<p style="font-size:14px;line-height:1.7;color:var(--text);margin-bottom:16px">${ch.about}</p>`:''}
+      ${ch.welcome_audio?`<div style="background:rgba(201,151,58,0.08);border-radius:12px;padding:14px;margin-bottom:16px"><div style="font-size:12px;font-weight:600;color:var(--brown);margin-bottom:8px">🎙️ Welcome from the Church</div><audio src="${ch.welcome_audio}" controls style="width:100%;height:36px"></audio></div>`:''}
       <div class="profile-detail"><span class="profile-detail-icon">📍</span><div><div class="profile-detail-label">Address</div><div class="profile-detail-value">${ch.address||''}${ch.city?', '+ch.city:''}${ch.zip?' '+ch.zip:''}</div></div></div>
       <div class="profile-detail"><span class="profile-detail-icon">📅</span><div><div class="profile-detail-label">Service Day</div><div class="profile-detail-value">${ch.service_day||'Not specified'}</div></div></div>
       <div class="profile-detail"><span class="profile-detail-icon">🕐</span><div><div class="profile-detail-label">Service Time</div><div class="profile-detail-value">${ch.service_time||'Not specified'}</div></div></div>
@@ -2187,16 +2214,69 @@ async function loadLifeGroups(){
 }
 async function joinGroup(groupId,groupName){if(!currentUser){openModal();return}if(groupId){joinEntity('group',groupId,groupName)}else{alert('You joined! 🙌')}}
 async function deleteGroup(id){if(!confirm('Delete?'))return;await db.from('life_groups').delete().eq('id',id);loadLifeGroups()}
+// AUDIO RECORDING
+let recorders={},recBlobs={},recStreams={};
+async function toggleRecording(prefix){
+  const btn=document.getElementById(prefix+'-rec-btn');
+  const status=document.getElementById(prefix+'-rec-status');
+  const preview=document.getElementById(prefix+'-rec-preview');
+  if(recorders[prefix]&&recorders[prefix].state==='recording'){
+    recorders[prefix].stop();
+    btn.textContent='🎙️ Record';btn.style.background='';
+    status.textContent='Processing...';
+    return;
+  }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    recStreams[prefix]=stream;
+    const mr=new MediaRecorder(stream,{mimeType:'audio/webm'});
+    const chunks=[];
+    mr.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)};
+    mr.onstop=()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:'audio/webm'});
+      recBlobs[prefix]=blob;
+      const url=URL.createObjectURL(blob);
+      preview.src=url;preview.style.display='block';
+      status.textContent='Recording saved! (' + Math.round(blob.size/1024) + ' KB)';
+    };
+    mr.start();
+    recorders[prefix]=mr;
+    btn.textContent='⏹️ Stop';btn.style.background='rgba(192,57,43,0.15)';
+    status.textContent='Recording...';
+    // Auto-stop after 30 seconds
+    setTimeout(()=>{if(mr.state==='recording'){mr.stop();btn.textContent='🎙️ Record';btn.style.background=''}},30000);
+  }catch(e){
+    status.textContent='Microphone access denied';
+    console.error('Recording error:',e);
+  }
+}
+function getRecordingBase64(prefix){
+  return new Promise(resolve=>{
+    const blob=recBlobs[prefix];
+    if(!blob){resolve(null);return}
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function addLifeGroup(){
   if(!currentUser){openModal();return}
   const name=document.getElementById('lg-name').value.trim(),meeting_time=document.getElementById('lg-time').value.trim(),location=document.getElementById('lg-location').value.trim(),desc=document.getElementById('lg-desc').value.trim();
   if(!name||!meeting_time||!location||!desc){alert('Please fill in all required fields.');return}
   const leaderName=currentProfile?.full_name||'Group Leader';
-  const row={name,meeting_time,location,description:document.getElementById('lg-desc').value.trim(),leader_id:currentUser.id,member_count:1};
-  let res=await db.from('life_groups').insert({...row,group_type:document.getElementById('lg-type').value,contact_email:document.getElementById('lg-email').value.trim(),leader_name:leaderName});
+  const welcome_audio=await getRecordingBase64('lg');
+  const row={name,meeting_time,location,description:desc,leader_id:currentUser.id,member_count:1};
+  let res=await db.from('life_groups').insert({...row,group_type:document.getElementById('lg-type').value,contact_email:document.getElementById('lg-email').value.trim(),leader_name:leaderName,welcome_audio});
+  if(res.error){res=await db.from('life_groups').insert({...row,group_type:document.getElementById('lg-type').value,contact_email:document.getElementById('lg-email').value.trim(),leader_name:leaderName})}
   if(res.error){res=await db.from('life_groups').insert(row)}
   if(res.error){alert('Error creating group: '+res.error.message);return}
-  ['lg-name','lg-time','lg-location','lg-desc','lg-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});loadLifeGroups();
+  ['lg-name','lg-time','lg-location','lg-desc','lg-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  const prev=document.getElementById('lg-rec-preview');if(prev){prev.style.display='none';prev.src=''}
+  const st=document.getElementById('lg-rec-status');if(st)st.textContent='';
+  recBlobs['lg']=null;
+  loadLifeGroups();
   alert('Life group created! 🙌');
 }
 function openGroupProfile(idx){
@@ -2210,6 +2290,7 @@ function openGroupProfile(idx){
     </div>
     <div class="profile-body">
       ${g.description?`<p style="font-size:14px;line-height:1.7;color:var(--text);margin-bottom:16px">${g.description}</p>`:''}
+      ${g.welcome_audio?`<div style="background:rgba(201,151,58,0.08);border-radius:12px;padding:14px;margin-bottom:16px"><div style="font-size:12px;font-weight:600;color:var(--brown);margin-bottom:8px">🎙️ Welcome from the Leader</div><audio src="${g.welcome_audio}" controls style="width:100%;height:36px"></audio></div>`:''}
       <div class="profile-detail"><span class="profile-detail-icon">👤</span><div><div class="profile-detail-label">Group Leader</div><div class="profile-detail-value">${g.leader_name||'Group Leader'}</div></div></div>
       <div class="profile-detail"><span class="profile-detail-icon">🕐</span><div><div class="profile-detail-label">Meeting Time</div><div class="profile-detail-value">${g.meeting_time||'TBD'}</div></div></div>
       <div class="profile-detail"><span class="profile-detail-icon">📍</span><div><div class="profile-detail-label">Location</div><div class="profile-detail-value">${g.location||'TBD'}</div></div></div>
@@ -2660,16 +2741,62 @@ const promisesDB={
     {text:'For I know the plans I have for you, declares the Lord, plans to prosper you.',ref:'Jeremiah 29:11'}
   ]
 };
+function switchPromisesTab(tab){
+  const allBtn=document.getElementById('promises-tab-all'),mineBtn=document.getElementById('promises-tab-mine');
+  const allC=document.getElementById('promises-tab-all-content'),mineC=document.getElementById('promises-tab-mine-content');
+  if(tab==='all'){
+    allBtn.className='btn btn-primary btn-sm';mineBtn.className='btn btn-ghost btn-sm';
+    allC.style.display='';mineC.style.display='none';
+  }else{
+    allBtn.className='btn btn-ghost btn-sm';mineBtn.className='btn btn-primary btn-sm';
+    allC.style.display='none';mineC.style.display='';
+    loadMyPromises();
+  }
+}
 function loadPromises(topic='all',btn){
-  if(btn){document.querySelectorAll('#page-promises .filter-pill').forEach(p=>p.classList.remove('active'));btn.classList.add('active')}
+  if(btn){document.querySelectorAll('#promises-tab-all-content .filter-pill').forEach(p=>p.classList.remove('active'));btn.classList.add('active')}
   let promises=[];
   if(topic==='all'){Object.entries(promisesDB).forEach(([t,arr])=>arr.forEach(p=>promises.push({...p,topic:t})))}
   else{promises=(promisesDB[topic]||[]).map(p=>({...p,topic}))}
-  // Shuffle
   promises.sort(()=>Math.random()-0.5);
-  document.getElementById('promises-list').innerHTML=promises.map(p=>`<div class="promise-card"><div class="promise-topic">${p.topic}</div><div class="promise-text">"${p.text}"</div><div class="promise-ref">— ${p.ref}</div><button class="verse-save-btn" onclick="savePromiseAsImage('${p.text.replace(/'/g,"\\'")}','${p.ref}')">📱 Save as Wallpaper</button></div>`).join('');
+  document.getElementById('promises-list').innerHTML=promises.map(p=>`<div class="promise-card"><div class="promise-topic">${p.topic}</div><div class="promise-text">"${p.text}"</div><div class="promise-ref">— ${p.ref}</div><div style="display:flex;gap:6px;margin-top:8px"><button class="verse-save-btn" onclick="savePromiseAsImage('${p.text.replace(/'/g,"\\'")}','${p.ref}')">📱 Wallpaper</button><button class="verse-save-btn" onclick="saveToMyPromises('${p.text.replace(/'/g,"\\'")}','${p.ref}','${p.topic}')">❤️ Save for Me</button></div></div>`).join('');
 }
 function savePromiseAsImage(text,ref){openWallpaperCreator(text,ref)}
+async function saveToMyPromises(text,ref,topic){
+  if(!currentUser){openModal();return}
+  // Check localStorage for duplicates
+  let saved=JSON.parse(localStorage.getItem('gc_my_promises')||'[]');
+  if(saved.find(p=>p.ref===ref)){alert('Already in your promises!');return}
+  saved.unshift({text,ref,topic,saved_at:new Date().toISOString()});
+  localStorage.setItem('gc_my_promises',JSON.stringify(saved));
+  // Also try DB
+  await db.from('user_promises').insert({verse_text:text,verse_ref:ref,topic:topic||'general',user_id:currentUser.id}).catch(()=>{});
+  alert('Saved to My Promises! ❤️');
+}
+async function loadMyPromises(){
+  const c=document.getElementById('my-promises-list');
+  if(!currentUser){c.innerHTML='<div class="empty-state"><div class="empty-icon">🔒</div><p>Sign in to save promises for yourself.</p></div>';return}
+  // Try DB first, fall back to localStorage
+  let promises=[];
+  try{
+    const{data}=await db.from('user_promises').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+    if(data&&data.length>0)promises=data.map(p=>({text:p.verse_text,ref:p.verse_ref,topic:p.topic||'general',id:p.id}));
+  }catch(e){}
+  if(promises.length===0){
+    const saved=JSON.parse(localStorage.getItem('gc_my_promises')||'[]');
+    promises=saved;
+  }
+  if(promises.length===0){c.innerHTML='<div class="empty-state"><div class="empty-icon">❤️</div><p>No saved promises yet.</p><p style="font-size:12px;color:var(--text-muted);margin-top:4px">Save verses from the Bible reader or from God\'s Promises to build your personal collection.</p></div>';return}
+  c.innerHTML=promises.map((p,i)=>`<div class="promise-card"><div class="promise-topic">${p.topic||'general'}</div><div class="promise-text">"${p.text}"</div><div class="promise-ref">— ${p.ref}</div><div style="display:flex;gap:6px;margin-top:8px"><button class="verse-save-btn" onclick="savePromiseAsImage('${(p.text||'').replace(/'/g,"\\'")}','${p.ref||''}')">📱 Wallpaper</button><button class="verse-save-btn" style="color:#c0392b" onclick="removeMyPromise(${i},'${p.id||''}')">🗑️ Remove</button></div></div>`).join('');
+}
+async function removeMyPromise(idx,dbId){
+  if(!confirm('Remove this promise?'))return;
+  let saved=JSON.parse(localStorage.getItem('gc_my_promises')||'[]');
+  if(idx<saved.length)saved.splice(idx,1);
+  localStorage.setItem('gc_my_promises',JSON.stringify(saved));
+  if(dbId)await db.from('user_promises').delete().eq('id',dbId).catch(()=>{});
+  loadMyPromises();
+}
 
 // SERMONS
 async function loadSermons(){
