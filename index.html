@@ -1598,6 +1598,11 @@ async function loadNSFWModel(){
 async function handleAvatarUpload(input){
   if(!input.files||!input.files[0])return;
   if(!currentUser){alert('Please sign in first.');return}
+  // Check if user is banned
+  const strikes=parseInt(localStorage.getItem('gc_strikes_'+currentUser.id)||'0');
+  if(strikes>=3){alert('⛔ Your account has been suspended from uploading images due to repeated community guideline violations.');input.value='';return}
+  // Check IP ban
+  try{const ipRes=await fetch('https://api.ipify.org?format=json');const ipData=await ipRes.json();const myIP=ipData.ip;const{data:banned}=await db.from('banned_ips').select('ip').eq('ip',myIP).maybeSingle().catch(()=>({data:null}));if(banned){alert('⛔ This device has been banned from uploading content due to repeated violations.');input.value='';return}}catch(e){}
   const file=input.files[0];
   if(file.size>5*1024*1024){alert('Image too large. Please use a photo under 5MB.');input.value='';return}
   const avatarEl=document.getElementById('profile-avatar-lg');
@@ -1622,7 +1627,19 @@ async function handleAvatarUpload(input){
       scanDiv.style.display='none';
       URL.revokeObjectURL(imgUrl);
       input.value='';
-      alert('⚠️ This image was flagged as potentially inappropriate by our AI content filter.\n\nPlease choose a different photo that follows our community guidelines.');
+      // Strike system
+      const newStrikes=strikes+1;
+      localStorage.setItem('gc_strikes_'+currentUser.id,newStrikes.toString());
+      await db.from('profiles').update({strikes:newStrikes}).eq('id',currentUser.id).catch(()=>{});
+      if(newStrikes>=3){
+        // IP ban on 3rd strike
+        try{const ipRes=await fetch('https://api.ipify.org?format=json');const ipData=await ipRes.json();await db.from('banned_ips').insert({ip:ipData.ip,user_id:currentUser.id,reason:'3 avatar violations'}).catch(()=>{})}catch(e){}
+        alert('⛔ ACCOUNT SUSPENDED\n\nYou have violated our community guidelines 3 times. Your account and device have been banned from uploading images.\n\nThis is a Christian community. Please respect our values.');
+      }else if(newStrikes===2){
+        alert('⚠️ FINAL WARNING (Strike 2 of 3)\n\nThis image violates our community guidelines. One more violation and your account will be permanently suspended from uploads.\n\nThis is a Christian community — profile pictures must be appropriate.');
+      }else{
+        alert('⚠️ WARNING (Strike 1 of 3)\n\nThis image was flagged as inappropriate by our AI content filter.\n\nPlease choose a photo that follows our community guidelines. Repeated violations will result in a ban.\n\nThis is a Christian community — no inappropriate, offensive, or non-Christian religious imagery.');
+      }
       return;
     }
     // Resize to 200x200
