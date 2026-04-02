@@ -1314,6 +1314,10 @@ function toggleNotifications(){
   localStorage.setItem('gc_notifs_enabled',on?'1':'0');
   document.getElementById('notif-link-row').style.display=on?'block':'none';
   updateNotifBell();
+  // Request push notification permission
+  if(on&&'Notification' in window&&Notification.permission==='default'){
+    Notification.requestPermission();
+  }
 }
 function updateNotifBell(){
   const on=localStorage.getItem('gc_notifs_enabled')==='1';
@@ -1725,6 +1729,24 @@ function setDailyVerse(){
   const v=dailyVerses[Math.floor((d-start)/86400000)%dailyVerses.length];
   document.getElementById('verse-text').textContent='"'+v.text+'"';
   document.getElementById('verse-ref').textContent='— '+v.ref;
+  // Daily verse notification
+  if(localStorage.getItem('gc_notifs_enabled')==='1'){
+    const today=d.toDateString();
+    if(localStorage.getItem('gc_verse_notif_date')!==today){
+      localStorage.setItem('gc_verse_notif_date',today);
+      sendDailyVerseNotif(v);
+    }
+  }
+}
+async function sendDailyVerseNotif(v){
+  try{
+    if(!('Notification' in window))return;
+    let perm=Notification.permission;
+    if(perm==='default')perm=await Notification.requestPermission();
+    if(perm==='granted'){
+      new Notification("Today's Verse — "+v.ref,{body:v.text,icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" stroke="%23C9973A" stroke-width="2" fill="none"/><path d="M16 7v18M10 16h12" stroke="%23C9973A" stroke-width="2.5" stroke-linecap="round"/></svg>',tag:'daily-verse',silent:false});
+    }
+  }catch(e){console.warn('Notification error:',e)}
 }
 
 // BIBLE READER — Immersive
