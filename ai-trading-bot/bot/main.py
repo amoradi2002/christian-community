@@ -27,6 +27,7 @@ Usage:
     python -m bot.main crawl        # Start knowledge crawler (YouTube, news, Reddit)
     python -m bot.main crawl-status # Show crawler stats and monitored channels
     python -m bot.main add-channel <url> # Add a YouTube channel to monitor
+    python -m bot.main agent        # Start AI trading agent (conversational interface)
 """
 
 import sys
@@ -674,6 +675,11 @@ def main():
             except Exception as e:
                 logger.error("Broker status error: %s", e)
                 print(f"  Error: {e}")
+        elif command == "agent":
+            print("AI Trading Bot - Starting AI Agent...")
+            from bot.agent.trading_agent import create_agent
+            agent = create_agent()
+            agent.run_interactive()
         elif command == "crawl":
             print("AI Trading Bot - Knowledge Crawler...")
             from bot.learning.crawler import KnowledgeCrawler
@@ -756,6 +762,7 @@ def main():
             print("  backtest  - Backtest strategies (backtest [symbol])")
             print("  regime    - Market regime detection")
             print("  brokers   - Broker connection status")
+            print("  agent     - AI trading agent (chat interface)")
             print("  crawl     - Start 24/7 knowledge crawler")
             print("  crawl once - Run crawler once and exit")
             print("  crawl-status - Show crawler stats")

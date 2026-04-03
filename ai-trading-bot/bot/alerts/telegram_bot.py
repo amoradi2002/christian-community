@@ -93,8 +93,11 @@ class TelegramBot:
             "knowledge": self._handle_knowledge,
             "strats": self._handle_strats,
             "status": self._handle_status,
+            "agent": self._handle_agent,
+            "ask": self._handle_agent,
             "help": self._handle_help,
         }
+        self._agent = None  # Lazy-loaded AI agent
 
     # ------------------------------------------------------------------
     # Sending
@@ -273,21 +276,8 @@ class TelegramBot:
                 self._handle_analyze(text.upper(), _chat_id=chat_id)
                 return
 
-            # Anything else → auto-ingest as knowledge/notes
-            if len(text) > 20:
-                self.send_message("\U0001f4dd Got it! Ingesting your notes into the knowledge base...", chat_id=chat_id)
-                self._handle_learn(text, _chat_id=chat_id)
-                return
-
-            # Short non-command text
-            self.send_message(
-                "Tip: Just send me:\n"
-                "\u2022 A ticker like `AAPL` for analysis\n"
-                "\u2022 A YouTube link to learn from\n"
-                "\u2022 Trading notes/rules to remember\n"
-                "\u2022 /help for all commands",
-                chat_id=chat_id,
-            )
+            # Everything else → forward to AI agent
+            self._handle_agent(text, _chat_id=chat_id)
 
         except Exception as exc:
             print(f"Telegram auto-route error: {exc}")
@@ -924,12 +914,71 @@ class TelegramBot:
             "  /learn <url or notes> \u2014 Feed the bot content\n"
             "  /knowledge <query> \u2014 Search what the bot knows\n"
             "  /strats \u2014 Strategy performance stats\n\n"
+            "*AI Agent:*\n"
+            "  /agent <anything> \u2014 Ask the AI agent anything\n"
+            "  /ask <anything> \u2014 Same as /agent\n\n"
             "*System:*\n"
             "  /status \u2014 Bot status\n"
             "  /help \u2014 This message\n\n"
+            "_Or just type a message \u2014 the AI agent will answer!_\n"
             "_Not financial advice. You make your own decisions._"
         )
         self.send_message(text, chat_id=_chat_id)
+
+    def _get_agent(self):
+        """Lazy-load the AI trading agent."""
+        if self._agent is None:
+            try:
+                from bot.agent.trading_agent import create_agent
+                self._agent = create_agent()
+            except Exception as exc:
+                print(f"Agent init failed: {exc}")
+                return None
+        return self._agent
+
+    def _handle_agent(self, *args, _chat_id: str = ""):
+        """Forward a message to the AI trading agent and return its response."""
+        if not args:
+            self.send_message(
+                "\U0001f916 *AI Agent*\n\n"
+                "Ask me anything about the market!\n\n"
+                "Examples:\n"
+                "  `/ask what's AAPL looking like?`\n"
+                "  `/ask should I buy NVDA?`\n"
+                "  `/ask run a scan for swing trades`\n"
+                "  `/ask what did the bot learn about RSI?`\n"
+                "  `/ask backtest momentum on SPY`\n\n"
+                "Or just type your question without /ask!",
+                chat_id=_chat_id,
+            )
+            return
+
+        question = " ".join(args)
+        self.send_message("\U0001f914 Thinking...", chat_id=_chat_id)
+
+        agent = self._get_agent()
+        if agent is None:
+            self.send_message(
+                "\u26a0\ufe0f Agent not available. Set ANTHROPIC\\_API\\_KEY in .env for full AI mode.\n"
+                "Using local mode instead...",
+                chat_id=_chat_id,
+            )
+            # Try local agent
+            try:
+                from bot.agent.trading_agent import LocalAgent
+                local = LocalAgent()
+                response = local.chat(question)
+                self.send_message(f"\U0001f916 {response}", chat_id=_chat_id, parse_mode="")
+            except Exception as exc:
+                self.send_message(f"\u26a0\ufe0f Error: {exc}", chat_id=_chat_id)
+            return
+
+        try:
+            response = agent.chat(question)
+            # Send as plain text to avoid markdown issues from AI response
+            self.send_message(f"\U0001f916 {response}", chat_id=_chat_id, parse_mode="")
+        except Exception as exc:
+            self.send_message(f"\u26a0\ufe0f Agent error: {exc}", chat_id=_chat_id)
 
     # ------------------------------------------------------------------
     # Helpers
