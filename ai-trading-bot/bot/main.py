@@ -444,10 +444,32 @@ def run_intel():
     return alerts
 
 
+def run_options_scan():
+    """Run options-specific scan."""
+    from bot.engine.analyzer import Analyzer
+    analyzer = Analyzer()
+    return analyzer.run_options_scan()
+
+
 def run_scheduler():
-    """Run periodic scans in a background thread."""
+    """Run periodic scans in a background thread.
+
+    All trade calls (options, day, swing) go to Discord automatically.
+    Telegram is for interactive chat with the AI agent.
+    """
     interval = CONFIG.get("bot", {}).get("scan_interval_minutes", 15)
+
+    # Full scan every interval (catches everything)
     schedule.every(interval).minutes.do(run_scan)
+
+    # Options scan every 30 minutes during market hours
+    schedule.every(30).minutes.do(run_options_scan)
+
+    # Day trade scan every 5 minutes (fast movers)
+    schedule.every(5).minutes.do(run_day_scan)
+
+    # Swing trade scan every 2 hours (slower setups)
+    schedule.every(2).hours.do(run_swing_scan)
 
     # Run intelligence scan every hour
     schedule.every(60).minutes.do(run_intel)
@@ -455,7 +477,13 @@ def run_scheduler():
     # Run sector analysis every 4 hours
     schedule.every(4).hours.do(run_sectors)
 
-    print(f"Scheduler started - strategy scan every {interval}m, intel every 60m, sectors every 4h")
+    print(f"Scheduler started:")
+    print(f"  Day trades:   every 5m  -> Discord (IB)")
+    print(f"  Options:      every 30m -> Discord (Robinhood)")
+    print(f"  Full scan:    every {interval}m  -> Discord")
+    print(f"  Swing trades: every 2h  -> Discord (Fidelity)")
+    print(f"  Intel:        every 60m -> Discord")
+    print(f"  Sectors:      every 4h  -> Discord")
     while True:
         schedule.run_pending()
         time.sleep(1)
@@ -505,6 +533,9 @@ def main():
         elif command == "swing":
             print("AI Trading Bot - Running swing trade scan...")
             run_swing_scan()
+        elif command == "options":
+            print("AI Trading Bot - Running options scan...")
+            run_options_scan()
         elif command == "intel":
             print("AI Trading Bot - Running intelligence scan...")
             run_intel()

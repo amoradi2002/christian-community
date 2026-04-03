@@ -139,9 +139,14 @@ class TelegramBot:
         return success
 
     def send_alert(self, signal: Signal) -> bool:
-        """Format and send a trading signal alert."""
+        """Format and send a trading signal alert. Handles stocks and options."""
         icon = _ACTION_ICON.get(signal.action, "\u26aa")
         style = _STYLE_LABEL.get(signal.style, "")
+
+        # Options-specific formatting
+        if signal.option_type or signal.style == "options":
+            return self._send_options_alert(signal)
+
         reasons = "\n".join(f"  \u2022 {r}" for r in signal.reasons)
 
         lines = [
@@ -159,12 +164,15 @@ class TelegramBot:
             lines.append(f"Catalyst Tier: {signal.catalyst_tier}")
         if signal.stop_loss:
             lines.append(f"Stop Loss: ${signal.stop_loss:.2f}")
-        if signal.target:
-            lines.append(f"Target: ${signal.target:.2f}")
+        if signal.target or signal.target_price:
+            target = signal.target or signal.target_price
+            lines.append(f"Target: ${target:.2f}")
         if signal.risk_reward:
             lines.append(f"R:R: {signal.risk_reward:.1f}:1")
         if signal.candle_pattern:
             lines.append(f"Candle: {signal.candle_pattern}")
+        if signal.broker:
+            lines.append(f"Broker: {signal.broker}")
 
         if reasons:
             lines.append("")
@@ -172,6 +180,113 @@ class TelegramBot:
 
         lines.append("")
         lines.append("_AI Trading Bot | Not financial advice_")
+
+        return self.send_message("\n".join(lines))
+
+    def _send_options_alert(self, signal: Signal) -> bool:
+        """Format and send an options-specific alert with strike, expiry, premium."""
+        icon = _ACTION_ICON.get(signal.action, "\u26aa")
+        opt_type = (signal.option_type or "call").upper()
+        opt_icon = "\U0001f7e2" if opt_type == "CALL" else "\U0001f534"
+
+        lines = [
+            f"{opt_icon} *OPTIONS {signal.action} \u2014 {signal.symbol}*",
+            "",
+            f"*{opt_type}* @ ${signal.strike:.2f} strike" if signal.strike else f"*{opt_type}*",
+        ]
+
+        if signal.expiry:
+            lines.append(f"Expiry: {signal.expiry}")
+        if signal.premium:
+            lines.append(f"Premium: ${signal.premium:.2f}/contract")
+        if signal.contracts:
+            total_cost = signal.premium * signal.contracts * 100
+            lines.append(f"Contracts: {signal.contracts} (${total_cost:,.0f} total)")
+        if signal.iv:
+            lines.append(f"IV: {signal.iv:.1f}%")
+        if signal.delta:
+            lines.append(f"Delta: {signal.delta:.2f}")
+
+        lines.append("")
+        lines.append(f"Stock Price: ${signal.price:.2f}")
+        lines.append(f"Confidence: {signal.confidence:.0%}")
+        lines.append(f"Strategy: {signal.strategy_name}")
+
+        if signal.setup:
+            lines.append(f"Setup: {signal.setup}")
+        if signal.stop_loss:
+            lines.append(f"Stock Stop: ${signal.stop_loss:.2f}")
+        if signal.target or signal.target_price:
+            target = signal.target or signal.target_price
+            lines.append(f"Stock Target: ${target:.2f}")
+        if signal.risk_reward:
+            lines.append(f"R:R: {signal.risk_reward:.1f}:1")
+
+        if signal.spread_type:
+            lines.append(f"\nSpread: {signal.spread_type}")
+            for leg in signal.spread_legs:
+                lines.append(f"  \u2022 {leg}")
+
+        reasons = "\n".join(f"  \u2022 {r}" for r in signal.reasons)
+        if reasons:
+            lines.append(f"\nReasoning:\n{reasons}")
+
+        lines.append("")
+        lines.append("_Execute on Robinhood | Not financial advice_")
+
+        return self.send_message("\n".join(lines))
+
+    def send_scan_results(self, signals: list, scan_type: str = "Full") -> bool:
+        """Send a batch of scan results to Telegram — called automatically after each scan."""
+        if not signals:
+            return True
+
+        day_signals = [s for s in signals if s.style == "day"]
+        swing_signals = [s for s in signals if s.style == "swing"]
+        options_signals = [s for s in signals if s.style == "options" or s.option_type]
+        other_signals = [s for s in signals if s.style not in ("day", "swing", "options") and not s.option_type]
+
+        lines = [f"\U0001f4e1 *{scan_type} Scan \u2014 {len(signals)} Signal(s)*", ""]
+
+        if options_signals:
+            lines.append("*\U0001f4b0 Options Calls:*")
+            for s in options_signals:
+                icon = "\u2705" if s.action == "BUY" else "\u274c"
+                opt = (s.option_type or "call").upper()
+                strike_info = f" ${s.strike:.0f}" if s.strike else ""
+                expiry_info = f" {s.expiry}" if s.expiry else ""
+                premium_info = f" @ ${s.premium:.2f}" if s.premium else ""
+                lines.append(f"  {icon} {s.symbol} {opt}{strike_info}{expiry_info}{premium_info} ({s.confidence:.0%})")
+            lines.append("")
+
+        if day_signals:
+            lines.append("*\u26a1 Day Trades (IB):*")
+            for s in day_signals:
+                icon = "\u2705" if s.action == "BUY" else "\u274c"
+                setup = f" [{s.setup}]" if s.setup else ""
+                rr = f" R:R {s.risk_reward:.1f}:1" if s.risk_reward else ""
+                lines.append(f"  {icon} {s.symbol} @ ${s.price:.2f}{setup}{rr} ({s.confidence:.0%})")
+            lines.append("")
+
+        if swing_signals:
+            lines.append("*\U0001f4c8 Swing Trades (Fidelity):*")
+            for s in swing_signals:
+                icon = "\u2705" if s.action == "BUY" else "\u274c"
+                setup = f" [{s.setup}]" if s.setup else ""
+                rr = f" R:R {s.risk_reward:.1f}:1" if s.risk_reward else ""
+                lines.append(f"  {icon} {s.symbol} @ ${s.price:.2f}{setup}{rr} ({s.confidence:.0%})")
+            lines.append("")
+
+        if other_signals:
+            lines.append("*\U0001f4ca Other:*")
+            for s in other_signals:
+                icon = "\u2705" if s.action == "BUY" else "\u274c"
+                lines.append(f"  {icon} {s.symbol} @ ${s.price:.2f} ({s.confidence:.0%}) \u2014 {s.strategy_name}")
+            lines.append("")
+
+        buys = [s for s in signals if s.action == "BUY"]
+        sells = [s for s in signals if s.action == "SELL"]
+        lines.append(f"*Total:* {len(buys)} BUY | {len(sells)} SELL")
 
         return self.send_message("\n".join(lines))
 

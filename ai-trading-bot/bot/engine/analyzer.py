@@ -125,15 +125,9 @@ class Analyzer:
             except Exception as e:
                 print(f"  [{symbol}] Error: {e}")
 
-        # Send Discord summary of all signals from this scan
+        # Send alerts to all channels (Discord + Telegram)
         all_signals = [s for sigs in results.values() for s in sigs]
-        if all_signals:
-            try:
-                from bot.alerts.discord import DiscordChannel
-                discord = DiscordChannel()
-                discord.send_summary(all_signals)
-            except Exception:
-                pass
+        self._dispatch_alerts(all_signals, scan_type="Full")
 
         print(f"Scan complete. {sum(len(s) for s in results.values())} total signals.\n")
         return results
@@ -174,6 +168,11 @@ class Analyzer:
             except Exception as e:
                 print(f"  [{symbol}] Error: {e}")
 
+        all_signals = [s for sigs in results.values() for s in sigs]
+        for s in all_signals:
+            s.broker = "interactive_brokers"
+        self._dispatch_alerts(all_signals, scan_type="Day Trade")
+
         print(f"Day scan complete. {sum(len(s) for s in results.values())} signals.\n")
         return results
 
@@ -213,5 +212,172 @@ class Analyzer:
             except Exception as e:
                 print(f"  [{symbol}] Error: {e}")
 
+        all_signals = [s for sigs in results.values() for s in sigs]
+        for s in all_signals:
+            s.broker = "fidelity"
+        self._dispatch_alerts(all_signals, scan_type="Swing Trade")
+
         print(f"Swing scan complete. {sum(len(s) for s in results.values())} signals.\n")
         return results
+
+    def run_options_scan(self) -> dict[str, list[Signal]]:
+        """Run options-specific scan — finds high-probability options plays.
+
+        Combines technical signals with options flow data to generate
+        call/put recommendations with strike, expiry, and premium.
+        """
+        watchlist = CONFIG.get("bot", {}).get("watchlist", [])
+        results = {}
+
+        print(f"\nOptions Scan on {len(watchlist)} symbols...")
+
+        for symbol in watchlist:
+            try:
+                candles = _fetch_candles(symbol, interval="1d", days=60)
+                if len(candles) < 20:
+                    continue
+
+                indicators = compute_indicators(candles)
+                snapshot = MarketSnapshot(
+                    symbol=symbol, timeframe="1d",
+                    candles=candles, indicators=indicators,
+                )
+
+                signals = []
+                # Run all strategies, then convert strong signals to options calls
+                all_strategies = self.registry.get_all()
+                for strategy in all_strategies:
+                    try:
+                        signal = strategy.analyze(snapshot)
+                        if signal and signal.confidence >= 0.70:  # Higher bar for options
+                            opt_signal = self._convert_to_options_signal(signal, candles, indicators)
+                            if opt_signal:
+                                signals.append(opt_signal)
+                    except Exception as e:
+                        print(f"  [{symbol}] {strategy.name} error: {e}")
+
+                if signals:
+                    results[symbol] = signals
+                    for s in signals:
+                        opt = (s.option_type or "call").upper()
+                        strike_str = f"${s.strike:.0f}" if s.strike else "ATM"
+                        print(f"  [{symbol}] {opt} {strike_str} {s.expiry} @ ${s.premium:.2f} ({s.confidence:.0%})")
+            except Exception as e:
+                print(f"  [{symbol}] Error: {e}")
+
+        all_signals = [s for sigs in results.values() for s in sigs]
+        for s in all_signals:
+            s.broker = "robinhood"
+        self._dispatch_alerts(all_signals, scan_type="Options")
+
+        print(f"Options scan complete. {sum(len(s) for s in results.values())} signals.\n")
+        return results
+
+    def _convert_to_options_signal(self, signal: Signal, candles, indicators) -> Signal | None:
+        """Convert a stock signal into an options recommendation."""
+        if not candles:
+            return None
+
+        price = candles[-1].close
+        atr = indicators.atr_14 if indicators.atr_14 else price * 0.02
+
+        # Determine option type from signal
+        if signal.action == "BUY":
+            option_type = "call"
+            # Strike: slightly OTM for leverage, or ATM for higher probability
+            if signal.confidence >= 0.80:
+                strike = round(price, 0)  # ATM for high confidence
+            else:
+                strike = round(price * 1.02, 0)  # Slightly OTM
+        elif signal.action == "SELL":
+            option_type = "put"
+            if signal.confidence >= 0.80:
+                strike = round(price, 0)
+            else:
+                strike = round(price * 0.98, 0)
+        else:
+            return None
+
+        # Expiry: 2-4 weeks out for swing, 1 week for day
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        if signal.style == "day":
+            # Weekly expiry (next Friday)
+            days_to_friday = (4 - today.weekday()) % 7
+            if days_to_friday == 0:
+                days_to_friday = 7
+            expiry_date = today + timedelta(days=days_to_friday)
+        else:
+            # 3 weeks out for swing
+            expiry_date = today + timedelta(days=21)
+            # Round to next Friday
+            days_to_friday = (4 - expiry_date.weekday()) % 7
+            expiry_date += timedelta(days=days_to_friday)
+
+        expiry = expiry_date.strftime("%Y-%m-%d")
+
+        # Estimate premium using ATR as a rough proxy
+        # Real premium would come from options chain API
+        estimated_premium = round(atr * 0.5, 2)
+
+        # Calculate suggested contracts based on risk
+        try:
+            from bot.engine.risk_manager import RiskManager
+            rm = RiskManager()
+            max_risk = rm.profile.risk_per_trade_dollars()
+            if estimated_premium > 0:
+                contracts = max(1, int(max_risk / (estimated_premium * 100)))
+            else:
+                contracts = 1
+        except Exception:
+            contracts = 1
+
+        reasons = list(signal.reasons)
+        reasons.append(f"Options play: {option_type.upper()} ${strike:.0f} exp {expiry}")
+        if signal.stop_loss:
+            reasons.append(f"Exit if stock breaks ${signal.stop_loss:.2f}")
+
+        return Signal(
+            action=signal.action,
+            confidence=signal.confidence,
+            strategy_name=signal.strategy_name,
+            symbol=signal.symbol,
+            price=price,
+            reasons=reasons,
+            style="options",
+            setup=signal.setup,
+            stop_loss=signal.stop_loss,
+            target=signal.target,
+            target_price=signal.target_price,
+            risk_reward=signal.risk_reward,
+            catalyst=signal.catalyst,
+            catalyst_tier=signal.catalyst_tier,
+            candle_pattern=signal.candle_pattern,
+            option_type=option_type,
+            strike=strike,
+            expiry=expiry,
+            premium=estimated_premium,
+            contracts=contracts,
+            broker="robinhood",
+        )
+
+    def _dispatch_alerts(self, signals: list[Signal], scan_type: str = "Full"):
+        """Send trade calls to Discord (labeled by type: options/day/swing).
+
+        Discord = automatic trade calls (the bread-making alerts)
+        Telegram = interactive agent chat (user types/asks questions)
+        """
+        if not signals:
+            return
+
+        # Discord gets ALL the calls — options, day, swing — properly labeled
+        try:
+            from bot.alerts.discord import DiscordChannel
+            discord = DiscordChannel()
+            # Send individual embeds for each signal (labeled by type)
+            for s in signals:
+                discord.send(s)
+            # Also send the summary
+            discord.send_summary(signals)
+        except Exception:
+            pass
