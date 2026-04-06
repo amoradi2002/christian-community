@@ -2961,26 +2961,22 @@ try{
     try{
       currentUser=session?.user||null;
       if(currentUser){
-        let data=null;
-        try{const r=await db.from('profiles').select('*').eq('id',currentUser.id).maybeSingle();data=r.data}catch(e){console.warn('profile load err:',e)}
-        if(!data){
-          // No profile row exists — create one from auth metadata
-          const newProfile={id:currentUser.id,full_name:currentUser.user_metadata?.full_name||'',username:currentUser.user_metadata?.username||'',email:currentUser.email||'',bio:''};
-          try{await db.from('profiles').upsert(newProfile,{onConflict:'id'})}catch(e){console.warn('profile create err:',e)}
-          try{const r2=await db.from('profiles').select('*').eq('id',currentUser.id).maybeSingle();data=r2.data||newProfile}catch(e){data=newProfile}
-        }else{
-          // Profile exists — backfill missing fields from auth metadata so they show up
-          const patch={};
-          if(!data.email&&currentUser.email)patch.email=currentUser.email;
-          if(!data.full_name&&currentUser.user_metadata?.full_name)patch.full_name=currentUser.user_metadata.full_name;
-          if(!data.username&&currentUser.user_metadata?.username)patch.username=currentUser.user_metadata.username;
-          if(Object.keys(patch).length){try{await db.from('profiles').update(patch).eq('id',currentUser.id);Object.assign(data,patch)}catch(e){console.warn('profile patch err:',e)}}
-        }
-        currentProfile=data;
-        // Cache username->email so next username login is instant (no DB lookup)
-        if(data?.username&&currentUser.email)localStorage.setItem('gc_uname_'+data.username.toLowerCase(),currentUser.email);
-      }else{currentProfile=null}
-      updateUI();
+        // Instant UI update with metadata — no waiting for DB
+        currentProfile={id:currentUser.id,full_name:currentUser.user_metadata?.full_name||'',username:currentUser.user_metadata?.username||'',email:currentUser.email||'',bio:''};
+        updateUI();
+        // Load real profile from DB in background
+        db.from('profiles').select('*').eq('id',currentUser.id).maybeSingle().then(async({data})=>{
+          if(data){
+            // Merge: prefer DB values, fall back to metadata
+            currentProfile={...currentProfile,...data};
+            if(data.username&&currentUser.email)localStorage.setItem('gc_uname_'+data.username.toLowerCase(),currentUser.email);
+          }else{
+            // Create row from metadata
+            try{await db.from('profiles').upsert(currentProfile,{onConflict:'id'})}catch(e){}
+          }
+          updateUI();
+        }).catch(e=>console.warn('bg profile load:',e));
+      }else{currentProfile=null;updateUI()}
     }catch(e){console.error('Auth state error:',e);updateUI()}
   });
 }catch(e){console.error('Auth init error:',e);updateUI()}
