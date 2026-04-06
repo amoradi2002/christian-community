@@ -1505,8 +1505,6 @@ async function handleLogin(){
   }
   const{error}=await db.auth.signInWithPassword({email,password});
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Sign In';return}
-  // Cache username->email so next login is instant
-  try{const meta=(await db.auth.getUser()).data?.user?.user_metadata;const uname=meta?.username;if(uname)localStorage.setItem('gc_uname_'+uname.toLowerCase(),email)}catch(e){}
   closeModal();btn.disabled=false;btn.textContent='Sign In';
 }
 async function handleForgotPassword(){
@@ -1580,15 +1578,6 @@ async function saveProfile(){
   if(!currentUser)return;
   const full_name=document.getElementById('edit-name').value.trim(),username=document.getElementById('edit-username').value.trim(),bio=document.getElementById('edit-bio').value.trim();
   if(!full_name){alert('Name cannot be empty.');return}
-  // Check what changed
-  const changes=[];
-  if(full_name!==(currentProfile?.full_name||''))changes.push(`Name: "${currentProfile?.full_name||'(none)'}\" → "${full_name}"`);
-  if(username!==(currentProfile?.username||''))changes.push(`Username: "@${currentProfile?.username||'(none)'}\" → "@${username}"`);
-  if(bio!==(currentProfile?.bio||''))changes.push('Bio updated');
-  if(changes.length===0){alert('No changes to save.');return}
-  // Confirm changes
-  const msg='Confirm profile changes?\n\n'+changes.join('\n');
-  if(!confirm(msg))return;
   const btn=document.querySelector('.profile-save-btn');btn.textContent='Saving...';btn.disabled=true;
   const{error}=await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio,email:currentUser.email||''},{onConflict:'id'});
   if(error){alert('Error saving profile: '+error.message);btn.textContent='Save Changes';btn.disabled=false;return}
@@ -2988,6 +2977,8 @@ try{
           if(Object.keys(patch).length){try{await db.from('profiles').update(patch).eq('id',currentUser.id);Object.assign(data,patch)}catch(e){console.warn('profile patch err:',e)}}
         }
         currentProfile=data;
+        // Cache username->email so next username login is instant (no DB lookup)
+        if(data?.username&&currentUser.email)localStorage.setItem('gc_uname_'+data.username.toLowerCase(),currentUser.email);
       }else{currentProfile=null}
       updateUI();
     }catch(e){console.error('Auth state error:',e);updateUI()}
