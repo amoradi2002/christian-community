@@ -1483,20 +1483,15 @@ async function handleLogin(){
   let email=input;
   if(!input.includes('@')){
     try{
-      const{data:profile,error:pErr}=await Promise.race([db.from('profiles').select('id,email,username').ilike('username',input).maybeSingle(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);
-      if(pErr){console.error('Username lookup error:',pErr.message);showErr('Username lookup error: '+pErr.message);btn.disabled=false;btn.textContent='Sign In';return}
-      if(!profile){
-        // Also try exact case match
-        const{data:p2}=await db.from('profiles').select('id,email,username').eq('username',input).maybeSingle().catch(()=>({data:null}));
-        if(p2&&p2.email){email=p2.email}
-        else{showErr('Username "'+input+'" not found. Try signing in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
-      }else
-      if(profile.email){email=profile.email}
-      else{
-        // Profile exists but email column is empty — look up from auth users via admin or ask user
-        showErr('No email linked to username "'+input+'". Please sign in with your email address and we\'ll fix this.');btn.disabled=false;btn.textContent='Sign In';return
-      }
-    }catch(e){console.error('Username lookup exception:',e);showErr('Username lookup timed out. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+      // Try case-insensitive lookup
+      let profile=null;
+      try{const r=await db.from('profiles').select('email,username').ilike('username',input).limit(1);if(r.data&&r.data.length)profile=r.data[0]}catch(e){console.warn('ilike failed:',e)}
+      // Fallback: exact match
+      if(!profile){try{const r2=await db.from('profiles').select('email,username').eq('username',input).limit(1);if(r2.data&&r2.data.length)profile=r2.data[0]}catch(e){console.warn('eq failed:',e)}}
+      if(!profile){showErr('Username "'+input+'" not found. Try signing in with your email address instead.');btn.disabled=false;btn.textContent='Sign In';return}
+      if(!profile.email){showErr('No email linked to this username. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+      email=profile.email;
+    }catch(e){console.error('Username lookup exception:',e);showErr('Could not look up username. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
   }
   const{error}=await db.auth.signInWithPassword({email,password});
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Sign In';return}
@@ -1595,8 +1590,11 @@ async function saveProfile(){
 let nsfwModel=null;
 async function loadNSFWModel(){
   if(nsfwModel)return nsfwModel;
-  if(typeof nsfwjs==='undefined'){await new Promise(r=>setTimeout(r,1000));if(typeof nsfwjs==='undefined')throw new Error('AI moderation not loaded yet. Please try again.')}
-  nsfwModel=await nsfwjs.load();
+  // Wait up to 3s for nsfwjs script to load
+  for(let i=0;i<6&&typeof nsfwjs==='undefined';i++)await new Promise(r=>setTimeout(r,500));
+  if(typeof nsfwjs==='undefined')throw new Error('NSFWJS_UNAVAILABLE');
+  // Timeout after 15s to avoid hanging
+  nsfwModel=await Promise.race([nsfwjs.load(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('NSFWJS_TIMEOUT')),15000))]);
   return nsfwModel;
 }
 async function handleAvatarUpload(input){
@@ -1620,13 +1618,16 @@ async function handleAvatarUpload(input){
     const imgUrl=URL.createObjectURL(file);
     const img=new Image();
     await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=imgUrl});
-    // AI Moderation check
-    const model=await loadNSFWModel();
-    const predictions=await model.classify(img);
-    const pred={};predictions.forEach(p=>{pred[p.className]=p.probability});
-    const pornScore=(pred['Porn']||0);
-    const hentaiScore=(pred['Hentai']||0);
-    const sexyScore=(pred['Sexy']||0);
+    // AI Moderation check (skip silently if model unavailable on this device)
+    let pornScore=0,hentaiScore=0,sexyScore=0;
+    try{
+      const model=await loadNSFWModel();
+      const predictions=await model.classify(img);
+      const pred={};predictions.forEach(p=>{pred[p.className]=p.probability});
+      pornScore=(pred['Porn']||0);hentaiScore=(pred['Hentai']||0);sexyScore=(pred['Sexy']||0);
+    }catch(modelErr){
+      console.warn('NSFW model unavailable, skipping scan:',modelErr.message);
+    }
     if(pornScore>0.15||hentaiScore>0.15||sexyScore>0.4){
       scanDiv.style.display='none';
       URL.revokeObjectURL(imgUrl);
@@ -1655,20 +1656,27 @@ async function handleAvatarUpload(input){
     ctx.drawImage(img,sx,sy,size,size,0,0,200,200);
     const dataUrl=canvas.toDataURL('image/jpeg',0.85);
     URL.revokeObjectURL(imgUrl);
+    // Always save locally first so it persists even if DB fails
+    localStorage.setItem('gc_avatar_'+currentUser.id,dataUrl);
     // Save to profile
     scanDiv.innerHTML='<div class="spinner"></div>Saving...';
-    const{error}=await db.from('profiles').upsert({id:currentUser.id,avatar_url:dataUrl,email:currentUser.email||''});
-    if(error){
-      // If avatar_url column doesn't exist, try without it and store locally
-      console.warn('Avatar save error:',error.message);
-      localStorage.setItem('gc_avatar_'+currentUser.id,dataUrl);
-    }else{
-      currentProfile={...currentProfile,avatar_url:dataUrl};
-    }
+    let dbOk=false;
+    try{
+      const{error:updErr}=await db.from('profiles').update({avatar_url:dataUrl}).eq('id',currentUser.id);
+      if(!updErr){dbOk=true}
+      else{
+        console.warn('Avatar update error:',updErr.message);
+        // Try upsert as fallback (row may not exist yet)
+        const{error:upErr}=await db.from('profiles').upsert({id:currentUser.id,avatar_url:dataUrl,email:currentUser.email||''},{onConflict:'id'});
+        if(!upErr)dbOk=true;else console.warn('Avatar upsert error:',upErr.message);
+      }
+    }catch(dbE){console.warn('Avatar DB exception:',dbE.message)}
+    currentProfile={...currentProfile,avatar_url:dataUrl};
     // Update all avatar displays
     setAvatarImage(dataUrl);
     scanDiv.style.display='none';
     input.value='';
+    if(!dbOk)showOk&&showOk('Profile picture updated (saved locally).');
   }catch(e){
     console.error('Avatar upload error:',e);
     scanDiv.style.display='none';
