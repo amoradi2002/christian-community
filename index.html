@@ -1457,6 +1457,10 @@ async function handleSignup(){
   const{data,error}=await db.auth.signUp({email,password,options:{data:{full_name:name,username,account_type:accountType}}});
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Finish Setup';return}
   if(data?.user?.identities?.length===0){showErr('An account with this email already exists. Please sign in.');switchTab('login');btn.disabled=false;btn.textContent='Finish Setup';return}
+  // Create profile row immediately so username/name/email are saved
+  if(data?.user){
+    try{await db.from('profiles').upsert({id:data.user.id,full_name:name,username,email,bio:''},{onConflict:'id'})}catch(e){console.warn('Profile upsert failed:',e)}
+  }
   // Create church or life group profile after signup
   if(data?.user){
     const uid=data.user.id;
