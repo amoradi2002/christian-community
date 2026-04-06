@@ -1482,16 +1482,15 @@ async function handleLogin(){
   const btn=document.getElementById('login-btn');btn.disabled=true;btn.textContent='Signing in...';
   let email=input;
   if(!input.includes('@')){
-    try{
-      // Try case-insensitive lookup
-      let profile=null;
-      try{const r=await db.from('profiles').select('email,username').ilike('username',input).limit(1);if(r.data&&r.data.length)profile=r.data[0]}catch(e){console.warn('ilike failed:',e)}
-      // Fallback: exact match
-      if(!profile){try{const r2=await db.from('profiles').select('email,username').eq('username',input).limit(1);if(r2.data&&r2.data.length)profile=r2.data[0]}catch(e){console.warn('eq failed:',e)}}
-      if(!profile){showErr('Username "'+input+'" not found. Try signing in with your email address instead.');btn.disabled=false;btn.textContent='Sign In';return}
-      if(!profile.email){showErr('No email linked to this username. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
-      email=profile.email;
-    }catch(e){console.error('Username lookup exception:',e);showErr('Could not look up username. Please sign in with your email address.');btn.disabled=false;btn.textContent='Sign In';return}
+    let foundEmail=null;
+    // Try RPC first (bypasses RLS, case-insensitive)
+    try{const{data:rpcEmail}=await db.rpc('get_email_by_username',{p_username:input});if(rpcEmail)foundEmail=rpcEmail}catch(e){console.warn('RPC lookup failed:',e.message)}
+    // Fallback: direct table query (case-insensitive)
+    if(!foundEmail){try{const r=await db.from('profiles').select('email').ilike('username',input).limit(1);if(r.data&&r.data.length&&r.data[0].email)foundEmail=r.data[0].email}catch(e){console.warn('ilike failed:',e)}}
+    // Fallback: exact match
+    if(!foundEmail){try{const r2=await db.from('profiles').select('email').eq('username',input).limit(1);if(r2.data&&r2.data.length&&r2.data[0].email)foundEmail=r2.data[0].email}catch(e){console.warn('eq failed:',e)}}
+    if(!foundEmail){showErr('Username "'+input+'" not found. Try signing in with your email address instead.');btn.disabled=false;btn.textContent='Sign In';return}
+    email=foundEmail;
   }
   const{error}=await db.auth.signInWithPassword({email,password});
   if(error){showErr(error.message);btn.disabled=false;btn.textContent='Sign In';return}
