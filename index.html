@@ -1588,7 +1588,7 @@ async function saveProfile(){
   const msg='Confirm profile changes?\n\n'+changes.join('\n');
   if(!confirm(msg))return;
   const btn=document.querySelector('.profile-save-btn');btn.textContent='Saving...';btn.disabled=true;
-  const{error}=await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio,email:currentUser.email||''});
+  const{error}=await db.from('profiles').upsert({id:currentUser.id,full_name,username,bio,email:currentUser.email||''},{onConflict:'id'});
   if(error){alert('Error saving profile: '+error.message);btn.textContent='Save Changes';btn.disabled=false;return}
   currentProfile={...currentProfile,full_name,username,bio};
   document.getElementById('avatar-letter').textContent=full_name?full_name[0].toUpperCase():'?';
@@ -2970,9 +2970,22 @@ try{
     try{
       currentUser=session?.user||null;
       if(currentUser){
-        const{data}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));
-        if(!data){await db.from('profiles').insert({id:currentUser.id,full_name:currentUser.user_metadata?.full_name||'',username:currentUser.user_metadata?.username||'',email:currentUser.email||''}).catch(()=>{});const{data:p}=await db.from('profiles').select('*').eq('id',currentUser.id).single().catch(()=>({data:null}));currentProfile=p;}
-        else{if(!data.email&&currentUser.email){await db.from('profiles').update({email:currentUser.email}).eq('id',currentUser.id).catch(()=>{});data.email=currentUser.email;}currentProfile=data}
+        let data=null;
+        try{const r=await db.from('profiles').select('*').eq('id',currentUser.id).maybeSingle();data=r.data}catch(e){console.warn('profile load err:',e)}
+        if(!data){
+          // No profile row exists — create one from auth metadata
+          const newProfile={id:currentUser.id,full_name:currentUser.user_metadata?.full_name||'',username:currentUser.user_metadata?.username||'',email:currentUser.email||'',bio:''};
+          try{await db.from('profiles').upsert(newProfile,{onConflict:'id'})}catch(e){console.warn('profile create err:',e)}
+          try{const r2=await db.from('profiles').select('*').eq('id',currentUser.id).maybeSingle();data=r2.data||newProfile}catch(e){data=newProfile}
+        }else{
+          // Profile exists — backfill missing fields from auth metadata so they show up
+          const patch={};
+          if(!data.email&&currentUser.email)patch.email=currentUser.email;
+          if(!data.full_name&&currentUser.user_metadata?.full_name)patch.full_name=currentUser.user_metadata.full_name;
+          if(!data.username&&currentUser.user_metadata?.username)patch.username=currentUser.user_metadata.username;
+          if(Object.keys(patch).length){try{await db.from('profiles').update(patch).eq('id',currentUser.id);Object.assign(data,patch)}catch(e){console.warn('profile patch err:',e)}}
+        }
+        currentProfile=data;
       }else{currentProfile=null}
       updateUI();
     }catch(e){console.error('Auth state error:',e);updateUI()}
