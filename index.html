@@ -1420,16 +1420,22 @@ async function handleDeleteAccount(){
   if(!confirm('Are you sure you want to delete your account? This action is permanent and cannot be undone.'))return;
   const confirmText=prompt('This will permanently delete your profile and data.\n\nType DELETE (all caps) to confirm:');
   if(confirmText!=='DELETE'){alert('Cancelled — you must type DELETE exactly to confirm.');return}
+  const uid=currentUser.id;
+  const tryDel=async(table,col)=>{try{await db.from(table).delete().eq(col,uid)}catch(e){console.warn('Delete '+table+' failed:',e?.message||e)}};
   try{
-    await db.from('profiles').delete().eq('id',currentUser.id).catch(()=>{});
-    await db.from('discussions').delete().eq('user_id',currentUser.id).catch(()=>{});
-    await db.from('prayer_requests').delete().eq('user_id',currentUser.id).catch(()=>{});
-    await db.from('testimonies').delete().eq('user_id',currentUser.id).catch(()=>{});
-    await db.from('comments').delete().eq('user_id',currentUser.id).catch(()=>{});
-    await db.auth.signOut();
+    await tryDel('discussions','user_id');
+    await tryDel('prayer_requests','user_id');
+    await tryDel('testimonies','user_id');
+    await tryDel('comments','user_id');
+    await tryDel('user_promises','user_id');
+    await tryDel('members','user_id');
+    await tryDel('life_groups','leader_id');
+    await tryDel('churches','user_id');
+    await tryDel('profiles','id');
+    try{await db.auth.signOut()}catch(e){console.warn('signOut failed:',e)}
     closeProfilePanel();
-    alert('Your account and data have been deleted. We are sorry to see you go.');
-  }catch(e){alert('Error deleting account. Please try again.')}
+    alert('Your profile and data have been deleted. Your login will be fully removed shortly. We are sorry to see you go.');
+  }catch(e){console.error('Delete account error:',e);alert('Error deleting account: '+(e?.message||'unknown')+'. Please try again or contact support.')}
 }
 async function handleSignup(){
   const name=document.getElementById('signup-name').value.trim(),username=document.getElementById('signup-username').value.trim(),email=document.getElementById('signup-email').value.trim(),password=document.getElementById('signup-password').value;
