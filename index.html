@@ -1418,7 +1418,8 @@ function blockUser(userId){
 async function handleDeleteAccount(){
   if(!currentUser)return;
   if(!confirm('Are you sure you want to delete your account? This action is permanent and cannot be undone.'))return;
-  if(!confirm('This will permanently delete your profile and data. Type DELETE to confirm.')){return}
+  const confirmText=prompt('This will permanently delete your profile and data.\n\nType DELETE (all caps) to confirm:');
+  if(confirmText!=='DELETE'){alert('Cancelled — you must type DELETE exactly to confirm.');return}
   try{
     await db.from('profiles').delete().eq('id',currentUser.id).catch(()=>{});
     await db.from('discussions').delete().eq('user_id',currentUser.id).catch(()=>{});
