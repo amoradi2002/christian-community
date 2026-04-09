@@ -1495,11 +1495,8 @@ async function handleLogin(){
   if(!input.includes('@')){
     const uKey='gc_uname_'+input.toLowerCase();
     let foundEmail=localStorage.getItem(uKey)||null;
-    // Wrap each DB call with 5s timeout so we never hang
     const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
     if(!foundEmail){try{const{data:rpcEmail}=await withTimeout(db.rpc('get_email_by_username',{p_username:input}),5000);if(rpcEmail)foundEmail=rpcEmail}catch(e){console.warn('RPC:',e.message)}}
-    if(!foundEmail){try{const r=await withTimeout(db.from('profiles').select('email').ilike('username',input).limit(1),5000);if(r.data&&r.data.length&&r.data[0].email)foundEmail=r.data[0].email}catch(e){console.warn('ilike:',e.message)}}
-    if(!foundEmail){try{const r2=await withTimeout(db.from('profiles').select('email').eq('username',input).limit(1),5000);if(r2.data&&r2.data.length&&r2.data[0].email)foundEmail=r2.data[0].email}catch(e){console.warn('eq:',e.message)}}
     if(!foundEmail){showErr('Username "'+input+'" not found. Try signing in with your email address instead.');btn.disabled=false;btn.textContent='Sign In';return}
     email=foundEmail;
   }
