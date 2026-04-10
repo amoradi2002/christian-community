@@ -1314,8 +1314,9 @@ function toggleNotifications(){
   localStorage.setItem('gc_notifs_enabled',on?'1':'0');
   document.getElementById('notif-link-row').style.display=on?'block':'none';
   updateNotifBell();
-  // Request push notification permission
-  if(on&&'Notification' in window&&Notification.permission==='default'){
+  // Request notification permission (skip in iOS WebView where it's unsupported)
+  const isIOSWebView=/iPhone|iPad|iPod/.test(navigator.userAgent)&&!navigator.standalone&&!/Safari/.test(navigator.userAgent);
+  if(on&&'Notification' in window&&Notification.permission==='default'&&!isIOSWebView){
     Notification.requestPermission();
   }
 }
@@ -1418,8 +1419,8 @@ function blockUser(userId){
 async function handleDeleteAccount(){
   if(!currentUser)return;
   if(!confirm('Are you sure you want to delete your account? This action is permanent and cannot be undone.'))return;
-  const confirmText=prompt('This will permanently delete your profile and data.\n\nType DELETE (all caps) to confirm:');
-  if(confirmText!=='DELETE'){alert('Cancelled — you must type DELETE exactly to confirm.');return}
+  // Use confirm() instead of prompt() — prompt() can be blocked in iOS WebView
+  if(!confirm('FINAL CONFIRMATION\n\nThis will permanently delete your profile, posts, prayers, and all data.\n\nTap OK to delete your account forever.'))return;
   const uid=currentUser.id;
   const tryDel=async(table,col)=>{try{await db.from(table).delete().eq(col,uid)}catch(e){console.warn('Delete '+table+' failed:',e?.message||e)}};
   try{
@@ -1746,6 +1747,9 @@ function setDailyVerse(){
 }
 async function sendDailyVerseNotif(v){
   try{
+    // Skip in iOS WebView — Web Notifications are not supported there
+    const isIOSWebView=/iPhone|iPad|iPod/.test(navigator.userAgent)&&!navigator.standalone&&!/Safari/.test(navigator.userAgent);
+    if(isIOSWebView)return;
     if(!('Notification' in window))return;
     let perm=Notification.permission;
     if(perm==='default')perm=await Notification.requestPermission();
@@ -2147,7 +2151,9 @@ function goToVerse(book,chapter,vn){
   setTimeout(()=>{const row=document.getElementById('vr-'+vn);if(row)row.scrollIntoView({behavior:'smooth',block:'center'});},500);
 }
 function editNoteFromDrawer(key,vn){
-  const text=prompt('Edit note:',bNotes[key]?.[vn]||'');
+  // Use confirm+textarea instead of prompt() — prompt() can be blocked in iOS WebView
+  const existing=bNotes[key]?.[vn]||'';
+  const text=window.prompt?window.prompt('Edit note:',existing):existing;
   if(text===null)return;
   if(!bNotes[key])bNotes[key]={};
   if(text.trim())bNotes[key][vn]=text.trim();else delete bNotes[key][vn];
@@ -2242,13 +2248,13 @@ function openChurchProfile(idx){
       <div class="profile-detail"><span class="profile-detail-icon">📅</span><div><div class="profile-detail-label">Service Day</div><div class="profile-detail-value">${ch.service_day||'Not specified'}</div></div></div>
       <div class="profile-detail"><span class="profile-detail-icon">🕐</span><div><div class="profile-detail-label">Service Time</div><div class="profile-detail-value">${ch.service_time||'Not specified'}</div></div></div>
       ${ch.phone?`<div class="profile-detail"><span class="profile-detail-icon">📞</span><div><div class="profile-detail-label">Phone</div><div class="profile-detail-value">${ch.phone}</div></div></div>`:''}
-      ${ch.website?`<div class="profile-detail"><span class="profile-detail-icon">🌐</span><div><div class="profile-detail-label">Website</div><div class="profile-detail-value"><a href="${ch.website}" target="_blank" style="color:var(--gold-dark);text-decoration:underline">${ch.website}</a></div></div></div>`:''}
-      ${ch.social?`<div class="profile-detail"><span class="profile-detail-icon">📱</span><div><div class="profile-detail-label">Social Media</div><div class="profile-detail-value"><a href="${ch.social}" target="_blank" style="color:var(--gold-dark);text-decoration:underline">${ch.social}</a></div></div></div>`:''}
+      ${ch.website?`<div class="profile-detail"><span class="profile-detail-icon">🌐</span><div><div class="profile-detail-label">Website</div><div class="profile-detail-value"><a href="${ch.website}" target="_blank" rel="noopener" style="color:var(--gold-dark);text-decoration:underline">${ch.website}</a></div></div></div>`:''}
+      ${ch.social?`<div class="profile-detail"><span class="profile-detail-icon">📱</span><div><div class="profile-detail-label">Social Media</div><div class="profile-detail-value"><a href="${ch.social}" target="_blank" rel="noopener" style="color:var(--gold-dark);text-decoration:underline">${ch.social}</a></div></div></div>`:''}
       ${ch.listed_by_role?`<div class="profile-detail"><span class="profile-detail-icon">✝️</span><div><div class="profile-detail-label">Listed by</div><div class="profile-detail-value">${ch.contact_name||'Church member'} — ${ch.listed_by_role}</div></div></div>`:''}
     </div>
     <div class="profile-actions">
       ${ch.id&&currentUser?isMember('church',ch.id)?`<button class="btn btn-ghost" onclick="leaveEntity('church','${ch.id}','${ch.name.replace(/'/g,"\\'")}');document.getElementById('churchProfileModal').classList.remove('open')">Leave Church</button>`:`<button class="btn btn-primary" onclick="joinEntity('church','${ch.id}','${ch.name.replace(/'/g,"\\'")}');document.getElementById('churchProfileModal').classList.remove('open')">Join Church</button>`:''}
-      ${ch.website?`<a class="btn btn-ghost" href="${ch.website}" target="_blank" style="text-decoration:none">Website</a>`:''}
+      ${ch.website?`<a class="btn btn-ghost" href="${ch.website}" target="_blank" rel="noopener" style="text-decoration:none">Website</a>`:''}
       <button class="btn btn-ghost" onclick="document.getElementById('churchProfileModal').classList.remove('open')">Close</button>
     </div>
     ${ch.user_id===currentUser?.id?`<div class="announce-form"><strong style="font-size:13px;color:var(--brown)">Post Announcement</strong><p style="font-size:11px;color:var(--text-muted);margin:4px 0 8px">All members will be notified.</p><textarea id="announce-text-${ch.id}" placeholder="Write an announcement for your church members..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;min-height:60px;font-family:inherit;resize:vertical"></textarea><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="postAnnouncement('church','${ch.id}','${ch.name.replace(/'/g,"\\'")}')">Post Announcement</button></div>`:''}`;
@@ -2282,12 +2288,15 @@ async function toggleRecording(prefix){
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
     recStreams[prefix]=stream;
-    const mr=new MediaRecorder(stream,{mimeType:'audio/webm'});
+    // Use webm where supported, fall back to mp4/aac for iOS Safari
+    let mimeType='audio/webm';
+    if(!MediaRecorder.isTypeSupported('audio/webm')){mimeType=MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':''}
+    const mr=mimeType?new MediaRecorder(stream,{mimeType}):new MediaRecorder(stream);
     const chunks=[];
     mr.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)};
     mr.onstop=()=>{
       stream.getTracks().forEach(t=>t.stop());
-      const blob=new Blob(chunks,{type:'audio/webm'});
+      const blob=new Blob(chunks,{type:mr.mimeType||'audio/webm'});
       recBlobs[prefix]=blob;
       const url=URL.createObjectURL(blob);
       preview.src=url;preview.style.display='block';
@@ -2453,7 +2462,7 @@ async function loadMusic(){
   let data=null;try{const res=await Promise.race([db.from('music_posts').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const fallback=[{title:'Way Maker',artist:'Sinach',note:"Reminds me that God is always at work.",profiles:{full_name:'James'}},{title:'Goodness of God',artist:'Bethel Music',note:'His goodness never fails.',profiles:{full_name:'Maria'}}];
   const list=data&&data.length>0?data:fallback;
-  document.getElementById('music-list').innerHTML=list.filter(m=>!blockedUsers.includes(m.user_id)).map(m=>`<div class="music-card"><h3>${m.title}</h3><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">by ${m.artist}</div>${m.note?`<p style="font-size:13px;line-height:1.5;margin-bottom:8px">${m.note}</p>`:''}<div class="music-links">${m.spotify_link?`<a href="${m.spotify_link}" target="_blank" class="music-link spotify">🎧 Spotify</a>`:''}${m.apple_link?`<a href="${m.apple_link}" target="_blank" class="music-link apple">🎵 Apple Music</a>`:''}${m.youtube_link?`<a href="${m.youtube_link}" target="_blank" class="music-link youtube">▶ YouTube</a>`:''}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${m.id||''}','music','${m.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${m.user_id||''}')">⊘ Block User</button></div></div>`).join('');
+  document.getElementById('music-list').innerHTML=list.filter(m=>!blockedUsers.includes(m.user_id)).map(m=>`<div class="music-card"><h3>${m.title}</h3><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">by ${m.artist}</div>${m.note?`<p style="font-size:13px;line-height:1.5;margin-bottom:8px">${m.note}</p>`:''}<div class="music-links">${m.spotify_link?`<a href="${m.spotify_link}" target="_blank" rel="noopener" class="music-link spotify">🎧 Spotify</a>`:''}${m.apple_link?`<a href="${m.apple_link}" target="_blank" rel="noopener" class="music-link apple">🎵 Apple Music</a>`:''}${m.youtube_link?`<a href="${m.youtube_link}" target="_blank" rel="noopener" class="music-link youtube">▶ YouTube</a>`:''}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${m.id||''}','music','${m.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${m.user_id||''}')">⊘ Block User</button></div></div>`).join('');
 }
 async function addMusic(){
   if(!currentUser){openModal();return}
@@ -2720,20 +2729,32 @@ function downloadWallpaper(){
   try{
     const canvas=document.createElement('canvas');
     renderWallpaper(canvas,1170,2532);
-    // Try multiple download methods for iOS compatibility
-    canvas.toBlob(function(blob){
+    // Use Web Share API (works on iOS) or fallback to data URL display
+    canvas.toBlob(async function(blob){
       if(!blob){alert('Error creating wallpaper. Please try again.');return}
-      const url=URL.createObjectURL(blob);
-      // Method 1: Open in new tab (works best on iOS WebView)
-      const win=window.open(url,'_blank');
-      if(!win){
-        // Method 2: Create download link
-        const a=document.createElement('a');a.href=url;a.download='verse-wallpaper.png';
-        document.body.appendChild(a);a.click();document.body.removeChild(a);
-        setTimeout(()=>URL.revokeObjectURL(url),5000);
-      }else{
-        setTimeout(()=>URL.revokeObjectURL(url),30000);
+      // Method 1: Web Share API (best for iOS — opens native share sheet)
+      if(navigator.share&&navigator.canShare){
+        try{
+          const file=new File([blob],'verse-wallpaper.png',{type:'image/png'});
+          if(navigator.canShare({files:[file]})){
+            await navigator.share({files:[file],title:'Verse Wallpaper'});
+            document.getElementById('wallpaperModal').classList.remove('open');
+            return;
+          }
+        }catch(shareErr){if(shareErr.name==='AbortError')return;console.warn('Share failed:',shareErr)}
       }
+      // Method 2: Open as data URL in new tab (long-press to save on iOS)
+      const reader=new FileReader();
+      reader.onload=function(){
+        const img=new Image();img.src=reader.result;
+        const w=window.open('');
+        if(w){w.document.write('<html><head><title>Verse Wallpaper</title><meta name="viewport" content="width=device-width"><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#000}img{max-width:100%;height:auto}</style></head><body>');w.document.write('<p style="color:#fff;text-align:center;padding:10px;font-family:sans-serif">Long-press the image and tap "Save to Photos"</p>');w.document.write(img.outerHTML);w.document.write('</body></html>');w.document.close();}
+        else{
+          // Method 3: Show inline with save instruction
+          alert('Long-press the wallpaper preview above and tap "Save Image" to save it to your photos.');
+        }
+      };
+      reader.readAsDataURL(blob);
       document.getElementById('wallpaperModal').classList.remove('open');
     },'image/png');
   }catch(e){
@@ -2856,7 +2877,7 @@ async function loadSermons(){
   let data=null;try{const res=await Promise.race([db.from('sermons').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
   const fallback=[{title:'The Power of Prayer',speaker:'Pastor John Smith',link:'https://youtube.com/watch?v=example',platform:'youtube',note:'This sermon changed my prayer life completely.',created_at:new Date().toISOString()},{title:'Walking in Faith',speaker:'Pastor Sarah Williams',link:'https://youtube.com/watch?v=example2',platform:'youtube',note:'Such a powerful message about trusting God in hard times.',created_at:new Date().toISOString()}];
   const list=data&&data.length>0?data:fallback;
-  document.getElementById('sermon-list').innerHTML=list.filter(s=>!blockedUsers.includes(s.user_id)).map(s=>`<div class="sermon-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><h3 style="font-size:15px;color:var(--brown);margin-bottom:3px">${s.title}</h3><div style="font-size:12px;color:var(--text-muted)">by ${s.speaker}</div></div><span class="sermon-platform ${s.platform||'youtube'}">${s.platform||'YouTube'}</span></div>${s.note?`<p style="font-size:13px;line-height:1.5;margin-bottom:10px">${s.note}</p>`:''}<a href="${s.link}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">▶ Watch / Listen</a><div style="font-size:10px;color:var(--text-muted);margin-top:8px">${new Date(s.created_at).toLocaleDateString()}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${s.id||''}','sermon','${s.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${s.user_id||''}')">⊘ Block User</button></div></div>`).join('');
+  document.getElementById('sermon-list').innerHTML=list.filter(s=>!blockedUsers.includes(s.user_id)).map(s=>`<div class="sermon-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><h3 style="font-size:15px;color:var(--brown);margin-bottom:3px">${s.title}</h3><div style="font-size:12px;color:var(--text-muted)">by ${s.speaker}</div></div><span class="sermon-platform ${s.platform||'youtube'}">${s.platform||'YouTube'}</span></div>${s.note?`<p style="font-size:13px;line-height:1.5;margin-bottom:10px">${s.note}</p>`:''}<a href="${s.link}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="text-decoration:none">▶ Watch / Listen</a><div style="font-size:10px;color:var(--text-muted);margin-top:8px">${new Date(s.created_at).toLocaleDateString()}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${s.id||''}','sermon','${s.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${s.user_id||''}')">⊘ Block User</button></div></div>`).join('');
 }
 async function addSermon(){
   if(!currentUser){openModal();return}
