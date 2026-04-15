@@ -2198,8 +2198,7 @@ async function downloadKJV(){
 // CHURCHES
 async function loadChurches(){
   let data=null;try{const res=await Promise.race([db.from('churches').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
-  const fallback=[{id:'c1',name:'Grace Community Church',pastor:'Pastor Michael Thompson',address:'1200 Hope Blvd',city:'Los Angeles',zip:'90001',denomination:'Non-denominational',service_day:'Sunday',service_time:'9:00 AM & 11:00 AM',website:'https://gracecommunity.com',social:'',about:'A welcoming church for all people.',user_id:null},{id:'c2',name:'First Baptist Church',pastor:'Pastor Sarah Williams',address:'456 Faith Ave',city:'Houston',zip:'77001',denomination:'Baptist',service_day:'Sunday',service_time:'8:30 AM & 10:30 AM',website:'',social:'',about:'Rooted in the Word, reaching the world.',user_id:null},{id:'c3',name:'Calvary Pentecostal',pastor:'Pastor David Cruz',address:'789 Spirit Lane',city:'Miami',zip:'33101',denomination:'Pentecostal',service_day:'Sunday',service_time:'10:00 AM',website:'https://calvarymiami.org',social:'',about:'Spirit-filled worship and powerful prayer.',user_id:null}];
-  allChurches=data&&data.length>0?data:fallback;filterChurches();
+  allChurches=data||[];filterChurches();
 }
 function filterChurches(){
   const denom=document.getElementById('filter-denom').value.toLowerCase(),day=document.getElementById('filter-day').value.toLowerCase(),city=document.getElementById('filter-city').value.toLowerCase().trim();
@@ -2266,10 +2265,11 @@ let allLifeGroups=[];
 // LIFE GROUPS
 async function loadLifeGroups(){
   let data=null;try{const res=await Promise.race([db.from('life_groups').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
-  const fallback=[{id:'d1',name:'Downtown Fellowship',meeting_time:'Wednesdays 7pm',location:'123 Main St',description:'Mixed age group focused on Romans.',member_count:12,leader_id:null},{id:'d2',name:'Young Adults Group',meeting_time:'Fridays 6pm',location:'456 Oak Ave',description:'For young adults 18-35.',member_count:24,leader_id:null},{id:'d3',name:'Morning Prayer Circle',meeting_time:'Sundays 8am',location:'789 Pine Rd',description:'Early morning prayer.',member_count:8,leader_id:null}];
-  const list=data&&data.length>0?data:fallback;
+  const list=data||[];
   allLifeGroups=list;
-  document.getElementById('life-groups-list').innerHTML=list.map((g,i)=>`<div class="group-card" onclick="openGroupProfile(${i})"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3>${g.group_type?`<span class="badge-denom" style="font-size:10px;margin-bottom:4px;display:inline-block">${g.group_type}</span>`:''}<p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p>${g.leader_name?`<div style="font-size:11px;color:var(--brown);margin-top:4px">Led by <strong>${g.leader_name}</strong></div>`:''}<div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="event.stopPropagation();deleteGroup('${g.id}')">Delete</button></div>`:''}</div><div><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openGroupProfile(${i})">Join</button><div style="font-size:11px;color:var(--gold-dark);margin-top:6px;font-weight:500;text-align:center">View profile →</div></div></div>`).join('');
+  const c=document.getElementById('life-groups-list');
+  if(!list.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><p>No life groups yet. Start one below!</p></div>';return}
+  c.innerHTML=list.map((g,i)=>`<div class="group-card" onclick="openGroupProfile(${i})"><div class="group-info"><h3>${g.name}${g.leader_id===currentUser?.id?'<span class="badge-leader">Your Group</span>':''}</h3>${g.group_type?`<span class="badge-denom" style="font-size:10px;margin-bottom:4px;display:inline-block">${g.group_type}</span>`:''}<p style="font-size:12px;color:var(--text-muted);margin-top:2px">${g.description||''}</p>${g.leader_name?`<div style="font-size:11px;color:var(--brown);margin-top:4px">Led by <strong>${g.leader_name}</strong></div>`:''}<div class="group-meta"><span>🕐 ${g.meeting_time||'TBD'}</span><span>📍 ${g.location||'TBD'}</span><span>👥 ${g.member_count||1}</span></div>${g.leader_id===currentUser?.id?`<div class="admin-controls">⭐ <strong>You lead this group</strong> <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="event.stopPropagation();deleteGroup('${g.id}')">Delete</button></div>`:''}</div><div><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openGroupProfile(${i})">Join</button><div style="font-size:11px;color:var(--gold-dark);margin-top:6px;font-weight:500;text-align:center">View profile →</div></div></div>`).join('');
 }
 async function joinGroup(groupId,groupName){if(!currentUser){openModal();return}if(groupId){joinEntity('group',groupId,groupName)}else{alert('You joined! 🙌')}}
 async function deleteGroup(id){if(!confirm('Delete?'))return;await db.from('life_groups').delete().eq('id',id);loadLifeGroups()}
@@ -2381,8 +2381,7 @@ async function loadDiscussions(){
     const res=await Promise.race([db.from('discussions').select('*').eq('book',book).order('created_at',{ascending:false}).limit(30),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);
     data=res?.data||null;
   }catch(e){console.error('Discussions load error:',e);data=null}
-  const fallback={"Matthew":[{profiles:{full_name:'Sarah'},comment:'The Great Commission inspires me daily.'},{profiles:{full_name:'John'},comment:'Jesus promises to be with us always!'}],"John":[{profiles:{full_name:'Alex'},comment:'John 3:16 is the heart of the gospel.'}],"Romans":[{profiles:{full_name:'Chris'},comment:"Nothing can separate us from God's love!"}]};
-  const list=(data&&data.length>0?data:(fallback[book]||[])).filter(d=>!blockedUsers.includes(d.user_id));
+  const list=(data||[]).filter(d=>!blockedUsers.includes(d.user_id));
   c.innerHTML=list.length===0?`<div class="empty-state"><div class="empty-icon">📖</div><p>No discussions yet for ${book}.</p></div>`:list.map(d=>`<div class="disc-item"><strong style="font-size:12px;color:var(--brown)">${d.profiles?.full_name||d.user_name||'Community member'}</strong><p style="font-size:13px;margin-top:3px;line-height:1.5">${d.comment}</p><div class="content-actions"><button class="report-btn" onclick="openReport('${d.id||''}','discussion','${d.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${d.user_id||''}')">⊘ Block User</button></div></div>`).join('');
 }
 async function addDiscussion(){
@@ -2399,8 +2398,7 @@ async function addDiscussion(){
 let allTestimonies=[],testimonyFilter='all';
 async function loadTestimonies(){
   let data=null;try{const res=await Promise.race([db.from('testimonies').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
-  const fallback=[{name:'Anonymous',story:'I was deep in addiction for seven years. A friend invited me to church and I found Jesus. Three years clean — God is faithful.',created_at:new Date().toISOString(),category:'addiction'},{name:'Sarah M.',story:'I lost my job and clung to Jeremiah 29:11. Three months later I found a better position. Never doubt His timing.',created_at:new Date().toISOString(),category:'career'},{name:'David R.',story:'After years of chronic pain, our church prayed over me. God healed me completely. Doctors were amazed.',created_at:new Date().toISOString(),category:'healing'},{name:'Maria L.',story:'My marriage was falling apart. Through prayer and counseling, God restored our relationship. We are stronger than ever.',created_at:new Date().toISOString(),category:'relationships'}];
-  allTestimonies=data&&data.length>0?data:fallback;
+  allTestimonies=data||[];
   renderTestimonies();
 }
 function filterTestimonies(cat,btn){
@@ -2460,9 +2458,10 @@ async function addComment(pid){
 // MUSIC
 async function loadMusic(){
   let data=null;try{const res=await Promise.race([db.from('music_posts').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
-  const fallback=[{title:'Way Maker',artist:'Sinach',note:"Reminds me that God is always at work.",profiles:{full_name:'James'}},{title:'Goodness of God',artist:'Bethel Music',note:'His goodness never fails.',profiles:{full_name:'Maria'}}];
-  const list=data&&data.length>0?data:fallback;
-  document.getElementById('music-list').innerHTML=list.filter(m=>!blockedUsers.includes(m.user_id)).map(m=>`<div class="music-card"><h3>${m.title}</h3><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">by ${m.artist}</div>${m.note?`<p style="font-size:13px;line-height:1.5;margin-bottom:8px">${m.note}</p>`:''}<div class="music-links">${m.spotify_link?`<a href="${m.spotify_link}" target="_blank" rel="noopener" class="music-link spotify">🎧 Spotify</a>`:''}${m.apple_link?`<a href="${m.apple_link}" target="_blank" rel="noopener" class="music-link apple">🎵 Apple Music</a>`:''}${m.youtube_link?`<a href="${m.youtube_link}" target="_blank" rel="noopener" class="music-link youtube">▶ YouTube</a>`:''}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${m.id||''}','music','${m.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${m.user_id||''}')">⊘ Block User</button></div></div>`).join('');
+  const list=(data||[]).filter(m=>!blockedUsers.includes(m.user_id));
+  const c=document.getElementById('music-list');
+  if(!list.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">🎵</div><p>No songs shared yet. Be the first!</p></div>';return}
+  c.innerHTML=list.map(m=>`<div class="music-card"><h3>${m.title}</h3><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">by ${m.artist}</div>${m.note?`<p style="font-size:13px;line-height:1.5;margin-bottom:8px">${m.note}</p>`:''}<div class="music-links">${m.spotify_link?`<a href="${m.spotify_link}" target="_blank" rel="noopener" class="music-link spotify">🎧 Spotify</a>`:''}${m.apple_link?`<a href="${m.apple_link}" target="_blank" rel="noopener" class="music-link apple">🎵 Apple Music</a>`:''}${m.youtube_link?`<a href="${m.youtube_link}" target="_blank" rel="noopener" class="music-link youtube">▶ YouTube</a>`:''}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${m.id||''}','music','${m.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${m.user_id||''}')">⊘ Block User</button></div></div>`).join('');
 }
 async function addMusic(){
   if(!currentUser){openModal();return}
@@ -2763,58 +2762,7 @@ function downloadWallpaper(){
 }
 
 // PROMISES
-const promisesDB={
-  healing:[
-    {text:'He heals the brokenhearted and binds up their wounds.',ref:'Psalm 147:3'},
-    {text:'By His wounds you have been healed.',ref:'1 Peter 2:24'},
-    {text:'The Lord will take away from you all sickness.',ref:'Deuteronomy 7:15'},
-    {text:'I am the Lord who heals you.',ref:'Exodus 15:26'},
-    {text:'He himself bore our sins in his body on the cross, so that we might die to sins and live for righteousness.',ref:'1 Peter 2:24'}
-  ],
-  strength:[
-    {text:'I can do all things through Christ who strengthens me.',ref:'Philippians 4:13'},
-    {text:'The Lord is my strength and my shield; my heart trusts in him.',ref:'Psalm 28:7'},
-    {text:'But those who hope in the Lord will renew their strength.',ref:'Isaiah 40:31'},
-    {text:'God is our refuge and strength, an ever-present help in trouble.',ref:'Psalm 46:1'},
-    {text:'Be strong and courageous. Do not be afraid, for the Lord your God will be with you wherever you go.',ref:'Joshua 1:9'}
-  ],
-  peace:[
-    {text:'Peace I leave with you; my peace I give you.',ref:'John 14:27'},
-    {text:'And the peace of God, which transcends all understanding, will guard your hearts and your minds.',ref:'Philippians 4:7'},
-    {text:'You will keep in perfect peace those whose minds are steadfast, because they trust in you.',ref:'Isaiah 26:3'},
-    {text:'The Lord gives strength to his people; the Lord blesses his people with peace.',ref:'Psalm 29:11'}
-  ],
-  provision:[
-    {text:'And my God will meet all your needs according to the riches of his glory in Christ Jesus.',ref:'Philippians 4:19'},
-    {text:'The Lord is my shepherd, I lack nothing.',ref:'Psalm 23:1'},
-    {text:'Seek first his kingdom and his righteousness, and all these things will be given to you as well.',ref:'Matthew 6:33'},
-    {text:'Give, and it will be given to you. A good measure, pressed down, shaken together and running over.',ref:'Luke 6:38'}
-  ],
-  love:[
-    {text:'For God so loved the world that he gave his one and only Son.',ref:'John 3:16'},
-    {text:'Nothing can separate us from the love of God that is in Christ Jesus our Lord.',ref:'Romans 8:39'},
-    {text:'See what great love the Father has lavished on us, that we should be called children of God!',ref:'1 John 3:1'},
-    {text:'God demonstrates his own love for us in this: while we were still sinners, Christ died for us.',ref:'Romans 5:8'}
-  ],
-  protection:[
-    {text:'The Lord is my light and my salvation — whom shall I fear?',ref:'Psalm 27:1'},
-    {text:'He will cover you with his feathers, and under his wings you will find refuge.',ref:'Psalm 91:4'},
-    {text:'When you pass through the waters, I will be with you.',ref:'Isaiah 43:2'},
-    {text:'No weapon forged against you will prevail.',ref:'Isaiah 54:17'}
-  ],
-  forgiveness:[
-    {text:'If we confess our sins, he is faithful and just and will forgive us our sins.',ref:'1 John 1:9'},
-    {text:'As far as the east is from the west, so far has he removed our transgressions from us.',ref:'Psalm 103:12'},
-    {text:'Come now, let us settle the matter. Though your sins are like scarlet, they shall be as white as snow.',ref:'Isaiah 1:18'},
-    {text:'There is now no condemnation for those who are in Christ Jesus.',ref:'Romans 8:1'}
-  ],
-  guidance:[
-    {text:'Trust in the Lord with all your heart and lean not on your own understanding.',ref:'Proverbs 3:5-6'},
-    {text:'I will instruct you and teach you in the way you should go.',ref:'Psalm 32:8'},
-    {text:'Your word is a lamp for my feet, a light on my path.',ref:'Psalm 119:105'},
-    {text:'For I know the plans I have for you, declares the Lord, plans to prosper you.',ref:'Jeremiah 29:11'}
-  ]
-};
+const promisesDB={healing:[],strength:[],peace:[],provision:[],love:[],protection:[],forgiveness:[],guidance:[]};
 function switchPromisesTab(tab){
   const allBtn=document.getElementById('promises-tab-all'),mineBtn=document.getElementById('promises-tab-mine');
   const allC=document.getElementById('promises-tab-all-content'),mineC=document.getElementById('promises-tab-mine-content');
@@ -2833,7 +2781,9 @@ function loadPromises(topic='all',btn){
   if(topic==='all'){Object.entries(promisesDB).forEach(([t,arr])=>arr.forEach(p=>promises.push({...p,topic:t})))}
   else{promises=(promisesDB[topic]||[]).map(p=>({...p,topic}))}
   promises.sort(()=>Math.random()-0.5);
-  document.getElementById('promises-list').innerHTML=promises.map(p=>`<div class="promise-card"><div class="promise-topic">${p.topic}</div><div class="promise-text">"${p.text}"</div><div class="promise-ref">— ${p.ref}</div><div style="display:flex;gap:6px;margin-top:8px"><button class="verse-save-btn" onclick="savePromiseAsImage('${p.text.replace(/'/g,"\\'")}','${p.ref}')">📱 Wallpaper</button><button class="verse-save-btn" onclick="saveToMyPromises('${p.text.replace(/'/g,"\\'")}','${p.ref}','${p.topic}')">❤️ Save for Me</button></div></div>`).join('');
+  const pc=document.getElementById('promises-list');
+  if(!promises.length){pc.innerHTML='<div class="empty-state"><div class="empty-icon">✨</div><p>No promises yet in this topic.</p></div>';return}
+  pc.innerHTML=promises.map(p=>`<div class="promise-card"><div class="promise-topic">${p.topic}</div><div class="promise-text">"${p.text}"</div><div class="promise-ref">— ${p.ref}</div><div style="display:flex;gap:6px;margin-top:8px"><button class="verse-save-btn" onclick="savePromiseAsImage('${p.text.replace(/'/g,"\\'")}','${p.ref}')">📱 Wallpaper</button><button class="verse-save-btn" onclick="saveToMyPromises('${p.text.replace(/'/g,"\\'")}','${p.ref}','${p.topic}')">❤️ Save for Me</button></div></div>`).join('');
 }
 function savePromiseAsImage(text,ref){openWallpaperCreator(text,ref)}
 async function saveToMyPromises(text,ref,topic){
@@ -2875,9 +2825,10 @@ async function removeMyPromise(idx,dbId){
 // SERMONS
 async function loadSermons(){
   let data=null;try{const res=await Promise.race([db.from('sermons').select('*').order('created_at',{ascending:false}),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);data=res?.data||null}catch(e){data=null}
-  const fallback=[{title:'The Power of Prayer',speaker:'Pastor John Smith',link:'https://youtube.com/watch?v=example',platform:'youtube',note:'This sermon changed my prayer life completely.',created_at:new Date().toISOString()},{title:'Walking in Faith',speaker:'Pastor Sarah Williams',link:'https://youtube.com/watch?v=example2',platform:'youtube',note:'Such a powerful message about trusting God in hard times.',created_at:new Date().toISOString()}];
-  const list=data&&data.length>0?data:fallback;
-  document.getElementById('sermon-list').innerHTML=list.filter(s=>!blockedUsers.includes(s.user_id)).map(s=>`<div class="sermon-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><h3 style="font-size:15px;color:var(--brown);margin-bottom:3px">${s.title}</h3><div style="font-size:12px;color:var(--text-muted)">by ${s.speaker}</div></div><span class="sermon-platform ${s.platform||'youtube'}">${s.platform||'YouTube'}</span></div>${s.note?`<p style="font-size:13px;line-height:1.5;margin-bottom:10px">${s.note}</p>`:''}<a href="${s.link}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="text-decoration:none">▶ Watch / Listen</a><div style="font-size:10px;color:var(--text-muted);margin-top:8px">${new Date(s.created_at).toLocaleDateString()}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${s.id||''}','sermon','${s.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${s.user_id||''}')">⊘ Block User</button></div></div>`).join('');
+  const list=(data||[]).filter(s=>!blockedUsers.includes(s.user_id));
+  const c=document.getElementById('sermon-list');
+  if(!list.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">🎙️</div><p>No sermons shared yet. Be the first!</p></div>';return}
+  c.innerHTML=list.map(s=>`<div class="sermon-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><h3 style="font-size:15px;color:var(--brown);margin-bottom:3px">${s.title}</h3><div style="font-size:12px;color:var(--text-muted)">by ${s.speaker}</div></div><span class="sermon-platform ${s.platform||'youtube'}">${s.platform||'YouTube'}</span></div>${s.note?`<p style="font-size:13px;line-height:1.5;margin-bottom:10px">${s.note}</p>`:''}<a href="${s.link}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="text-decoration:none">▶ Watch / Listen</a><div style="font-size:10px;color:var(--text-muted);margin-top:8px">${new Date(s.created_at).toLocaleDateString()}</div><div class="content-actions"><button class="report-btn" onclick="openReport('${s.id||''}','sermon','${s.user_id||''}')">⚑ Report</button><button class="report-btn block-btn" onclick="blockUser('${s.user_id||''}')">⊘ Block User</button></div></div>`).join('');
 }
 async function addSermon(){
   if(!currentUser){openModal();return}
