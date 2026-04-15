@@ -1,10 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import './App.css';
-import DemoHub from './demos/DemoHub';
-import LendingDemo from './demos/LendingDemo';
-import RealtorDemo from './demos/RealtorDemo';
-import RestaurantDemo from './demos/RestaurantDemo';
 
 // Simple brown cross SVG as a React component
 const BrownCross = () => (
@@ -183,22 +179,22 @@ function Home() {
 }
 
 function LifeGroups() {
-  const lifeGroups = [
-    { name: 'Downtown Fellowship', time: 'Wednesdays 7pm', location: '123 Main St' },
-    { name: 'Young Adults Group', time: 'Fridays 6pm', location: '456 Oak Ave' },
-    { name: 'Morning Prayer Circle', time: 'Sundays 8am', location: '789 Pine Rd' },
-  ];
+  const lifeGroups = [];
   return (
     <section>
       <h2>Life Groups Near You</h2>
-      <ul>
-        {lifeGroups.map((group, idx) => (
-          <li key={idx} style={{ marginBottom: 8, background: '#fffbe6', padding: 12, borderRadius: 8, boxShadow: '0 1px 4px #e2cfa1' }}>
-            <strong>{group.name}</strong> <br/>
-            <span>{group.time} | {group.location}</span>
-          </li>
-        ))}
-      </ul>
+      {lifeGroups.length === 0 ? (
+        <p style={{ color: '#8B5C2A', fontStyle: 'italic' }}>No life groups have been added yet.</p>
+      ) : (
+        <ul>
+          {lifeGroups.map((group, idx) => (
+            <li key={idx} style={{ marginBottom: 8, background: '#fffbe6', padding: 12, borderRadius: 8, boxShadow: '0 1px 4px #e2cfa1' }}>
+              <strong>{group.name}</strong> <br/>
+              <span>{group.time} | {group.location}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -221,21 +217,7 @@ function BibleDiscussions() {
     "Jude", "Revelation"
   ];
 
-  const allDiscussions = {
-    "Matthew": [
-      { user: 'Sarah', comment: 'The Great Commission inspires me to share my faith.' },
-      { user: 'John', comment: 'I love how Jesus promises to be with us always.' },
-      { user: 'Maria', comment: 'Verse 19 reminds us to make disciples of all nations.' },
-    ],
-    "John": [
-      { user: 'Alex', comment: 'John 3:16 is the heart of the gospel.' },
-      { user: 'Beth', comment: 'Nicodemus\'s story is so relatable.' },
-    ],
-    "Romans": [
-      { user: 'Chris', comment: 'Nothing can separate us from God\'s love!' },
-      { user: 'Dana', comment: 'Romans 8:28 gives me hope every day.' },
-    ],
-  };
+  const allDiscussions = {};
 
   const [selectedBook, setSelectedBook] = React.useState("Matthew");
 
@@ -912,7 +894,6 @@ function App() {
               <Link to="/testimonies" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>Testimonies</Link>
               <Link to="/prayer-wall" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>Prayer</Link>
               <Link to="/music-forum" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>Music</Link>
-              <Link to="/demos" style={{ color: '#fbbf24', textDecoration: 'none', fontWeight: 700 }}>Demos</Link>
             </nav>
           </div>
         </header>
@@ -932,10 +913,6 @@ function App() {
             <Route path="/testimonies" element={<Testimonies />} />
             <Route path="/prayer-wall" element={<PrayerWall />} />
             <Route path="/music-forum" element={<MusicForum />} />
-            <Route path="/demos" element={<DemoHub />} />
-            <Route path="/demos/lending" element={<LendingDemo />} />
-            <Route path="/demos/realtor" element={<RealtorDemo />} />
-            <Route path="/demos/restaurant" element={<RestaurantDemo />} />
           </Routes>
         </main>
 
