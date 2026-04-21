@@ -1183,7 +1183,7 @@ if(typeof supabase!=='undefined'&&supabase.createClient){
 let currentUser=null,currentProfile=null,allChurches=[];
 
 // BIBLE STATE
-let bBook='Genesis',bChapter=1,bVersion='web',bHL=null,bHighlights={},bNotes={},offlineKJV=null,publishTarget=null,selVerse=null;
+let bBook='Genesis',bChapter=1,bVersion='web',bHL=null,bHighlights={},bNotes={},offlineKJV=null,publishTarget=null,selVerse=null,selVerses=new Set(),selTexts={};
 let bLang='English';
 const BIBLE_LANGS={
   'English':[{v:'kjv',n:'KJV'},{v:'web',n:'WEB'},{v:'asv',n:'ASV'},{v:'bbe',n:'BBE'}],
@@ -1872,6 +1872,7 @@ function getBookNumber(bookName){
 }
 function getVersionLabel(){return bVersion.startsWith('gb:')?bVersion.split(':')[1].toUpperCase():bVersion.toUpperCase()}
 async function loadBibleChapter(){
+  selVerse=null;selVerses.clear();selTexts={};
   updateBibleLabel();
   const area=document.getElementById('verse-area');
   const vLabel=getVersionLabel();
@@ -1969,35 +1970,69 @@ function renderBibleVerses(verses,area,notice){
 }
 function selectVerse(vn,text,row){
   document.querySelectorAll('.verse-panel').forEach(p=>p.remove());
-  document.querySelectorAll('.verse-row.selected').forEach(r=>r.classList.remove('selected'));
-  if(selVerse===vn){selVerse=null;return}
-  selVerse=vn;row.classList.add('selected');
-  if(bHL)applyHL(vn,row,bHL);
+  if(bHL){applyHL(vn,row,bHL);return}
+  if(selVerses.has(vn)){
+    selVerses.delete(vn);delete selTexts[vn];
+    row.classList.remove('selected');
+    if(selVerses.size===0){selVerse=null;return}
+  }else{
+    selVerses.add(vn);selTexts[vn]=text;
+    row.classList.add('selected');
+  }
+  selVerse=vn;
+  const sorted=[...selVerses].sort((a,b)=>a-b);
+  const refLabel=sorted.length===1?`${bBook} ${bChapter}:${sorted[0]}`:
+    `${bBook} ${bChapter}:${sorted.join(',')}`;
+  const combinedText=sorted.map(v=>selTexts[v]).join(' ');
+  const lastRow=document.getElementById('vr-'+sorted[sorted.length-1]);
   const hlKey=`${bBook}-${bChapter}`;
-  const existNote=(bNotes[hlKey]||{})[vn]||'';
+  const existNote=sorted.length===1?(bNotes[hlKey]||{})[sorted[0]]||'':'';
+  const safeText=combinedText.replace(/'/g,"\\'").replace(/"/g,'\\"');
   const panel=document.createElement('div');panel.className='verse-panel';
-  panel.innerHTML=`<div style="font-size:11px;font-weight:500;color:var(--gold-dark);margin-bottom:7px">${bBook} ${bChapter}:${vn}</div>
-    <div style="font-family:'Cormorant Garamond',serif;font-size:14px;line-height:1.5;color:var(--text-muted);margin-bottom:9px;font-style:italic">"${text}"</div>
+  panel.innerHTML=`<div style="font-size:11px;font-weight:500;color:var(--gold-dark);margin-bottom:7px">${refLabel}${sorted.length>1?' <span style="background:var(--gold-light);padding:1px 6px;border-radius:4px;font-size:10px">'+sorted.length+' verses</span>':''}</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:14px;line-height:1.5;color:var(--text-muted);margin-bottom:9px;font-style:italic">"${combinedText}"</div>
     <div class="panel-actions">
-      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),'yellow')">🟡</button>
-      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),'green')">🟢</button>
-      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),'blue')">🔵</button>
-      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),'pink')">🩷</button>
-      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),'orange')">🟠</button>
-      <button class="panel-btn" onclick="applyHL(${vn},document.getElementById('vr-${vn}'),null)">✕ Clear</button>
+      <button class="panel-btn" onclick="applyHLMulti('yellow')">🟡</button>
+      <button class="panel-btn" onclick="applyHLMulti('green')">🟢</button>
+      <button class="panel-btn" onclick="applyHLMulti('blue')">🔵</button>
+      <button class="panel-btn" onclick="applyHLMulti('pink')">🩷</button>
+      <button class="panel-btn" onclick="applyHLMulti('orange')">🟠</button>
+      <button class="panel-btn" onclick="applyHLMulti(null)">✕ Clear</button>
     </div>
     ${existNote?`<div class="saved-note-preview">${existNote}</div>`:''}
-    <textarea class="note-input" id="ni-${vn}" placeholder="Write a note about this verse...">${existNote}</textarea>
+    ${sorted.length===1?`<textarea class="note-input" id="ni-${sorted[0]}" placeholder="Write a note about this verse...">${existNote}</textarea>`:''}
     <div class="panel-footer">
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-primary btn-sm" onclick="saveVerseNote(${vn})">Save Note</button>
-        <button class="btn btn-ghost btn-sm" onclick="openPublish(${vn},'${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">📤 Publish</button>
-        <button class="btn btn-ghost btn-sm" onclick="saveToMyPromises('${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}','${bBook} ${bChapter}:${vn}','saved')">❤️ Save</button>
-        <button class="btn btn-ghost btn-sm" onclick="openWallpaperCreator('${text.replace(/'/g,"\\'").replace(/"/g,'\\"')}','${bBook} ${bChapter}:${vn}')">📱 Wallpaper</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${sorted.length===1?`<button class="btn btn-primary btn-sm" onclick="saveVerseNote(${sorted[0]})">Save Note</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="shareVerses()">🔗 Share</button>
+        <button class="btn btn-ghost btn-sm" onclick="openPublish(${sorted[0]},'${safeText}')">📤 Publish</button>
+        <button class="btn btn-ghost btn-sm" onclick="saveToMyPromises('${safeText}','${refLabel}','saved')">❤️ Save</button>
+        <button class="btn btn-ghost btn-sm" onclick="openWallpaperCreator('${safeText}','${refLabel}')">📱 Wallpaper</button>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="this.closest('.verse-panel').remove();selVerse=null;document.querySelectorAll('.verse-row.selected').forEach(r=>r.classList.remove('selected'))">✕</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearVerseSelection()">✕</button>
     </div>`;
-  row.insertAdjacentElement('afterend',panel);
+  if(lastRow)lastRow.insertAdjacentElement('afterend',panel);
+}
+function clearVerseSelection(){
+  document.querySelectorAll('.verse-panel').forEach(p=>p.remove());
+  document.querySelectorAll('.verse-row.selected').forEach(r=>r.classList.remove('selected'));
+  selVerse=null;selVerses.clear();selTexts={};
+}
+function applyHLMulti(color){
+  [...selVerses].forEach(vn=>{const row=document.getElementById('vr-'+vn);if(row)applyHL(vn,row,color)});
+}
+function shareVerses(){
+  const sorted=[...selVerses].sort((a,b)=>a-b);
+  const refLabel=sorted.length===1?`${bBook} ${bChapter}:${sorted[0]}`:`${bBook} ${bChapter}:${sorted.join(',')}`;
+  const combinedText=sorted.map(v=>selTexts[v]).join(' ');
+  const shareText=`"${combinedText}"\n— ${refLabel}`;
+  if(navigator.share){
+    navigator.share({title:refLabel,text:shareText}).catch(()=>{});
+  }else{
+    navigator.clipboard.writeText(shareText).then(()=>{alert('Verse copied to clipboard!')}).catch(()=>{
+      const ta=document.createElement('textarea');ta.value=shareText;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();alert('Verse copied to clipboard!');
+    });
+  }
 }
 function setHL(color){
   bHL=color;
