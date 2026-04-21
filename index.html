@@ -1986,7 +1986,8 @@ function selectVerse(vn,text,row){
   const combinedText=sorted.map(v=>selTexts[v]).join(' ');
   const lastRow=document.getElementById('vr-'+sorted[sorted.length-1]);
   const hlKey=`${bBook}-${bChapter}`;
-  const existNote=sorted.length===1?(bNotes[hlKey]||{})[sorted[0]]||'':'';
+  const notesObj=bNotes[hlKey]||{};
+  const existNote=sorted.map(v=>notesObj[v]).find(n=>n)||'';
   const safeText=combinedText.replace(/'/g,"\\'").replace(/"/g,'\\"');
   const panel=document.createElement('div');panel.className='verse-panel';
   panel.innerHTML=`<div style="font-size:11px;font-weight:500;color:var(--gold-dark);margin-bottom:7px">${refLabel}${sorted.length>1?' <span style="background:var(--gold-light);padding:1px 6px;border-radius:4px;font-size:10px">'+sorted.length+' verses</span>':''}</div>
@@ -2000,10 +2001,10 @@ function selectVerse(vn,text,row){
       <button class="panel-btn" onclick="applyHLMulti(null)">✕ Clear</button>
     </div>
     ${existNote?`<div class="saved-note-preview">${existNote}</div>`:''}
-    ${sorted.length===1?`<textarea class="note-input" id="ni-${sorted[0]}" placeholder="Write a note about this verse...">${existNote}</textarea>`:''}
+    <textarea class="note-input" id="ni-multi" placeholder="Write a note about ${sorted.length>1?'these verses':'this verse'}...">${existNote}</textarea>
     <div class="panel-footer">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${sorted.length===1?`<button class="btn btn-primary btn-sm" onclick="saveVerseNote(${sorted[0]})">Save Note</button>`:''}
+        <button class="btn btn-primary btn-sm" onclick="saveMultiNote()">Save Note</button>
         <button class="btn btn-ghost btn-sm" onclick="shareVerses()">🔗 Share</button>
         <button class="btn btn-ghost btn-sm" onclick="openPublish(${sorted[0]},'${safeText}')">📤 Publish</button>
         <button class="btn btn-ghost btn-sm" onclick="saveToMyPromises('${safeText}','${refLabel}','saved')">❤️ Save</button>
@@ -2054,6 +2055,23 @@ function saveVerseNote(vn){
   const hlKey=`${bBook}-${bChapter}`;
   if(!bNotes[hlKey])bNotes[hlKey]={};
   if(text)bNotes[hlKey][vn]=text;else delete bNotes[hlKey][vn];
+  saveBibleLocal();
+  inp.style.borderColor='#4CAF50';setTimeout(()=>{inp.style.borderColor=''},1500);
+}
+function saveMultiNote(){
+  const inp=document.getElementById('ni-multi');if(!inp)return;
+  const text=inp.value.trim();
+  const hlKey=`${bBook}-${bChapter}`;
+  if(!bNotes[hlKey])bNotes[hlKey]={};
+  [...selVerses].forEach(vn=>{
+    if(text)bNotes[hlKey][vn]=text;else delete bNotes[hlKey][vn];
+    const row=document.getElementById('vr-'+vn);
+    if(row){
+      const dot=row.querySelector('.v-note-dot');
+      if(text&&!dot){row.querySelector('.v-text').insertAdjacentHTML('beforeend','<span class="v-note-dot"></span>')}
+      if(!text&&dot)dot.remove();
+    }
+  });
   saveBibleLocal();
   inp.style.borderColor='#4CAF50';setTimeout(()=>{inp.style.borderColor=''},1500);
 }
