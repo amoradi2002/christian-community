@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  macOS LaunchDaemon for the AI Trading Bot.
+
+  Installs as a system service that:
+    - Starts automatically on boot
+    - Restarts automatically if the bot crashes
+    - Runs 24/7 (market hours filtering is handled by the bot itself)
+
+  INSTALL:
+    1. Edit WorkingDirectory and ProgramArguments paths below to match your setup
+    2. Copy to LaunchAgents:
+         cp com.tradingbot.plist ~/Library/LaunchAgents/
+    3. Load:
+         launchctl load ~/Library/LaunchAgents/com.tradingbot.plist
+    4. Verify running:
+         launchctl list | grep tradingbot
+
+  UNINSTALL:
+    launchctl unload ~/Library/LaunchAgents/com.tradingbot.plist
+    rm ~/Library/LaunchAgents/com.tradingbot.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.tradingbot</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <!-- UPDATE THIS PATH to your venv python -->
+        <string>/Users/YOUR_USERNAME/christian-community/ai-trading-bot/venv/bin/python</string>
+        <string>-m</string>
+        <string>bot.main</string>
+    </array>
+
+    <!-- UPDATE THIS PATH to your bot directory -->
+    <key>WorkingDirectory</key>
+    <string>/Users/YOUR_USERNAME/christian-community/ai-trading-bot</string>
+
+    <!-- Start on boot -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Auto-restart if bot crashes (wait 10 seconds between restarts) -->
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <!-- Environment variables (loaded from .env by python-dotenv, but set PATH) -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <!-- Log stdout and stderr -->
+    <key>StandardOutPath</key>
+    <string>/tmp/tradingbot.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/tradingbot.stderr.log</string>
+</dict>
+</plist>

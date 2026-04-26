@@ -276,39 +276,95 @@ echo ""
 echo "Running tests..."
 python3 -m pytest tests/ -q --no-header 2>/dev/null || echo "  (Some tests may need API keys to pass)"
 
-# 11. Done!
+# 11. Auto-start on boot (macOS)
+echo ""
+read -p "Set up auto-start on boot? (y/n): " AUTO_START
+if [ "$AUTO_START" = "y" ]; then
+    BOT_DIR="$(pwd)"
+    PYTHON_PATH="$BOT_DIR/venv/bin/python"
+    PLIST_FILE="$HOME/Library/LaunchAgents/com.tradingbot.plist"
+
+    mkdir -p "$HOME/Library/LaunchAgents"
+
+    cat > "$PLIST_FILE" << PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.tradingbot</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${PYTHON_PATH}</string>
+        <string>-m</string>
+        <string>bot.main</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>${BOT_DIR}</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/tradingbot.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/tradingbot.stderr.log</string>
+</dict>
+</plist>
+PLISTEOF
+
+    launchctl load "$PLIST_FILE" 2>/dev/null || true
+    echo "✓ Auto-start configured"
+    echo "  Bot will start on boot and restart on crash"
+    echo "  Logs: /tmp/tradingbot.stdout.log"
+    echo "  Stop:  launchctl unload ~/Library/LaunchAgents/com.tradingbot.plist"
+    echo "  Start: launchctl load ~/Library/LaunchAgents/com.tradingbot.plist"
+fi
+
+# 12. Done!
 echo ""
 echo "========================================="
 echo "  Setup Complete!"
 echo "========================================="
 echo ""
+echo "  Market Hours: Scans only run 9:30 AM - 4:00 PM ET (weekdays)"
+echo "  Crash Recovery: Auto-restarts if bot dies (launchd)"
+echo "  Holiday Aware: No scanning on NYSE holidays"
+echo ""
 echo "  Brokers configured:"
 echo "    Alpaca     — Paper trading + real-time data"
 echo "    Robinhood  — Options trading"
-echo "    Fidelity   — Swing trades (CSV import)"
-echo "    IB/TWS     — Day trading"
+echo "    Fidelity   — Swing trades (alert-only, manual execute)"
+echo "    IB/TWS     — Day trading (needs TWS running)"
 echo "    TradingView — Webhook alerts"
 echo ""
-echo "  Start the bot:"
+echo "  START THE BOT:"
 echo "    source venv/bin/activate"
 echo "    python -m bot.main              # Full bot (scan + dashboard + Telegram)"
-echo "    python -m bot.main live          # Interactive CLI mode"
-echo "    python -m bot.main dashboard     # Web dashboard only"
 echo ""
-echo "  Quick commands:"
+echo "  COMMANDS:"
 echo "    python -m bot.main scan          # Run a scan now"
+echo "    python -m bot.main day           # Day trade scan"
+echo "    python -m bot.main swing         # Swing trade scan"
+echo "    python -m bot.main options       # Options scan"
 echo "    python -m bot.main premarket     # Pre-market scanner"
 echo "    python -m bot.main sentiment AAPL  # News sentiment"
 echo "    python -m bot.main backtest      # Backtest strategies"
+echo "    python -m bot.main regime        # Market regime check"
+echo "    python -m bot.main agent         # AI trading agent (chat)"
+echo "    python -m bot.main dashboard     # Web dashboard only"
+echo "    python -m bot.main crawl         # 24/7 knowledge crawler"
 echo ""
-echo "  Knowledge Crawler (24/7 learning):"
-echo "    python -m bot.main crawl         # Start continuous learning"
-echo "    python -m bot.main crawl once    # Run one crawl cycle"
-echo "    python -m bot.main crawl-status  # See what it's learned"
-echo "    python -m bot.main add-channel <url>  # Add YouTube channel"
-echo ""
-echo "  The bot auto-crawls when running in full mode (python -m bot.main)"
-echo "  It monitors 17+ YouTube trading channels, news RSS feeds, and Reddit."
+echo "  ALERTS GO TO:"
+echo "    Discord — Automatic trade calls (options, day, swing)"
+echo "    Telegram — Chat with AI agent, ask questions, get analysis"
 echo ""
 echo "  Or just text your Telegram bot — it handles everything."
 echo ""

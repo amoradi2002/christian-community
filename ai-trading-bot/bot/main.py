@@ -451,41 +451,56 @@ def run_options_scan():
     return analyzer.run_options_scan()
 
 
+def _safe_run(func, requires_market=True):
+    """Wrapper that checks market hours and catches exceptions."""
+    def wrapper():
+        try:
+            if requires_market:
+                from bot.utils.market_hours import is_market_open, is_premarket, market_status
+                if not is_market_open() and not is_premarket():
+                    return  # Skip silently outside market hours
+            func()
+        except Exception as e:
+            logger.error("Scheduled job %s failed: %s", func.__name__, e, exc_info=True)
+            print(f"[SCHEDULER ERROR] {func.__name__}: {e}")
+    wrapper.__name__ = func.__name__
+    return wrapper
+
+
 def run_scheduler():
     """Run periodic scans in a background thread.
 
     All trade calls (options, day, swing) go to Discord automatically.
     Telegram is for interactive chat with the AI agent.
+    Only scans during market hours (9:30 AM - 4 PM ET, weekdays, no holidays).
     """
     interval = CONFIG.get("bot", {}).get("scan_interval_minutes", 15)
 
-    # Full scan every interval (catches everything)
-    schedule.every(interval).minutes.do(run_scan)
+    # Market-hours-only scans
+    schedule.every(interval).minutes.do(_safe_run(run_scan))
+    schedule.every(30).minutes.do(_safe_run(run_options_scan))
+    schedule.every(5).minutes.do(_safe_run(run_day_scan))
+    schedule.every(2).hours.do(_safe_run(run_swing_scan))
 
-    # Options scan every 30 minutes during market hours
-    schedule.every(30).minutes.do(run_options_scan)
+    # Intelligence + sectors can run anytime (useful for after-hours prep)
+    schedule.every(60).minutes.do(_safe_run(run_intel, requires_market=False))
+    schedule.every(4).hours.do(_safe_run(run_sectors, requires_market=False))
 
-    # Day trade scan every 5 minutes (fast movers)
-    schedule.every(5).minutes.do(run_day_scan)
-
-    # Swing trade scan every 2 hours (slower setups)
-    schedule.every(2).hours.do(run_swing_scan)
-
-    # Run intelligence scan every hour
-    schedule.every(60).minutes.do(run_intel)
-
-    # Run sector analysis every 4 hours
-    schedule.every(4).hours.do(run_sectors)
-
+    from bot.utils.market_hours import market_status
     print(f"Scheduler started:")
+    print(f"  Market: {market_status()}")
     print(f"  Day trades:   every 5m  -> Discord (IB)")
     print(f"  Options:      every 30m -> Discord (Robinhood)")
     print(f"  Full scan:    every {interval}m  -> Discord")
     print(f"  Swing trades: every 2h  -> Discord (Fidelity)")
-    print(f"  Intel:        every 60m -> Discord")
-    print(f"  Sectors:      every 4h  -> Discord")
+    print(f"  Intel:        every 60m -> Discord (anytime)")
+    print(f"  Sectors:      every 4h  -> Discord (anytime)")
+    print(f"  Scans ONLY run during market hours (9:30 AM - 4 PM ET)")
     while True:
-        schedule.run_pending()
+        try:
+            schedule.run_pending()
+        except Exception as e:
+            logger.error("Scheduler loop error: %s", e, exc_info=True)
         time.sleep(1)
 
 
