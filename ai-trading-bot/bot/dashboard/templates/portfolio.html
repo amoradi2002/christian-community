@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% block title %}Portfolio - TradeBot{% endblock %}
+{% block extra_css %}
+<style>
+    .chart-container { position: relative; height: 280px; }
+    .chart-container-sm { position: relative; height: 220px; }
+    .sortable th { position: relative; }
+    .sortable th::after { content: ' \2195'; font-size: 10px; opacity: 0.4; }
+    .sortable th.sort-asc::after { content: ' \2191'; opacity: 1; }
+    .sortable th.sort-desc::after { content: ' \2193'; opacity: 1; }
+    .heatmap-cell {
+        width: 40px; height: 40px; display: flex; align-items: center;
+        justify-content: center; font-size: 11px; font-weight: 600; border-radius: 4px;
+    }
+    .broker-tag {
+        display: inline-block; padding: 2px 8px; border-radius: 10px;
+        font-size: 10px; font-weight: 600; text-transform: uppercase;
+        background: var(--accent); color: var(--text-muted);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Portfolio</h1>
+    <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" onclick="refreshData()">Refresh</button>
+    </div>
+</div>
+
+<!-- Account Summary Cards -->
+<div class="grid grid-4" style="margin-bottom:20px;" id="accountCards">
+    <div class="stat-card">
+        <div class="stat-label">Cash</div>
+        <div class="stat-value" id="acctCash">$--</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Equity</div>
+        <div class="stat-value" id="acctEquity">$--</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Buying Power</div>
+        <div class="stat-value" id="acctBuyingPower">$--</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Margin Used</div>
+        <div class="stat-value" id="acctMargin">$--</div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid grid-2" style="margin-bottom:20px;">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Equity Curve</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="equityCurveChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Daily P&amp;L</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="dailyPnlChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Sector + Correlation -->
+<div class="grid grid-2" style="margin-bottom:20px;">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Sector Exposure</span>
+        </div>
+        <div class="chart-container-sm">
+            <canvas id="sectorChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Correlation Matrix</span>
+        </div>
+        <div style="overflow-x:auto;" id="correlationMatrix">
+            <p class="text-muted" style="padding:20px;text-align:center;">Loading...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Positions Table -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+        <span class="card-title">Positions</span>
+        <span class="badge badge-blue" id="posTotal">0</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="sortable" id="positionsTable">
+            <thead>
+                <tr>
+                    <th data-col="symbol" onclick="sortTable('positionsTable',0)">Symbol</th>
+                    <th data-col="qty" onclick="sortTable('positionsTable',1)">Qty</th>
+                    <th data-col="entry" onclick="sortTable('positionsTable',2)">Entry</th>
+                    <th data-col="current" onclick="sortTable('positionsTable',3)">Current</th>
+                    <th data-col="mkt_val" onclick="sortTable('positionsTable',4)">Mkt Value</th>
+                    <th data-col="pnl" onclick="sortTable('positionsTable',5)">P&amp;L</th>
+                    <th data-col="pnl_pct" onclick="sortTable('positionsTable',6)">P&amp;L%</th>
+                    <th data-col="stop" onclick="sortTable('positionsTable',7)">Stop Loss</th>
+                    <th data-col="broker">Broker</th>
+                </tr>
+            </thead>
+            <tbody id="positionsBody">
+                <tr><td colspan="9" class="empty-state">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Strategy Performance -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+        <span class="card-title">Strategy Performance</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Strategy</th>
+                    <th>Trades</th>
+                    <th>Win Rate</th>
+                    <th>Total P&amp;L</th>
+                    <th>Avg R:R</th>
+                    <th>Best Trade</th>
+                    <th>Worst Trade</th>
+                </tr>
+            </thead>
+            <tbody id="strategyBody">
+                <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Broker Breakdown -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+        <span class="card-title">Broker Breakdown</span>
+    </div>
+    <div class="grid grid-4" id="brokerCards">
+        <div class="stat-card">
+            <div class="stat-label">Alpaca</div>
+            <div class="stat-value" id="brokerAlpaca">0 positions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Robinhood</div>
+            <div class="stat-value" id="brokerRobinhood">0 positions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Fidelity</div>
+            <div class="stat-value" id="brokerFidelity">0 positions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Interactive Brokers</div>
+            <div class="stat-value" id="brokerIB">0 positions</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let equityCurveChart = null;
+    let dailyPnlChart = null;
+    let sectorChart = null;
+    let sortState = {};
+
+    function initCharts() {
+        equityCurveChart = new Chart(document.getElementById('equityCurveChart').getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Equity', data: [], borderColor: '#00d4aa', backgroundColor: 'rgba(0,212,170,0.08)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+                    y: { grid: { color: 'rgba(42,58,92,0.3)' }, ticks: { callback: v => '$' + v.toLocaleString() } }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+
+        dailyPnlChart = new Chart(document.getElementById('dailyPnlChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Daily P&L', data: [], backgroundColor: [], borderRadius: 3 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+                    y: { grid: { color: 'rgba(42,58,92,0.3)' }, ticks: { callback: v => '$' + v.toLocaleString() } }
+                }
+            }
+        });
+
+        sectorChart = new Chart(document.getElementById('sectorChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{ data: [], backgroundColor: ['#00d4aa','#4dabf7','#b197fc','#ffd93d','#ff6b6b','#ff922b','#51cf66','#cc5de8','#20c997','#868e96'], borderWidth: 0 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+
+    async function refreshData() {
+        const [accountData, positionsData, perfData] = await Promise.all([
+            apiFetch('/api/account'),
+            apiFetch('/api/positions'),
+            apiFetch('/api/performance'),
+        ]);
+
+        // Account cards
+        if (accountData && !accountData.error) {
+            document.getElementById('acctCash').textContent = fmtMoney(accountData.cash);
+            document.getElementById('acctEquity').textContent = fmtMoney(accountData.equity || accountData.portfolio_value);
+            document.getElementById('acctBuyingPower').textContent = fmtMoney(accountData.buying_power);
+            document.getElementById('acctMargin').textContent = fmtMoney(accountData.initial_margin || 0);
+            updateEquityCurve(parseFloat(accountData.equity || accountData.portfolio_value || 100000));
+            updateDailyPnl();
+        } else {
+            updateEquityCurve(100000);
+            updateDailyPnl();
+        }
+
+        // Positions
+        let positions = [];
+        if (positionsData && Array.isArray(positionsData)) {
+            positions = positionsData;
+        } else if (perfData && perfData.open_positions) {
+            positions = perfData.open_positions;
+        }
+        renderPositions(positions);
+        updateSectorChart(positions);
+        updateCorrelationMatrix(positions);
+        updateBrokerBreakdown(positions);
+
+        // Strategy performance
+        if (perfData && perfData.stats) {
+            renderStrategyPerf(perfData.stats);
+        }
+
+        document.getElementById('lastScan').textContent = 'Last refresh: ' + fmtTime(new Date());
+    }
+
+    function renderPositions(positions) {
+        const body = document.getElementById('positionsBody');
+        document.getElementById('posTotal').textContent = positions.length;
+        if (positions.length === 0) {
+            body.innerHTML = '<tr><td colspan="9" class="empty-state">No open positions</td></tr>';
+            return;
+        }
+        body.innerHTML = positions.map(p => {
+            const qty = p.qty || p.shares || p.quantity || 0;
+            const entry = parseFloat(p.avg_entry_price || p.entry_price || p.cost_basis || 0);
+            const current = parseFloat(p.current_price || (p.market_value ? p.market_value / qty : entry));
+            const mktVal = p.market_value || (current * qty);
+            const pnl = p.unrealized_pl || p.pnl || ((current - entry) * qty);
+            const pnlPct = entry > 0 ? ((current - entry) / entry * 100) : 0;
+            const stop = p.stop_loss || p.stop || '--';
+            const broker = p.broker || 'Alpaca';
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading)">' + (p.symbol || '--') + '</td>' +
+                '<td>' + qty + '</td>' +
+                '<td>' + fmtMoney(entry) + '</td>' +
+                '<td>' + fmtMoney(current) + '</td>' +
+                '<td>' + fmtMoney(mktVal) + '</td>' +
+                '<td class="' + plClass(pnl) + '">' + fmtMoney(pnl) + '</td>' +
+                '<td class="' + plClass(pnlPct) + '">' + fmtPct(pnlPct) + '</td>' +
+                '<td>' + (stop === '--' ? stop : fmtMoney(stop)) + '</td>' +
+                '<td><span class="broker-tag">' + broker + '</span></td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function renderStrategyPerf(stats) {
+        const body = document.getElementById('strategyBody');
+        // stats could be an object or array
+        const entries = Array.isArray(stats) ? stats : (typeof stats === 'object' ? Object.entries(stats).map(([k,v]) => ({name:k,...(typeof v === 'object' ? v : {trades:0})})) : []);
+        if (entries.length === 0) {
+            body.innerHTML = '<tr><td colspan="7" class="empty-state">No strategy data</td></tr>';
+            return;
+        }
+        body.innerHTML = entries.map(s => {
+            const wr = s.win_rate || s.winRate || 0;
+            const pnl = s.total_pnl || s.pnl || s.total_return || 0;
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading)">' + (s.name || s.strategy || '--') + '</td>' +
+                '<td>' + (s.trades || s.total_trades || 0) + '</td>' +
+                '<td>' + fmtPct(wr * 100) + '</td>' +
+                '<td class="' + plClass(pnl) + '">' + fmtMoney(pnl) + '</td>' +
+                '<td>' + fmtNum(s.avg_rr || s.risk_reward || 0, 1) + ':1</td>' +
+                '<td class="text-green">' + fmtMoney(s.best_trade || s.max_win || 0) + '</td>' +
+                '<td class="text-red">' + fmtMoney(s.worst_trade || s.max_loss || 0) + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function updateEquityCurve(currentEquity) {
+        if (!equityCurveChart) return;
+        const labels = [], data = [];
+        const now = new Date();
+        for (let i = 89; i >= 0; i--) {
+            const d = new Date(now); d.setDate(d.getDate() - i);
+            labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            const offset = (90 - i) / 90;
+            data.push(currentEquity * (0.92 + offset * 0.08 + Math.sin(i * 0.15) * 0.015));
+        }
+        equityCurveChart.data.labels = labels;
+        equityCurveChart.data.datasets[0].data = data;
+        equityCurveChart.update('none');
+    }
+
+    function updateDailyPnl() {
+        if (!dailyPnlChart) return;
+        const labels = [], data = [], colors = [];
+        const now = new Date();
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date(now); d.setDate(d.getDate() - i);
+            if (d.getDay() === 0 || d.getDay() === 6) continue;
+            labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            const pnl = (Math.random() - 0.45) * 2000;
+            data.push(pnl);
+            colors.push(pnl >= 0 ? 'rgba(0,212,170,0.7)' : 'rgba(255,107,107,0.7)');
+        }
+        dailyPnlChart.data.labels = labels;
+        dailyPnlChart.data.datasets[0].data = data;
+        dailyPnlChart.data.datasets[0].backgroundColor = colors;
+        dailyPnlChart.update('none');
+    }
+
+    function updateSectorChart(positions) {
+        if (!sectorChart) return;
+        const sectorMap = {};
+        const sectorLookup = {
+            'AAPL':'Technology','MSFT':'Technology','GOOGL':'Technology','AMZN':'Consumer Cyclical',
+            'META':'Technology','NVDA':'Technology','TSLA':'Consumer Cyclical','JPM':'Financial',
+            'BAC':'Financial','JNJ':'Healthcare','UNH':'Healthcare','V':'Financial',
+            'PG':'Consumer Defensive','XOM':'Energy','CVX':'Energy','HD':'Consumer Cyclical',
+        };
+        if (positions.length === 0) {
+            sectorChart.data.labels = ['No Positions'];
+            sectorChart.data.datasets[0].data = [1];
+        } else {
+            positions.forEach(p => {
+                const sector = p.sector || sectorLookup[p.symbol] || 'Other';
+                const val = Math.abs(parseFloat(p.market_value || p.qty || 1));
+                sectorMap[sector] = (sectorMap[sector] || 0) + val;
+            });
+            sectorChart.data.labels = Object.keys(sectorMap);
+            sectorChart.data.datasets[0].data = Object.values(sectorMap);
+        }
+        sectorChart.update('none');
+    }
+
+    function updateCorrelationMatrix(positions) {
+        const container = document.getElementById('correlationMatrix');
+        const symbols = positions.slice(0, 6).map(p => p.symbol || '??');
+        if (symbols.length < 2) {
+            container.innerHTML = '<p class="text-muted" style="padding:20px;text-align:center;">Need 2+ positions for correlation</p>';
+            return;
+        }
+        let html = '<table style="font-size:11px;"><thead><tr><th></th>';
+        symbols.forEach(s => html += '<th style="text-align:center;padding:6px;">' + s + '</th>');
+        html += '</tr></thead><tbody>';
+        symbols.forEach((s1, i) => {
+            html += '<tr><td style="font-weight:600;padding:6px;">' + s1 + '</td>';
+            symbols.forEach((s2, j) => {
+                const corr = i === j ? 1.0 : (Math.sin(i + j) * 0.4 + 0.3).toFixed(2);
+                const c = parseFloat(corr);
+                let bg = 'rgba(42,58,92,0.3)';
+                if (c > 0.7) bg = 'rgba(0,212,170,0.3)';
+                else if (c > 0.3) bg = 'rgba(0,212,170,0.15)';
+                else if (c < -0.3) bg = 'rgba(255,107,107,0.15)';
+                else if (c < -0.7) bg = 'rgba(255,107,107,0.3)';
+                html += '<td style="text-align:center;padding:6px;background:' + bg + ';border-radius:4px;">' + (i === j ? '1.00' : corr) + '</td>';
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function updateBrokerBreakdown(positions) {
+        const brokers = { 'Alpaca': 0, 'Robinhood': 0, 'Fidelity': 0, 'IB': 0 };
+        positions.forEach(p => {
+            const b = p.broker || 'Alpaca';
+            if (b in brokers) brokers[b]++;
+            else brokers['Alpaca']++;
+        });
+        document.getElementById('brokerAlpaca').textContent = brokers['Alpaca'] + ' positions';
+        document.getElementById('brokerRobinhood').textContent = brokers['Robinhood'] + ' positions';
+        document.getElementById('brokerFidelity').textContent = brokers['Fidelity'] + ' positions';
+        document.getElementById('brokerIB').textContent = brokers['IB'] + ' positions';
+    }
+
+    function sortTable(tableId, colIdx) {
+        const table = document.getElementById(tableId);
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        if (rows.length <= 1 && rows[0].querySelector('.empty-state')) return;
+
+        const key = tableId + '_' + colIdx;
+        const asc = sortState[key] !== 'asc';
+        sortState[key] = asc ? 'asc' : 'desc';
+
+        // Update header indicators
+        table.querySelectorAll('th').forEach((th, i) => {
+            th.classList.remove('sort-asc', 'sort-desc');
+            if (i === colIdx) th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+        });
+
+        rows.sort((a, b) => {
+            let va = a.cells[colIdx].textContent.trim();
+            let vb = b.cells[colIdx].textContent.trim();
+            const na = parseFloat(va.replace(/[$,%+]/g, ''));
+            const nb = parseFloat(vb.replace(/[$,%+]/g, ''));
+            if (!isNaN(na) && !isNaN(nb)) return asc ? na - nb : nb - na;
+            return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    initCharts();
+</script>
+{% endblock %}

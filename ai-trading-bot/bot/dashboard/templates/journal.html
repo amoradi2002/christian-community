@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+{% block title %}Trade Journal - TradeBot{% endblock %}
+{% block extra_css %}
+<style>
+    .journal-filters {
+        display: flex; gap: 12px; flex-wrap: wrap; align-items: end;
+        padding: 12px 16px; background: var(--bg); border-radius: var(--radius);
+        border: 1px solid var(--border); margin-bottom: 16px;
+    }
+    .journal-filters .form-group { margin-bottom: 0; }
+
+    .trade-form {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 12px; align-items: end;
+    }
+    .trade-form textarea { min-height: 60px; resize: vertical; }
+
+    .calendar-heatmap {
+        display: grid; grid-template-columns: repeat(7, 1fr);
+        gap: 3px; max-width: 600px;
+    }
+    .cal-day {
+        aspect-ratio: 1; border-radius: 3px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10px; font-weight: 600; cursor: default;
+        position: relative;
+    }
+    .cal-day:hover::after {
+        content: attr(data-tooltip);
+        position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+        background: var(--bg-secondary); border: 1px solid var(--border);
+        padding: 4px 8px; border-radius: 4px; font-size: 10px;
+        white-space: nowrap; z-index: 10; color: var(--text);
+    }
+    .cal-header { font-size: 10px; color: var(--text-muted); text-align: center; font-weight: 600; }
+
+    .perf-strategy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    .perf-strategy-card {
+        background: var(--bg); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 14px;
+    }
+    .perf-strategy-name { font-size: 14px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px; }
+    .perf-stat-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+    .perf-stat-label { color: var(--text-muted); }
+    .perf-stat-value { font-weight: 600; color: var(--text-heading); }
+
+    .trade-analysis-card {
+        display: none; background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 16px; margin-top: 12px;
+    }
+    .trade-analysis-card.show { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Trade Journal</h1>
+    <button class="btn btn-success" onclick="toggleAddForm()">+ Log Trade</button>
+</div>
+
+<!-- Add Trade Form (collapsible) -->
+<div class="card trade-analysis-card" id="addTradeForm">
+    <div class="card-header">
+        <span class="card-title">Log New Trade</span>
+        <button class="btn btn-sm btn-ghost" onclick="toggleAddForm()">Close</button>
+    </div>
+    <form id="tradeForm" onsubmit="saveTrade(event)">
+        <div class="trade-form">
+            <div class="form-group">
+                <label>Symbol</label>
+                <input type="text" id="tfSymbol" placeholder="AAPL" required>
+            </div>
+            <div class="form-group">
+                <label>Side</label>
+                <select id="tfSide">
+                    <option value="LONG">LONG</option>
+                    <option value="SHORT">SHORT</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Strategy</label>
+                <select id="tfStrategy">
+                    <option value="day_trade">Day Trade</option>
+                    <option value="swing_trade">Swing Trade</option>
+                    <option value="scalp">Scalp</option>
+                    <option value="options">Options</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Entry Date</label>
+                <input type="date" id="tfEntryDate" required>
+            </div>
+            <div class="form-group">
+                <label>Entry Price</label>
+                <input type="number" id="tfEntry" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label>Exit Date</label>
+                <input type="date" id="tfExitDate">
+            </div>
+            <div class="form-group">
+                <label>Exit Price</label>
+                <input type="number" id="tfExit" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Shares/Contracts</label>
+                <input type="number" id="tfQty" value="100">
+            </div>
+        </div>
+        <div class="form-row" style="margin-top:12px;">
+            <div class="form-group" style="flex:1;">
+                <label>What went right</label>
+                <textarea id="tfRight" placeholder="Good entry timing, followed the plan..."></textarea>
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>What went wrong</label>
+                <textarea id="tfWrong" placeholder="Moved stop too early, FOMO entry..."></textarea>
+            </div>
+        </div>
+        <div style="margin-top:12px;">
+            <button type="submit" class="btn btn-success">Save Trade</button>
+        </div>
+    </form>
+</div>
+
+<!-- Filters -->
+<div class="journal-filters">
+    <div class="form-group">
+        <label>From</label>
+        <input type="date" id="jfFrom" onchange="applyFilters()">
+    </div>
+    <div class="form-group">
+        <label>To</label>
+        <input type="date" id="jfTo" onchange="applyFilters()">
+    </div>
+    <div class="form-group">
+        <label>Symbol</label>
+        <input type="text" id="jfSymbol" placeholder="All" oninput="applyFilters()" style="width:80px;">
+    </div>
+    <div class="form-group">
+        <label>Strategy</label>
+        <select id="jfStrategy" onchange="applyFilters()">
+            <option value="all">All</option>
+            <option value="day_trade">Day Trade</option>
+            <option value="swing_trade">Swing Trade</option>
+            <option value="scalp">Scalp</option>
+            <option value="options">Options</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Result</label>
+        <select id="jfResult" onchange="applyFilters()">
+            <option value="all">All</option>
+            <option value="win">Wins</option>
+            <option value="loss">Losses</option>
+        </select>
+    </div>
+    <div style="margin-left:auto;font-size:12px;color:var(--text-muted);" id="journalCount">0 trades</div>
+</div>
+
+<!-- Trade Log Table -->
+<div class="card" style="margin-bottom:20px;">
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th>Strategy</th>
+                    <th>Entry</th>
+                    <th>Exit</th>
+                    <th>Qty</th>
+                    <th>P&amp;L</th>
+                    <th>P&amp;L%</th>
+                    <th>Notes</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="journalBody">
+                <tr><td colspan="11" class="empty-state">No trades logged yet</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="grid grid-2" style="margin-bottom:20px;">
+    <!-- Strategy Performance -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Performance by Strategy</span>
+        </div>
+        <div class="perf-strategy-grid" id="strategyPerf">
+            <div class="empty-state">Log trades to see strategy performance</div>
+        </div>
+    </div>
+
+    <!-- Calendar Heatmap -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Daily P&amp;L Calendar</span>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-sm btn-ghost" onclick="changeCalMonth(-1)">&larr;</button>
+                <span id="calMonthLabel" style="font-size:13px;color:var(--text-heading);font-weight:600;"></span>
+                <button class="btn btn-sm btn-ghost" onclick="changeCalMonth(1)">&rarr;</button>
+            </div>
+        </div>
+        <div class="calendar-heatmap" id="calendarHeatmap"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:center;">
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);">
+                <span style="width:12px;height:12px;border-radius:2px;background:rgba(255,107,107,0.5);display:inline-block;"></span> Loss
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);">
+                <span style="width:12px;height:12px;border-radius:2px;background:rgba(42,58,92,0.3);display:inline-block;"></span> No Trade
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);">
+                <span style="width:12px;height:12px;border-radius:2px;background:rgba(0,212,170,0.5);display:inline-block;"></span> Profit
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let trades = JSON.parse(localStorage.getItem('journal_trades') || '[]');
+    let calMonth = new Date().getMonth();
+    let calYear = new Date().getFullYear();
+
+    function toggleAddForm() {
+        const form = document.getElementById('addTradeForm');
+        form.classList.toggle('show');
+        if (form.classList.contains('show')) {
+            document.getElementById('tfEntryDate').value = new Date().toISOString().split('T')[0];
+            form.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    function saveTrade(e) {
+        e.preventDefault();
+        const entry = parseFloat(document.getElementById('tfEntry').value);
+        const exit = parseFloat(document.getElementById('tfExit').value) || null;
+        const qty = parseInt(document.getElementById('tfQty').value) || 1;
+        const side = document.getElementById('tfSide').value;
+        const pnl = exit ? (side === 'LONG' ? (exit - entry) * qty : (entry - exit) * qty) : 0;
+        const pnlPct = exit && entry > 0 ? (side === 'LONG' ? ((exit - entry) / entry * 100) : ((entry - exit) / entry * 100)) : 0;
+
+        const trade = {
+            id: Date.now(),
+            symbol: document.getElementById('tfSymbol').value.toUpperCase(),
+            side: side,
+            strategy: document.getElementById('tfStrategy').value,
+            entry_date: document.getElementById('tfEntryDate').value,
+            exit_date: document.getElementById('tfExitDate').value || null,
+            entry_price: entry,
+            exit_price: exit,
+            qty: qty,
+            pnl: pnl,
+            pnl_pct: pnlPct,
+            went_right: document.getElementById('tfRight').value,
+            went_wrong: document.getElementById('tfWrong').value,
+        };
+
+        trades.push(trade);
+        localStorage.setItem('journal_trades', JSON.stringify(trades));
+        document.getElementById('tradeForm').reset();
+        document.getElementById('addTradeForm').classList.remove('show');
+        renderAll();
+    }
+
+    function deleteTrade(id) {
+        if (!confirm('Delete this trade entry?')) return;
+        trades = trades.filter(t => t.id !== id);
+        localStorage.setItem('journal_trades', JSON.stringify(trades));
+        renderAll();
+    }
+
+    function applyFilters() {
+        renderAll();
+    }
+
+    function getFilteredTrades() {
+        let filtered = [...trades];
+        const from = document.getElementById('jfFrom').value;
+        const to = document.getElementById('jfTo').value;
+        const symbol = document.getElementById('jfSymbol').value.toUpperCase();
+        const strategy = document.getElementById('jfStrategy').value;
+        const result = document.getElementById('jfResult').value;
+
+        if (from) filtered = filtered.filter(t => t.entry_date >= from);
+        if (to) filtered = filtered.filter(t => t.entry_date <= to);
+        if (symbol) filtered = filtered.filter(t => t.symbol.includes(symbol));
+        if (strategy !== 'all') filtered = filtered.filter(t => t.strategy === strategy);
+        if (result === 'win') filtered = filtered.filter(t => t.pnl > 0);
+        if (result === 'loss') filtered = filtered.filter(t => t.pnl <= 0);
+
+        return filtered.sort((a, b) => b.entry_date.localeCompare(a.entry_date));
+    }
+
+    function renderAll() {
+        const filtered = getFilteredTrades();
+        document.getElementById('journalCount').textContent = filtered.length + ' trade' + (filtered.length !== 1 ? 's' : '');
+        renderTradeTable(filtered);
+        renderStrategyPerf(filtered);
+        renderCalendar();
+    }
+
+    function renderTradeTable(filtered) {
+        const body = document.getElementById('journalBody');
+        if (filtered.length === 0) {
+            body.innerHTML = '<tr><td colspan="11" class="empty-state">No trades match your filters</td></tr>';
+            return;
+        }
+        body.innerHTML = filtered.map(t => {
+            const hasNotes = t.went_right || t.went_wrong;
+            const stratLabel = (t.strategy || '').replace('_', ' ');
+            return '<tr>' +
+                '<td>' + (t.entry_date || '--') + '</td>' +
+                '<td style="font-weight:600;color:var(--text-heading);">' + t.symbol + '</td>' +
+                '<td><span class="badge ' + (t.side === 'LONG' ? 'badge-green' : 'badge-red') + '">' + t.side + '</span></td>' +
+                '<td style="font-size:12px;">' + stratLabel + '</td>' +
+                '<td>' + fmtMoney(t.entry_price) + '</td>' +
+                '<td>' + (t.exit_price ? fmtMoney(t.exit_price) : '<span class="text-muted">Open</span>') + '</td>' +
+                '<td>' + t.qty + '</td>' +
+                '<td class="' + plClass(t.pnl) + '" style="font-weight:600;">' + fmtMoney(t.pnl) + '</td>' +
+                '<td class="' + plClass(t.pnl_pct) + '">' + fmtPct(t.pnl_pct) + '</td>' +
+                '<td>' + (hasNotes ? '<span class="badge badge-blue" title="' + (t.went_right || '').replace(/"/g, '&quot;') + '">Notes</span>' : '') + '</td>' +
+                '<td><button class="btn btn-sm btn-ghost" onclick="deleteTrade(' + t.id + ')" style="color:var(--red);font-size:14px;" title="Delete">&times;</button></td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function renderStrategyPerf(filtered) {
+        const container = document.getElementById('strategyPerf');
+        const stratMap = {};
+        filtered.forEach(t => {
+            const s = t.strategy || 'other';
+            if (!stratMap[s]) stratMap[s] = { trades: 0, wins: 0, totalPnl: 0, pnls: [] };
+            stratMap[s].trades++;
+            if (t.pnl > 0) stratMap[s].wins++;
+            stratMap[s].totalPnl += t.pnl;
+            stratMap[s].pnls.push(t.pnl);
+        });
+
+        const entries = Object.entries(stratMap);
+        if (entries.length === 0) {
+            container.innerHTML = '<div class="empty-state">Log trades to see strategy performance</div>';
+            return;
+        }
+        container.innerHTML = entries.map(([name, data]) => {
+            const winRate = data.trades > 0 ? (data.wins / data.trades * 100).toFixed(1) : 0;
+            const avgPnl = data.trades > 0 ? data.totalPnl / data.trades : 0;
+            const maxWin = data.pnls.length > 0 ? Math.max(...data.pnls) : 0;
+            const maxLoss = data.pnls.length > 0 ? Math.min(...data.pnls) : 0;
+            return '<div class="perf-strategy-card">' +
+                '<div class="perf-strategy-name">' + name.replace('_', ' ') + '</div>' +
+                '<div class="perf-stat-row"><span class="perf-stat-label">Trades</span><span class="perf-stat-value">' + data.trades + '</span></div>' +
+                '<div class="perf-stat-row"><span class="perf-stat-label">Win Rate</span><span class="perf-stat-value">' + winRate + '%</span></div>' +
+                '<div class="perf-stat-row"><span class="perf-stat-label">Total P&L</span><span class="perf-stat-value ' + plClass(data.totalPnl) + '">' + fmtMoney(data.totalPnl) + '</span></div>' +
+                '<div class="perf-stat-row"><span class="perf-stat-label">Avg P&L</span><span class="perf-stat-value ' + plClass(avgPnl) + '">' + fmtMoney(avgPnl) + '</span></div>' +
+                '<div class="perf-stat-row"><span class="perf-stat-label">Best</span><span class="perf-stat-value text-green">' + fmtMoney(maxWin) + '</span></div>' +
+                '<div class="perf-stat-row"><span class="perf-stat-label">Worst</span><span class="perf-stat-value text-red">' + fmtMoney(maxLoss) + '</span></div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function changeCalMonth(delta) {
+        calMonth += delta;
+        if (calMonth > 11) { calMonth = 0; calYear++; }
+        if (calMonth < 0) { calMonth = 11; calYear--; }
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        const container = document.getElementById('calendarHeatmap');
+        const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        document.getElementById('calMonthLabel').textContent = monthNames[calMonth] + ' ' + calYear;
+
+        // Build daily PnL map
+        const dailyPnl = {};
+        trades.forEach(t => {
+            const d = t.entry_date;
+            if (!d) return;
+            dailyPnl[d] = (dailyPnl[d] || 0) + (t.pnl || 0);
+        });
+
+        const firstDay = new Date(calYear, calMonth, 1).getDay();
+        const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+        const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+        let html = dayLabels.map(d => '<div class="cal-header">' + d + '</div>').join('');
+
+        // Empty cells before first day
+        for (let i = 0; i < firstDay; i++) {
+            html += '<div class="cal-day" style="background:transparent;"></div>';
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = calYear + '-' + String(calMonth + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            const pnl = dailyPnl[dateStr];
+            let bg = 'rgba(42,58,92,0.15)';
+            let color = 'var(--text-muted)';
+
+            if (pnl !== undefined) {
+                if (pnl > 0) {
+                    const intensity = Math.min(1, Math.abs(pnl) / 1000);
+                    bg = 'rgba(0,212,170,' + (0.2 + intensity * 0.5) + ')';
+                    color = 'var(--green)';
+                } else if (pnl < 0) {
+                    const intensity = Math.min(1, Math.abs(pnl) / 1000);
+                    bg = 'rgba(255,107,107,' + (0.2 + intensity * 0.5) + ')';
+                    color = 'var(--red)';
+                } else {
+                    bg = 'rgba(42,58,92,0.3)';
+                }
+            }
+
+            const tooltip = pnl !== undefined ? dateStr + ': ' + fmtMoney(pnl) : dateStr;
+            html += '<div class="cal-day" style="background:' + bg + ';color:' + color + ';" data-tooltip="' + tooltip + '">' + day + '</div>';
+        }
+
+        container.innerHTML = html;
+    }
+
+    function refreshData() {
+        renderAll();
+    }
+
+    // Initialize
+    renderAll();
+</script>
+{% endblock %}

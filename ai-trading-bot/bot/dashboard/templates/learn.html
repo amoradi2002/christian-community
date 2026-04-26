@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Learn from YouTube - AI Trading Bot{% endblock %}
+{% block content %}
+<h1>Learn from YouTube Traders</h1>
+
+<div class="card">
+    <h2>Add a Trading Video</h2>
+    <p class="muted">
+        Paste a YouTube URL of a trader explaining their strategy. The bot will extract the transcript,
+        identify trading rules (RSI levels, MACD signals, moving average setups, etc.), and auto-create
+        mentorship strategies you can review and enable.
+    </p>
+    <form method="post">
+        <div class="form-row">
+            <label>YouTube Video URL</label>
+            <input type="text" name="video_url" required
+                   placeholder="https://www.youtube.com/watch?v=...">
+        </div>
+        <button type="submit" class="btn">Extract Strategies</button>
+    </form>
+</div>
+
+{% if result and result.status == 'success' %}
+<div class="card">
+    <h2>Extracted from: {{ result.title }}</h2>
+    <p class="muted">Channel: {{ result.channel }} | Transcript: {{ result.transcript_length }} chars</p>
+
+    {% if result.strategies %}
+    {% for strat in result.strategies %}
+    <div class="strategy-preview">
+        <h3>{{ strat.name }} ({{ strat.signal }})</h3>
+        <p>{{ strat.description }}</p>
+        <table>
+            <tr><th>Indicator</th><th>Condition</th><th>Value / Reference</th></tr>
+            {% for c in strat.conditions %}
+            <tr>
+                <td>{{ c.indicator }}</td>
+                <td>{{ c.operator }}</td>
+                <td>{{ c.get('ref', c.get('value', '')) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endfor %}
+    <p>
+        <a href="/strategies" class="btn btn-secondary">Review & Enable in Strategies</a>
+    </p>
+    {% else %}
+    <p class="muted">No specific trading strategies could be extracted. The video may be too general or not contain specific indicator-based rules.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>Lesson History</h2>
+    {% if lessons %}
+    <table>
+        <tr><th>Video</th><th>Channel</th><th>Status</th><th>Strategies</th><th>Date</th></tr>
+        {% for l in lessons %}
+        <tr>
+            <td>
+                <a href="{{ l.video_url }}" target="_blank" style="color: #58a6ff;">
+                    {{ l.title or 'Unknown' }}
+                </a>
+            </td>
+            <td>{{ l.channel_name or '-' }}</td>
+            <td>
+                {% if l.status == 'done' %}
+                <span class="badge badge-buy">Done</span>
+                {% elif l.status == 'no_transcript' %}
+                <span class="badge badge-sell">No Captions</span>
+                {% else %}
+                <span class="badge badge-hold">{{ l.status }}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% set strats = [] %}
+                {% if l.extracted_strategies %}
+                    {% set strats = l.extracted_strategies | tojson | default('[]', true) %}
+                {% endif %}
+                {{ (l.extracted_strategies | default('[]', true) | length) if l.extracted_strategies else 0 }}
+            </td>
+            <td>{{ l.created_at }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="muted">No videos processed yet. Add a YouTube URL above to start learning!</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Tips for Best Results</h2>
+    <ul style="color: #8b949e; padding-left: 1.5rem;">
+        <li>Choose videos where traders explain specific setups (e.g., "I buy when RSI drops below 30")</li>
+        <li>Videos with clear indicator-based strategies work best (RSI, MACD, Moving Averages, Bollinger Bands)</li>
+        <li>The video must have captions/subtitles (most YouTube videos have auto-generated ones)</li>
+        <li>Extracted strategies are saved as <strong>disabled</strong> — review them in the Strategies page and enable the ones you like</li>
+        <li>The more videos you add, the more strategies the AI can learn from and combine</li>
+    </ul>
+</div>
+{% endblock %}

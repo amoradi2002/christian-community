@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Sector Rotation{% endblock %}
+{% block content %}
+<h1>Sector Rotation</h1>
+<p>Trade with the hot sector = swimming downstream. Focus swing trade scanning in top sectors.</p>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Market Regime</h2>
+    <div id="regime" style="font-size: 1.5em;">Loading...</div>
+    <p id="recommendation" style="margin-top: 10px;"></p>
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Sector Performance vs SPY</h2>
+    <canvas id="sector-chart" height="100"></canvas>
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>All Sectors</h2>
+    <table class="data-table">
+        <thead>
+            <tr><th>ETF</th><th>Sector</th><th>Change %</th><th>vs SPY</th><th>Trend</th></tr>
+        </thead>
+        <tbody id="sectors-body"></tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>Check Stock Alignment</h2>
+    <div style="display:flex;gap:10px;align-items:end;">
+        <label>Symbol: <input type="text" id="check-symbol" placeholder="AAPL"></label>
+        <label>Action:
+            <select id="check-action">
+                <option value="BUY">BUY</option>
+                <option value="SELL">SELL</option>
+            </select>
+        </label>
+        <button onclick="checkAlignment()" class="btn btn-primary">Check</button>
+    </div>
+    <div id="alignment-result" style="margin-top: 10px;"></div>
+</div>
+
+<script>
+async function loadSectors() {
+    const resp = await fetch('/api/sectors');
+    const data = await resp.json();
+
+    if (data.error) {
+        document.getElementById('regime').textContent = 'Error: ' + data.error;
+        return;
+    }
+
+    const regimeIcons = {'risk-on': '🚀', 'risk-off': '🛡️', 'mixed': '⚖️'};
+    document.getElementById('regime').innerHTML =
+        `${regimeIcons[data.market_regime] || ''} ${data.market_regime.toUpperCase()} (SPY: ${data.spy_change_pct > 0 ? '+' : ''}${data.spy_change_pct}%)`;
+    document.getElementById('recommendation').textContent = data.recommendation;
+
+    const tbody = document.getElementById('sectors-body');
+    tbody.innerHTML = data.sectors.map(s => {
+        const color = s.relative_to_spy > 0 ? '#00ff00' : s.relative_to_spy < 0 ? '#ff4444' : '#888';
+        const trendBadge = s.trend === 'leading' ? 'success' : s.trend === 'lagging' ? 'danger' : 'warning';
+        return `<tr>
+            <td><strong>${s.symbol}</strong></td><td>${s.name}</td>
+            <td style="color:${s.change_pct>=0?'#00ff00':'#ff4444'}">${s.change_pct > 0 ? '+' : ''}${s.change_pct}%</td>
+            <td style="color:${color}">${s.relative_to_spy > 0 ? '+' : ''}${s.relative_to_spy}%</td>
+            <td><span class="badge badge-${trendBadge}">${s.trend}</span></td>
+        </tr>`;
+    }).join('');
+
+    // Chart
+    const ctx = document.getElementById('sector-chart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.sectors.map(s => s.symbol),
+            datasets: [{
+                label: 'vs SPY (%)',
+                data: data.sectors.map(s => s.relative_to_spy),
+                backgroundColor: data.sectors.map(s => s.relative_to_spy >= 0 ? 'rgba(0,255,0,0.6)' : 'rgba(255,68,68,0.6)'),
+            }]
+        },
+        options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+    });
+}
+
+async function checkAlignment() {
+    const symbol = document.getElementById('check-symbol').value;
+    const action = document.getElementById('check-action').value;
+    const resp = await fetch(`/api/sectors/check/${symbol}?action=${action}`);
+    const data = await resp.json();
+    const color = data.aligned === true ? '#00ff00' : data.aligned === false ? '#ff4444' : '#888';
+    document.getElementById('alignment-result').innerHTML =
+        `<span style="color:${color}">${data.message}</span>`;
+}
+
+loadSectors();
+</script>
+{% endblock %}

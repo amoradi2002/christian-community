@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Alerts - AI Trading Bot{% endblock %}
+{% block content %}
+<h1>Alert History</h1>
+
+<form class="filter-bar" method="get">
+    <input type="text" name="symbol" placeholder="Filter by symbol..." value="{{ filter_symbol or '' }}">
+    <button type="submit" class="btn">Filter</button>
+    {% if filter_symbol %}
+    <a href="/alerts" class="btn btn-secondary">Clear</a>
+    {% endif %}
+</form>
+
+<table>
+    <tr><th>Time</th><th>Symbol</th><th>Signal</th><th>Price</th><th>Confidence</th><th>Strategy</th><th>Reasons</th></tr>
+    {% for a in alerts %}
+    <tr>
+        <td>{{ a.created_at }}</td>
+        <td><strong>{{ a.symbol }}</strong></td>
+        <td><span class="badge badge-{{ a.signal|lower }}">{{ a.signal }}</span></td>
+        <td>${{ "%.2f"|format(a.price_at or 0) }}</td>
+        <td>{{ "%.0f"|format((a.confidence or 0) * 100) }}%</td>
+        <td>{{ a.strategy_name or "AI" }}</td>
+        <td>{{ a.reasons or "" }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% if not alerts %}
+<p class="muted">No alerts found.</p>
+{% endif %}
+{% endblock %}

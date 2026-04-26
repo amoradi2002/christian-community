@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Trading Bot{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: #16213e;
+            --bg-card-hover: #1a2745;
+            --accent: #0f3460;
+            --accent-light: #1a4a8a;
+            --text: #e0e0e0;
+            --text-muted: #8892a4;
+            --text-heading: #ffffff;
+            --green: #00d4aa;
+            --green-dim: rgba(0,212,170,0.15);
+            --red: #ff6b6b;
+            --red-dim: rgba(255,107,107,0.15);
+            --yellow: #ffd93d;
+            --yellow-dim: rgba(255,217,61,0.15);
+            --blue: #4dabf7;
+            --blue-dim: rgba(77,171,247,0.15);
+            --purple: #b197fc;
+            --border: #2a3a5c;
+            --sidebar-width: 240px;
+            --sidebar-collapsed: 60px;
+            --topbar-height: 56px;
+            --radius: 8px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.3);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh; overflow-x: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-width); height: 100vh;
+            background: var(--bg-secondary); border-right: 1px solid var(--border);
+            z-index: 1000; display: flex; flex-direction: column;
+            transition: width 0.25s ease, transform 0.25s ease; overflow: hidden;
+        }
+        .sidebar.collapsed { width: var(--sidebar-collapsed); }
+        .sidebar-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px; border-bottom: 1px solid var(--border); min-height: var(--topbar-height);
+        }
+        .sidebar-logo { font-size: 18px; font-weight: 700; color: var(--green); white-space: nowrap; overflow: hidden; }
+        .sidebar.collapsed .sidebar-logo { display: none; }
+        .sidebar-toggle {
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 20px; padding: 4px 8px; border-radius: 4px; flex-shrink: 0;
+        }
+        .sidebar-toggle:hover { background: var(--accent); color: var(--text); }
+        .sidebar-nav { flex: 1; padding: 12px 8px; overflow-y: auto; }
+        .nav-link {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px; margin-bottom: 2px;
+            color: var(--text-muted); text-decoration: none;
+            border-radius: 6px; font-size: 14px; font-weight: 500;
+            white-space: nowrap; transition: all 0.15s;
+        }
+        .nav-link:hover { background: var(--accent); color: var(--text); }
+        .nav-link.active { background: var(--accent); color: var(--green); }
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+        .sidebar.collapsed .nav-label { display: none; }
+
+        /* Topbar */
+        .topbar {
+            position: fixed; top: 0; left: var(--sidebar-width); right: 0;
+            height: var(--topbar-height); background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; z-index: 999; transition: left 0.25s ease;
+        }
+        .sidebar.collapsed ~ .topbar { left: var(--sidebar-collapsed); }
+        .topbar-left { display: flex; align-items: center; gap: 20px; }
+        .topbar-right { display: flex; align-items: center; gap: 16px; }
+        .status-badge {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s infinite; }
+        .status-online .status-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .status-offline .status-dot { background: var(--red); box-shadow: 0 0 6px var(--red); }
+        .status-online { background: var(--green-dim); color: var(--green); }
+        .status-offline { background: var(--red-dim); color: var(--red); }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        .market-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .market-open { background: var(--green-dim); color: var(--green); }
+        .market-closed { background: var(--red-dim); color: var(--red); }
+        .market-premarket { background: var(--yellow-dim); color: var(--yellow); }
+        .last-scan { font-size: 12px; color: var(--text-muted); }
+        .auto-refresh-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+        .toggle-switch {
+            position: relative; width: 36px; height: 20px;
+            background: var(--accent); border-radius: 10px; cursor: pointer; transition: background 0.2s;
+        }
+        .toggle-switch.active { background: var(--green); }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform 0.2s;
+        }
+        .toggle-switch.active::after { transform: translateX(16px); }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width); margin-top: var(--topbar-height);
+            padding: 24px; min-height: calc(100vh - var(--topbar-height)); transition: margin-left 0.25s ease;
+        }
+        .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed); }
+
+        /* Flash messages */
+        .flash { padding: 10px 16px; border-radius: var(--radius); margin-bottom: 12px; font-size: 13px; }
+        .flash.success { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+        .flash.error { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+        .flash.info { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue); }
+
+        /* Common Components */
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
+        }
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+        }
+        .card-title {
+            font-size: 14px; font-weight: 600; color: var(--text-heading);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow);
+        }
+        .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 24px; font-weight: 700; color: var(--text-heading); }
+        .stat-change { font-size: 12px; margin-top: 4px; }
+
+        .grid { display: grid; gap: 16px; }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+        .grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            text-align: left; padding: 10px 12px; color: var(--text-muted); font-weight: 600;
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border); cursor: pointer; user-select: none;
+        }
+        thead th:hover { color: var(--text); }
+        tbody td { padding: 10px 12px; border-bottom: 1px solid rgba(42,58,92,0.5); }
+        tbody tr:hover { background: var(--bg-card-hover); }
+
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-green { background: var(--green-dim); color: var(--green); }
+        .badge-red { background: var(--red-dim); color: var(--red); }
+        .badge-yellow { background: var(--yellow-dim); color: var(--yellow); }
+        .badge-blue { background: var(--blue-dim); color: var(--blue); }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+            cursor: pointer; border: none; transition: all 0.15s; color: var(--text);
+        }
+        .btn-primary { background: var(--accent-light); color: var(--text); }
+        .btn-primary:hover { background: var(--blue); color: #fff; }
+        .btn-success { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+        .btn-success:hover { background: var(--green); color: #000; }
+        .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+        .btn-danger:hover { background: var(--red); color: #fff; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .btn-ghost { background: transparent; border: 1px solid var(--border); }
+        .btn-ghost:hover { border-color: var(--text-muted); }
+
+        .text-green { color: var(--green); }
+        .text-red { color: var(--red); }
+        .text-yellow { color: var(--yellow); }
+        .text-muted { color: var(--text-muted); }
+        .text-blue { color: var(--blue); }
+
+        .loading-spinner {
+            display: inline-block; width: 20px; height: 20px;
+            border: 2px solid var(--border); border-top-color: var(--green);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay {
+            display: flex; align-items: center; justify-content: center;
+            padding: 40px; color: var(--text-muted);
+        }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+
+        /* Mobile */
+        .mobile-toggle {
+            display: none; position: fixed; top: 12px; left: 12px; z-index: 1100;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            color: var(--text); font-size: 20px; padding: 6px 10px; border-radius: 6px; cursor: pointer;
+        }
+        .mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; }
+
+        @media (max-width: 1200px) {
+            .grid-5 { grid-template-columns: repeat(3, 1fr); }
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-width); }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .topbar { left: 0; padding-left: 56px; }
+            .sidebar.collapsed ~ .topbar { left: 0; }
+            .main-content { margin-left: 0; padding: 16px; }
+            .sidebar.collapsed ~ .main-content { margin-left: 0; }
+            .mobile-toggle { display: block; }
+            .mobile-overlay.show { display: block; }
+            .grid-2, .grid-3, .grid-4, .grid-5 { grid-template-columns: 1fr; }
+            .topbar-right .last-scan { display: none; }
+        }
+        @media (max-width: 480px) {
+            .topbar-right .auto-refresh-toggle { display: none; }
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-light); }
+
+        .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+        .tab {
+            padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: 500;
+            color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.15s;
+            background: none; border-top: none; border-left: none; border-right: none;
+        }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+        input, select, textarea {
+            background: var(--bg); border: 1px solid var(--border);
+            color: var(--text); padding: 8px 12px; border-radius: 6px;
+            font-size: 13px; font-family: inherit;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none; border-color: var(--accent-light);
+            box-shadow: 0 0 0 2px rgba(15,52,96,0.4);
+        }
+
+        .confidence-bar { width: 100%; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+        .confidence-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .page-title { font-size: 22px; font-weight: 700; color: var(--text-heading); }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; }
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 150px; }
+
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <button class="mobile-toggle" onclick="toggleMobileSidebar()">&#9776;</button>
+    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileSidebar()"></div>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span class="sidebar-logo">TradeBot</span>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">&#9776;</button>
+        </div>
+        <div class="sidebar-nav">
+            <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+                <span class="nav-icon">&#9635;</span><span class="nav-label">Dashboard</span>
+            </a>
+            <a href="/scanner" class="nav-link {% if request.path == '/scanner' %}active{% endif %}">
+                <span class="nav-icon">&#9906;</span><span class="nav-label">Scanner</span>
+            </a>
+            <a href="/portfolio" class="nav-link {% if request.path == '/portfolio' %}active{% endif %}">
+                <span class="nav-icon">&#9733;</span><span class="nav-label">Portfolio</span>
+            </a>
+            <a href="/strategies" class="nav-link {% if request.path == '/strategies' %}active{% endif %}">
+                <span class="nav-icon">&#9881;</span><span class="nav-label">Strategies</span>
+            </a>
+            <a href="/intelligence" class="nav-link {% if request.path == '/intelligence' %}active{% endif %}">
+                <span class="nav-icon">&#9881;</span><span class="nav-label">Intelligence</span>
+            </a>
+            <a href="/premarket" class="nav-link {% if request.path == '/premarket' %}active{% endif %}">
+                <span class="nav-icon">&#9788;</span><span class="nav-label">Pre-Market</span>
+            </a>
+            <a href="/journal" class="nav-link {% if request.path == '/journal' %}active{% endif %}">
+                <span class="nav-icon">&#9998;</span><span class="nav-label">Journal</span>
+            </a>
+            <a href="/backtest" class="nav-link {% if request.path == '/backtest' %}active{% endif %}">
+                <span class="nav-icon">&#9655;</span><span class="nav-label">Backtest</span>
+            </a>
+            <a href="/profile" class="nav-link {% if request.path == '/profile' %}active{% endif %}">
+                <span class="nav-icon">&#9881;</span><span class="nav-label">Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="status-badge status-online" id="botStatus">
+                <span class="status-dot"></span>
+                <span id="botStatusText">Bot Online</span>
+            </div>
+            <span class="last-scan" id="lastScan">Last scan: --</span>
+        </div>
+        <div class="topbar-right">
+            <div class="market-badge market-closed" id="marketBadge">
+                <span id="marketStatusText">Market Closed</span>
+            </div>
+            <div class="auto-refresh-toggle">
+                <span>Auto-Refresh</span>
+                <div class="toggle-switch active" id="autoRefreshToggle" onclick="toggleAutoRefresh()"></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            localStorage.setItem('sidebar-collapsed', document.getElementById('sidebar').classList.contains('collapsed'));
+        }
+        function toggleMobileSidebar() {
+            document.getElementById('sidebar').classList.toggle('mobile-open');
+            document.getElementById('mobileOverlay').classList.toggle('show');
+        }
+        if (localStorage.getItem('sidebar-collapsed') === 'true') {
+            document.getElementById('sidebar').classList.add('collapsed');
+        }
+
+        let autoRefreshEnabled = true;
+        let autoRefreshInterval = null;
+        function toggleAutoRefresh() {
+            autoRefreshEnabled = !autoRefreshEnabled;
+            document.getElementById('autoRefreshToggle').classList.toggle('active', autoRefreshEnabled);
+            if (autoRefreshEnabled) startAutoRefresh();
+            else stopAutoRefresh();
+        }
+        function startAutoRefresh() {
+            stopAutoRefresh();
+            if (typeof refreshData === 'function') {
+                autoRefreshInterval = setInterval(refreshData, 30000);
+            }
+        }
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
+        }
+
+        async function apiFetch(url, options = {}) {
+            try {
+                const res = await fetch(url, options);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: res.statusText }));
+                    throw new Error(err.error || res.statusText);
+                }
+                return await res.json();
+            } catch (e) {
+                console.error('API error [' + url + ']:', e.message);
+                return null;
+            }
+        }
+        async function apiPost(url, body) {
+            return apiFetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+        }
+
+        function fmtMoney(v) {
+            if (v == null || isNaN(v)) return '$--';
+            const n = Number(v);
+            const sign = n < 0 ? '-' : '';
+            return sign + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        function fmtPct(v) {
+            if (v == null || isNaN(v)) return '--%';
+            return (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%';
+        }
+        function fmtNum(v, d) {
+            d = d !== undefined ? d : 2;
+            if (v == null || isNaN(v)) return '--';
+            return Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+        }
+        function fmtTime(ts) {
+            if (!ts) return '--';
+            return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+        function fmtDate(ts) {
+            if (!ts) return '--';
+            return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+        function fmtDateTime(ts) {
+            if (!ts) return '--';
+            return new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+        function plClass(v) { return v >= 0 ? 'text-green' : 'text-red'; }
+        function plBadge(v) { return v >= 0 ? 'badge-green' : 'badge-red'; }
+
+        function updateMarketStatus() {
+            const now = new Date();
+            const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+            const h = et.getHours(), m = et.getMinutes(), day = et.getDay();
+            const badge = document.getElementById('marketBadge');
+            const txt = document.getElementById('marketStatusText');
+            if (day === 0 || day === 6) {
+                badge.className = 'market-badge market-closed'; txt.textContent = 'Weekend';
+            } else if ((h === 9 && m >= 30) || (h > 9 && h < 16)) {
+                badge.className = 'market-badge market-open'; txt.textContent = 'Market Open';
+            } else if (h >= 4 && (h < 9 || (h === 9 && m < 30))) {
+                badge.className = 'market-badge market-premarket'; txt.textContent = 'Pre-Market';
+            } else if (h >= 16 && h < 20) {
+                badge.className = 'market-badge market-premarket'; txt.textContent = 'After Hours';
+            } else {
+                badge.className = 'market-badge market-closed'; txt.textContent = 'Market Closed';
+            }
+        }
+        updateMarketStatus();
+        setInterval(updateMarketStatus, 60000);
+
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.color = '#8892a4';
+            Chart.defaults.borderColor = 'rgba(42,58,92,0.5)';
+            Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+            Chart.defaults.font.size = 11;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof refreshData === 'function') {
+                refreshData();
+                startAutoRefresh();
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

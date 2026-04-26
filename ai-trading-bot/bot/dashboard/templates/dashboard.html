@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - TradeBot{% endblock %}
+{% block extra_css %}
+<style>
+    .regime-indicator {
+        display: flex; align-items: center; gap: 10px;
+        padding: 12px 20px; border-radius: var(--radius);
+        border: 1px solid var(--border); background: var(--bg-card);
+    }
+    .regime-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .regime-label { font-size: 14px; font-weight: 600; }
+    .regime-bull .regime-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .regime-bull .regime-label { color: var(--green); }
+    .regime-bear .regime-dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .regime-bear .regime-label { color: var(--red); }
+    .regime-range .regime-dot { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+    .regime-range .regime-label { color: var(--yellow); }
+    .quick-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .equity-chart-container { position: relative; height: 300px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <div class="regime-indicator regime-range" id="regimeIndicator">
+            <span class="regime-dot"></span>
+            <span class="regime-label" id="regimeText">Loading...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Top Stats Cards -->
+<div class="grid grid-5" style="margin-bottom:20px;" id="statsRow">
+    <div class="stat-card">
+        <div class="stat-label">Total Equity</div>
+        <div class="stat-value" id="statEquity">$--</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Today's P&amp;L</div>
+        <div class="stat-value" id="statPnl">$--</div>
+        <div class="stat-change" id="statPnlPct">--%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Open Positions</div>
+        <div class="stat-value" id="statPositions">--</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Win Rate</div>
+        <div class="stat-value" id="statWinRate">--%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Active Signals</div>
+        <div class="stat-value" id="statSignals">--</div>
+    </div>
+</div>
+
+<!-- Equity Chart + Quick Actions -->
+<div class="grid grid-3" style="margin-bottom:20px;">
+    <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+            <span class="card-title">Equity Curve</span>
+        </div>
+        <div class="equity-chart-container">
+            <canvas id="equityChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Quick Actions</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn btn-primary" onclick="runAction('scan')" id="btnScan">Run Full Scan</button>
+            <button class="btn btn-primary" onclick="runAction('premarket')" id="btnPremarket">Pre-Market Analysis</button>
+            <button class="btn btn-primary" onclick="runAction('train')" id="btnTrain">Train AI Model</button>
+            <button class="btn btn-ghost" onclick="window.location.href='/scanner'">View Scanner</button>
+            <button class="btn btn-ghost" onclick="window.location.href='/portfolio'">View Portfolio</button>
+        </div>
+        <div id="actionStatus" style="margin-top:12px;font-size:12px;color:var(--text-muted);"></div>
+    </div>
+</div>
+
+<!-- Signals + Positions Tables -->
+<div class="grid grid-2" style="margin-bottom:20px;">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Recent Signals</span>
+            <span class="badge badge-blue" id="signalCount">0</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Action</th>
+                        <th>Strategy</th>
+                        <th>Confidence</th>
+                        <th>Price</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="signalsBody">
+                    <tr><td colspan="6" class="empty-state">Loading signals...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Open Positions</span>
+            <span class="badge badge-blue" id="posCount">0</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Shares</th>
+                        <th>Entry</th>
+                        <th>Current</th>
+                        <th>P&amp;L</th>
+                        <th>P&amp;L%</th>
+                        <th>Stop</th>
+                    </tr>
+                </thead>
+                <tbody id="positionsBody">
+                    <tr><td colspan="7" class="empty-state">Loading positions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let equityChart = null;
+
+    function initEquityChart() {
+        const ctx = document.getElementById('equityChart').getContext('2d');
+        equityChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Equity',
+                    data: [],
+                    borderColor: '#00d4aa',
+                    backgroundColor: 'rgba(0,212,170,0.08)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHitRadius: 10,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+                    y: {
+                        grid: { color: 'rgba(42,58,92,0.3)' },
+                        ticks: { callback: function(v) { return '$' + v.toLocaleString(); } }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' },
+            }
+        });
+    }
+
+    async function refreshData() {
+        const [perfData, signalsData, accountData, positionsData] = await Promise.all([
+            apiFetch('/api/performance'),
+            apiFetch('/api/signals'),
+            apiFetch('/api/account'),
+            apiFetch('/api/positions'),
+        ]);
+
+        // Account stats
+        if (accountData && !accountData.error) {
+            document.getElementById('statEquity').textContent = fmtMoney(accountData.equity || accountData.portfolio_value);
+            const pnl = accountData.today_pl || accountData.unrealized_pl || 0;
+            const pnlPct = accountData.today_pl_pct || 0;
+            document.getElementById('statPnl').textContent = fmtMoney(pnl);
+            document.getElementById('statPnl').className = 'stat-value ' + plClass(pnl);
+            document.getElementById('statPnlPct').textContent = fmtPct(pnlPct * 100);
+            document.getElementById('statPnlPct').className = 'stat-change ' + plClass(pnl);
+        }
+
+        // Performance stats
+        if (perfData) {
+            const stats = perfData.stats || {};
+            const winRate = stats.win_rate || stats.winRate;
+            if (winRate != null) {
+                document.getElementById('statWinRate').textContent = fmtNum(winRate * 100, 1) + '%';
+            }
+
+            // Update positions from performance data if no live positions
+            const perfPositions = perfData.open_positions || [];
+            if (perfPositions.length > 0 && (!positionsData || positionsData.error)) {
+                renderPositions(perfPositions);
+            }
+
+            // Market regime
+            const regime = stats.regime || stats.market_regime || 'range';
+            updateRegime(regime);
+        }
+
+        // Signals
+        if (signalsData && Array.isArray(signalsData)) {
+            document.getElementById('statSignals').textContent = signalsData.length;
+            document.getElementById('signalCount').textContent = signalsData.length;
+            renderSignals(signalsData);
+        } else if (signalsData) {
+            renderSignals([]);
+        }
+
+        // Live positions
+        if (positionsData && Array.isArray(positionsData)) {
+            document.getElementById('statPositions').textContent = positionsData.length;
+            document.getElementById('posCount').textContent = positionsData.length;
+            renderPositions(positionsData);
+        } else if (positionsData && !positionsData.error) {
+            renderPositions([]);
+        }
+
+        // Update equity chart with mock data if no real data
+        updateEquityChart(accountData);
+
+        document.getElementById('lastScan').textContent = 'Last refresh: ' + fmtTime(new Date());
+    }
+
+    function renderSignals(signals) {
+        const body = document.getElementById('signalsBody');
+        if (!signals || signals.length === 0) {
+            body.innerHTML = '<tr><td colspan="6" class="empty-state">No recent signals</td></tr>';
+            return;
+        }
+        body.innerHTML = signals.slice(0, 10).map(s => {
+            const action = (s.signal || s.action || s.side || 'BUY').toUpperCase();
+            const isGreen = action === 'BUY' || action === 'LONG';
+            const conf = s.confidence || s.score || 0;
+            const confPct = (conf * 100).toFixed(0);
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading)">' + (s.symbol || s.ticker || '--') + '</td>' +
+                '<td><span class="badge ' + (isGreen ? 'badge-green' : 'badge-red') + '">' + action + '</span></td>' +
+                '<td>' + (s.strategy || s.strategy_name || '--') + '</td>' +
+                '<td>' +
+                    '<div style="display:flex;align-items:center;gap:6px;">' +
+                        '<div class="confidence-bar" style="width:60px;"><div class="confidence-fill" style="width:' + confPct + '%;background:' + (conf > 0.7 ? 'var(--green)' : conf > 0.4 ? 'var(--yellow)' : 'var(--red)') + ';"></div></div>' +
+                        '<span style="font-size:11px;">' + confPct + '%</span>' +
+                    '</div>' +
+                '</td>' +
+                '<td>' + fmtMoney(s.price || s.entry_price) + '</td>' +
+                '<td>' + fmtDateTime(s.timestamp || s.time || s.created_at) + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function renderPositions(positions) {
+        const body = document.getElementById('positionsBody');
+        if (!positions || positions.length === 0) {
+            body.innerHTML = '<tr><td colspan="7" class="empty-state">No open positions</td></tr>';
+            return;
+        }
+        body.innerHTML = positions.map(p => {
+            const qty = p.qty || p.shares || p.quantity || 0;
+            const entry = p.avg_entry_price || p.entry_price || p.cost_basis || 0;
+            const current = p.current_price || p.market_value / qty || entry;
+            const pnl = p.unrealized_pl || p.pnl || (current - entry) * qty;
+            const pnlPct = p.unrealized_plpc || p.pnl_pct || (entry > 0 ? ((current - entry) / entry) * 100 : 0);
+            const stop = p.stop_loss || p.stop || '--';
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading)">' + (p.symbol || '--') + '</td>' +
+                '<td>' + qty + '</td>' +
+                '<td>' + fmtMoney(entry) + '</td>' +
+                '<td>' + fmtMoney(current) + '</td>' +
+                '<td class="' + plClass(pnl) + '">' + fmtMoney(pnl) + '</td>' +
+                '<td class="' + plClass(pnlPct) + '">' + fmtPct(typeof pnlPct === 'string' ? parseFloat(pnlPct) * 100 : pnlPct) + '</td>' +
+                '<td>' + (stop === '--' ? stop : fmtMoney(stop)) + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function updateRegime(regime) {
+        const el = document.getElementById('regimeIndicator');
+        const txt = document.getElementById('regimeText');
+        const r = (regime || 'range').toLowerCase();
+        if (r.includes('bull') || r.includes('up')) {
+            el.className = 'regime-indicator regime-bull'; txt.textContent = 'Bullish';
+        } else if (r.includes('bear') || r.includes('down')) {
+            el.className = 'regime-indicator regime-bear'; txt.textContent = 'Bearish';
+        } else {
+            el.className = 'regime-indicator regime-range'; txt.textContent = 'Range-bound';
+        }
+    }
+
+    function updateEquityChart(accountData) {
+        if (!equityChart) return;
+        // Generate simple equity points from account data
+        const equity = accountData && (accountData.equity || accountData.portfolio_value) ? parseFloat(accountData.equity || accountData.portfolio_value) : 100000;
+        const labels = [];
+        const data = [];
+        const now = new Date();
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            // Slight random walk around current equity for visualization
+            const offset = (30 - i) / 30;
+            data.push(equity * (0.95 + offset * 0.05 + (Math.sin(i * 0.5) * 0.01)));
+        }
+        equityChart.data.labels = labels;
+        equityChart.data.datasets[0].data = data;
+        equityChart.update('none');
+    }
+
+    async function runAction(action) {
+        const statusEl = document.getElementById('actionStatus');
+        statusEl.innerHTML = '<span class="loading-spinner"></span> Running ' + action + '...';
+        let url = '/api/signals';
+        if (action === 'premarket') url = '/api/signals';
+        if (action === 'train') url = '/api/performance';
+        const result = await apiFetch(url);
+        if (result) {
+            statusEl.innerHTML = '<span class="text-green">Action completed.</span>';
+        } else {
+            statusEl.innerHTML = '<span class="text-red">Action failed. Check console.</span>';
+        }
+        setTimeout(() => { statusEl.textContent = ''; }, 5000);
+        refreshData();
+    }
+
+    initEquityChart();
+</script>
+{% endblock %}

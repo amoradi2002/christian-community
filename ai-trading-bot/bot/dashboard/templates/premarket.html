@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% block title %}Pre-Market - TradeBot{% endblock %}
+{% block extra_css %}
+<style>
+    .premarket-banner {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 20px; border-radius: var(--radius);
+        background: var(--bg-card); border: 1px solid var(--border);
+        margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+    }
+    .premarket-status {
+        display: flex; align-items: center; gap: 12px;
+    }
+    .premarket-dot {
+        width: 14px; height: 14px; border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+    .premarket-dot.active { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+    .premarket-dot.closed { background: var(--red); box-shadow: 0 0 6px var(--red); }
+    .premarket-dot.open { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .premarket-label { font-size: 18px; font-weight: 700; color: var(--text-heading); }
+    .premarket-countdown { font-size: 14px; color: var(--text-muted); }
+    .premarket-hours {
+        display: flex; gap: 4px; font-size: 12px;
+    }
+    .hour-block {
+        padding: 3px 8px; border-radius: 4px;
+        background: var(--accent); color: var(--text-muted); font-weight: 500;
+    }
+    .hour-block.active { background: var(--yellow-dim); color: var(--yellow); }
+
+    .pillar-checklist { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+    .pillar-item {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 12px; color: var(--text-muted);
+    }
+    .pillar-check {
+        width: 16px; height: 16px; border-radius: 3px;
+        border: 1px solid var(--border); display: flex;
+        align-items: center; justify-content: center; font-size: 10px;
+        cursor: pointer; transition: all 0.15s;
+    }
+    .pillar-check.checked { background: var(--green); border-color: var(--green); color: #000; }
+
+    .futures-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .futures-card {
+        background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 12px 16px;
+    }
+    .futures-name { font-size: 12px; color: var(--text-muted); }
+    .futures-value { font-size: 20px; font-weight: 700; color: var(--text-heading); }
+    .futures-change { font-size: 13px; }
+
+    .gap-positive { color: var(--green); }
+    .gap-negative { color: var(--red); }
+
+    .econ-event {
+        padding: 8px 0; border-bottom: 1px solid rgba(42,58,92,0.3);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .econ-event:last-child { border-bottom: none; }
+    .econ-time { font-size: 12px; color: var(--text-muted); width: 60px; flex-shrink: 0; }
+    .econ-name { font-size: 13px; color: var(--text-heading); flex: 1; }
+    .econ-impact { font-size: 11px; font-weight: 600; }
+    .impact-high { color: var(--red); }
+    .impact-medium { color: var(--yellow); }
+    .impact-low { color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Status Banner -->
+<div class="premarket-banner">
+    <div class="premarket-status">
+        <span class="premarket-dot closed" id="pmDot"></span>
+        <span class="premarket-label" id="pmLabel">Market Status</span>
+        <span class="premarket-countdown" id="pmCountdown"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div class="premarket-hours">
+            <span class="hour-block" id="pmHour1">4:00 AM</span>
+            <span class="hour-block" id="pmHour2">Pre-Market</span>
+            <span class="hour-block" id="pmHour3">9:30 AM</span>
+            <span class="hour-block" id="pmHour4">Open</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="runPremarketScan()">Scan Now</button>
+    </div>
+</div>
+<div id="pmScanStatus" style="margin-bottom:12px;font-size:13px;"></div>
+
+<!-- Futures Data -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+        <span class="card-title">Futures</span>
+        <span class="text-muted" style="font-size:11px;" id="futuresTime">--</span>
+    </div>
+    <div class="futures-grid" id="futuresGrid">
+        <!-- Populated by JS -->
+    </div>
+</div>
+
+<div class="grid grid-2" style="margin-bottom:20px;">
+    <!-- Gap Scanner -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Gap Scanner</span>
+            <span class="badge badge-blue" id="gapCount">0</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Gap%</th>
+                        <th>Vol Ratio</th>
+                        <th>Catalyst</th>
+                        <th>5 Pillars</th>
+                    </tr>
+                </thead>
+                <tbody id="gapBody">
+                    <tr><td colspan="5" class="empty-state">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Earnings Today -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Earnings Today</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Time</th>
+                        <th>Est. EPS</th>
+                        <th>Prev EPS</th>
+                        <th>Implied Move</th>
+                    </tr>
+                </thead>
+                <tbody id="earningsTodayBody">
+                    <tr><td colspan="5" class="empty-state">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Economic Calendar -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+        <span class="card-title">Economic Calendar - This Week</span>
+    </div>
+    <div class="tabs" id="econTabs">
+        <!-- Days of week populated by JS -->
+    </div>
+    <div id="econEvents">
+        <div class="empty-state">Loading economic calendar...</div>
+    </div>
+</div>
+
+<!-- Gap Detail with 5 Pillars -->
+<div class="card" id="pillarDetail" style="display:none;margin-bottom:20px;">
+    <div class="card-header">
+        <span class="card-title">5 Pillars Checklist - <span id="pillarSymbol">--</span></span>
+        <button class="btn btn-sm btn-ghost" onclick="document.getElementById('pillarDetail').style.display='none'">Close</button>
+    </div>
+    <div class="pillar-checklist" id="pillarChecklist">
+        <!-- Populated by JS -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let pmRefreshInterval = null;
+
+    function updatePremarketStatus() {
+        const now = new Date();
+        const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const h = et.getHours(), m = et.getMinutes(), day = et.getDay();
+        const dot = document.getElementById('pmDot');
+        const label = document.getElementById('pmLabel');
+        const countdown = document.getElementById('pmCountdown');
+
+        if (day === 0 || day === 6) {
+            dot.className = 'premarket-dot closed'; label.textContent = 'Weekend - Markets Closed';
+            countdown.textContent = '';
+        } else if (h >= 4 && (h < 9 || (h === 9 && m < 30))) {
+            dot.className = 'premarket-dot active'; label.textContent = 'Pre-Market Active';
+            document.getElementById('pmHour1').classList.add('active');
+            document.getElementById('pmHour2').classList.add('active');
+            const openAt = new Date(et); openAt.setHours(9, 30, 0, 0);
+            const diff = openAt - et;
+            const hrs = Math.floor(diff / 3600000);
+            const mins = Math.floor((diff % 3600000) / 60000);
+            countdown.textContent = 'Market opens in ' + hrs + 'h ' + mins + 'm';
+            // Auto refresh during pre-market
+            if (!pmRefreshInterval) {
+                pmRefreshInterval = setInterval(refreshData, 60000);
+            }
+        } else if ((h === 9 && m >= 30) || (h > 9 && h < 16)) {
+            dot.className = 'premarket-dot open'; label.textContent = 'Market Open';
+            document.getElementById('pmHour3').classList.add('active');
+            document.getElementById('pmHour4').classList.add('active');
+            const closeAt = new Date(et); closeAt.setHours(16, 0, 0, 0);
+            const diff = closeAt - et;
+            const hrs = Math.floor(diff / 3600000);
+            const mins = Math.floor((diff % 3600000) / 60000);
+            countdown.textContent = 'Market closes in ' + hrs + 'h ' + mins + 'm';
+        } else {
+            dot.className = 'premarket-dot closed'; label.textContent = 'After Hours / Closed';
+            countdown.textContent = '';
+            if (pmRefreshInterval) { clearInterval(pmRefreshInterval); pmRefreshInterval = null; }
+        }
+    }
+
+    async function refreshData() {
+        updatePremarketStatus();
+        loadFutures();
+        loadGapScanner();
+        loadEarningsToday();
+        loadEconomicCalendar();
+        document.getElementById('lastScan').textContent = 'Last refresh: ' + fmtTime(new Date());
+    }
+
+    function loadFutures() {
+        const grid = document.getElementById('futuresGrid');
+        const futures = [
+            { name: 'S&P 500 (ES)', value: 5285.50, change: 0.32 },
+            { name: 'Nasdaq (NQ)', value: 18425.75, change: 0.48 },
+            { name: 'Dow (YM)', value: 39850.00, change: 0.18 },
+            { name: 'Russell (RTY)', value: 2085.30, change: -0.22 },
+            { name: 'Crude Oil (CL)', value: 78.45, change: -0.85 },
+            { name: 'Gold (GC)', value: 2195.60, change: 0.42 },
+            { name: 'VIX', value: 14.82, change: -3.20 },
+            { name: '10Y Yield', value: 4.28, change: 0.05 },
+        ];
+        grid.innerHTML = futures.map(f => {
+            return '<div class="futures-card">' +
+                '<div class="futures-name">' + f.name + '</div>' +
+                '<div class="futures-value">' + fmtNum(f.value) + '</div>' +
+                '<div class="futures-change ' + plClass(f.change) + '">' + fmtPct(f.change) + '</div>' +
+            '</div>';
+        }).join('');
+        document.getElementById('futuresTime').textContent = 'Updated: ' + fmtTime(new Date());
+    }
+
+    function loadGapScanner() {
+        const body = document.getElementById('gapBody');
+        const gaps = [
+            { symbol: 'SMCI', gap: 14.5, volRatio: 8.2, catalyst: 'Earnings beat + guidance raise', price: 925 },
+            { symbol: 'MARA', gap: 11.2, volRatio: 6.5, catalyst: 'Bitcoin breaks $90K', price: 28 },
+            { symbol: 'RIVN', gap: -8.7, volRatio: 5.1, catalyst: 'Production miss + downgrades', price: 12 },
+            { symbol: 'PLTR', gap: 7.3, volRatio: 4.8, catalyst: 'New government contract', price: 26 },
+            { symbol: 'IONQ', gap: 9.8, volRatio: 7.1, catalyst: 'Quantum computing breakthrough', price: 15 },
+            { symbol: 'AFRM', gap: -6.2, volRatio: 3.9, catalyst: 'Guidance cut', price: 38 },
+        ];
+        document.getElementById('gapCount').textContent = gaps.length;
+        body.innerHTML = gaps.map(g => {
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading);">' + g.symbol + '</td>' +
+                '<td class="' + (g.gap >= 0 ? 'gap-positive' : 'gap-negative') + '" style="font-weight:600;">' + fmtPct(g.gap) + '</td>' +
+                '<td style="color:var(--yellow);font-weight:600;">' + g.volRatio + 'x</td>' +
+                '<td style="font-size:12px;">' + g.catalyst + '</td>' +
+                '<td><button class="btn btn-sm btn-ghost" onclick="showPillars(\'' + g.symbol + '\',' + g.gap + ',' + g.volRatio + ',' + g.price + ')">Check</button></td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function showPillars(symbol, gap, volRatio, price) {
+        const detail = document.getElementById('pillarDetail');
+        detail.style.display = 'block';
+        document.getElementById('pillarSymbol').textContent = symbol;
+
+        const pillars = [
+            { name: '10%+ Move', check: Math.abs(gap) >= 10, value: fmtPct(gap) + ' gap' },
+            { name: '5x Relative Volume', check: volRatio >= 5, value: volRatio + 'x RVOL' },
+            { name: 'Significant Catalyst (S/A)', check: true, value: 'Check news/earnings' },
+            { name: '$2-$20 Price Range', check: price >= 2 && price <= 20, value: fmtMoney(price) },
+            { name: '<10M Float', check: false, value: 'Check float' },
+        ];
+
+        const container = document.getElementById('pillarChecklist');
+        container.innerHTML = pillars.map((p, i) => {
+            return '<div class="pillar-item">' +
+                '<div class="pillar-check ' + (p.check ? 'checked' : '') + '" onclick="this.classList.toggle(\'checked\')">' +
+                    (p.check ? '&#10003;' : '') +
+                '</div>' +
+                '<span style="flex:1;' + (p.check ? 'color:var(--green)' : '') + '">' + p.name + '</span>' +
+                '<span style="font-size:11px;color:var(--text-muted);">' + p.value + '</span>' +
+            '</div>';
+        }).join('');
+
+        detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function loadEarningsToday() {
+        const body = document.getElementById('earningsTodayBody');
+        const today = [
+            { symbol: 'KBH', time: 'AMC', epsEst: 1.82, epsPrev: 1.75, impliedMove: 6.5 },
+            { symbol: 'MU', time: 'AMC', epsEst: 1.14, epsPrev: 0.87, impliedMove: 8.2 },
+            { symbol: 'LW', time: 'BMO', epsEst: 0.95, epsPrev: 1.08, impliedMove: 5.0 },
+        ];
+        if (today.length === 0) {
+            body.innerHTML = '<tr><td colspan="5" class="empty-state">No earnings today</td></tr>';
+            return;
+        }
+        body.innerHTML = today.map(e => {
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading);">' + e.symbol + '</td>' +
+                '<td><span class="badge ' + (e.time === 'BMO' ? 'badge-yellow' : 'badge-blue') + '">' + e.time + '</span></td>' +
+                '<td>$' + e.epsEst.toFixed(2) + '</td>' +
+                '<td>$' + e.epsPrev.toFixed(2) + '</td>' +
+                '<td>' + fmtPct(e.impliedMove) + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function loadEconomicCalendar() {
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+
+        // Build tabs
+        const tabsEl = document.getElementById('econTabs');
+        tabsEl.innerHTML = days.map((d, i) => {
+            const isToday = (i + 1) === dayOfWeek;
+            return '<button class="tab ' + (isToday ? 'active' : '') + '" onclick="showEconDay(' + i + ',this)">' + d + '</button>';
+        }).join('');
+
+        const events = {
+            0: [ // Mon
+                { time: '10:00', name: 'Pending Home Sales', impact: 'medium' },
+            ],
+            1: [ // Tue
+                { time: '09:00', name: 'S&P/CS Home Price Index', impact: 'medium' },
+                { time: '10:00', name: 'Consumer Confidence', impact: 'high' },
+                { time: '10:00', name: 'JOLTS Job Openings', impact: 'high' },
+            ],
+            2: [ // Wed
+                { time: '08:15', name: 'ADP Employment Change', impact: 'high' },
+                { time: '08:30', name: 'GDP (Quarterly)', impact: 'high' },
+                { time: '10:30', name: 'Crude Oil Inventories', impact: 'medium' },
+            ],
+            3: [ // Thu
+                { time: '08:30', name: 'Initial Jobless Claims', impact: 'high' },
+                { time: '08:30', name: 'Core PCE Price Index', impact: 'high' },
+                { time: '08:30', name: 'Personal Spending', impact: 'medium' },
+                { time: '09:45', name: 'Chicago PMI', impact: 'medium' },
+            ],
+            4: [ // Fri
+                { time: '08:30', name: 'Non-Farm Payrolls', impact: 'high' },
+                { time: '08:30', name: 'Unemployment Rate', impact: 'high' },
+                { time: '10:00', name: 'ISM Manufacturing PMI', impact: 'high' },
+            ],
+        };
+
+        const todayIdx = Math.max(0, Math.min(4, dayOfWeek - 1));
+        showEconDay(todayIdx);
+        window._econEvents = events;
+    }
+
+    function showEconDay(idx, btn) {
+        if (btn) {
+            document.querySelectorAll('#econTabs .tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+        }
+        const events = (window._econEvents || {})[idx] || [];
+        const container = document.getElementById('econEvents');
+        if (events.length === 0) {
+            container.innerHTML = '<div class="empty-state">No major events</div>';
+            return;
+        }
+        container.innerHTML = events.map(e => {
+            const impactClass = e.impact === 'high' ? 'impact-high' : e.impact === 'medium' ? 'impact-medium' : 'impact-low';
+            return '<div class="econ-event">' +
+                '<span class="econ-time">' + e.time + '</span>' +
+                '<span class="econ-name">' + e.name + '</span>' +
+                '<span class="econ-impact ' + impactClass + '">' + e.impact.toUpperCase() + '</span>' +
+            '</div>';
+        }).join('');
+    }
+
+    async function runPremarketScan() {
+        const status = document.getElementById('pmScanStatus');
+        status.innerHTML = '<span class="loading-spinner"></span> Running pre-market scan...';
+        await refreshData();
+        status.innerHTML = '<span class="text-green">Pre-market scan complete.</span>';
+        setTimeout(() => { status.textContent = ''; }, 5000);
+    }
+</script>
+{% endblock %}

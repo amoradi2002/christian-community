@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}My Profile - AI Trading Bot{% endblock %}
+{% block content %}
+<h1>My Trading Profile</h1>
+
+<!-- Profile Summary Cards -->
+<div class="grid" id="profile-summary">
+    <p class="muted">Loading profile...</p>
+</div>
+
+<!-- Performance Stats -->
+<div class="card" id="perf-card" style="display:none;">
+    <h2>Performance</h2>
+    <div class="grid" id="perf-grid"></div>
+</div>
+
+<!-- Risk Calculator -->
+<div class="card">
+    <h2>Position Size Calculator</h2>
+    <p class="muted">See exactly how many shares to buy based on your risk profile.</p>
+    <div style="display:flex; gap:0.5rem; margin:1rem 0; flex-wrap:wrap;">
+        <input type="text" id="calc-symbol" placeholder="Symbol" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:100px;">
+        <input type="number" id="calc-price" placeholder="Price" step="0.01" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:120px;">
+        <input type="number" id="calc-confidence" placeholder="Confidence (0-1)" step="0.05" value="0.75" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:160px;">
+        <button onclick="calculateSize()" class="btn">Calculate</button>
+    </div>
+    <div id="calc-result"></div>
+</div>
+
+<!-- Edit Profile -->
+<div class="card">
+    <h2>Edit Profile</h2>
+    <form id="profile-form" onsubmit="saveProfile(event)">
+        <div class="grid">
+            <div>
+                <label><strong>Starting Capital ($)</strong></label><br>
+                <input type="number" id="edit-capital" step="0.01" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:100%;">
+            </div>
+            <div>
+                <label><strong>Risk Level</strong></label><br>
+                <select id="edit-risk-level" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:100%;">
+                    <option value="conservative">Conservative (1% per trade)</option>
+                    <option value="moderate">Moderate (2% per trade)</option>
+                    <option value="aggressive">Aggressive (4% per trade)</option>
+                </select>
+            </div>
+            <div>
+                <label><strong>Risk Per Trade (%)</strong></label><br>
+                <input type="number" id="edit-risk-pct" step="0.5" min="0.5" max="10" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:100%;">
+            </div>
+            <div>
+                <label><strong>Max Open Positions</strong></label><br>
+                <input type="number" id="edit-max-pos" min="1" max="20" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:100%;">
+            </div>
+            <div>
+                <label><strong>Max % Per Stock</strong></label><br>
+                <input type="number" id="edit-max-pct" step="1" min="1" max="50" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:100%;">
+            </div>
+            <div>
+                <label><strong>Daily Loss Limit (%)</strong></label><br>
+                <input type="number" id="edit-daily-limit" step="1" min="1" max="20" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; width:100%;">
+            </div>
+        </div>
+        <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+            <button type="submit" class="btn">Save Profile</button>
+            <button type="button" onclick="syncBroker()" class="btn btn-secondary">Sync with Alpaca</button>
+        </div>
+        <div id="save-status" style="margin-top:0.5rem;"></div>
+    </form>
+</div>
+
+<!-- How It Works -->
+<div class="card">
+    <h2>How Risk Management Works</h2>
+    <table>
+        <tr><th>Feature</th><th>What It Does</th></tr>
+        <tr><td><strong>Position Sizing</strong></td><td>Calculates shares based on your risk budget, not a fixed number. A $500 account trades differently than a $50k account.</td></tr>
+        <tr><td><strong>Risk Per Trade</strong></td><td>Max you can lose on one trade. Set to 2% means a $500 account risks max $10 per trade.</td></tr>
+        <tr><td><strong>Adaptive Multiplier</strong></td><td>Winning streak? Bot gradually increases size (up to 1.5x). Losing streak? Cuts down to 0.25x automatically.</td></tr>
+        <tr><td><strong>Drawdown Protection</strong></td><td>If you're down 10%+ from your peak, risk is automatically halved. Down 15%+, quartered.</td></tr>
+        <tr><td><strong>Daily/Weekly Limits</strong></td><td>Stop-loss for your whole day/week. Prevents revenge trading after bad days.</td></tr>
+        <tr><td><strong>Stop Loss + Take Profit</strong></td><td>Every trade gets a stop loss and 2:1 reward target automatically.</td></tr>
+    </table>
+</div>
+
+<script>
+function loadProfile() {
+    fetch('/api/profile').then(r => r.json()).then(data => {
+        if (data.error) return;
+        const p = data.profile;
+        const summary = document.getElementById('profile-summary');
+
+        const riskColor = p.risk_multiplier >= 1 ? 'positive' : 'negative';
+        const growthColor = p.growth_pct >= 0 ? 'positive' : 'negative';
+
+        summary.innerHTML = `
+            <div class="stat">
+                <div class="stat-label">Capital</div>
+                <div class="stat-value">$${parseFloat(p.current_capital).toLocaleString()}</div>
+                <div class="${growthColor}" style="font-size:0.85rem;">${p.growth_pct >= 0 ? '+' : ''}${p.growth_pct.toFixed(1)}% all time</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Risk Per Trade</div>
+                <div class="stat-value">$${p.risk_per_trade_dollars.toFixed(2)}</div>
+                <div style="font-size:0.85rem;">${p.effective_risk_pct}% effective</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Risk Level</div>
+                <div class="stat-value">${p.risk_level.charAt(0).toUpperCase() + p.risk_level.slice(1)}</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Adaptive Multiplier</div>
+                <div class="stat-value ${riskColor}">${p.risk_multiplier}x</div>
+                <div style="font-size:0.85rem;">Streak: ${data.streak_label}</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Today's P&L</div>
+                <div class="stat-value ${data.daily_pnl >= 0 ? 'positive' : 'negative'}">$${data.daily_pnl.toFixed(2)}</div>
+                <div style="font-size:0.85rem;">Limit: -$${data.daily_limit.toFixed(2)}</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Can Trade?</div>
+                <div class="stat-value ${data.can_trade_today ? 'positive' : 'negative'}">${data.can_trade_today ? 'YES' : 'STOPPED'}</div>
+            </div>
+        `;
+
+        // Fill form
+        document.getElementById('edit-capital').value = p.starting_capital;
+        document.getElementById('edit-risk-level').value = p.risk_level;
+        document.getElementById('edit-risk-pct').value = p.risk_per_trade_pct;
+        document.getElementById('edit-max-pos').value = p.max_open_positions;
+        document.getElementById('edit-max-pct').value = p.max_portfolio_pct;
+        document.getElementById('edit-daily-limit').value = p.daily_loss_limit_pct;
+
+        // Show performance if trades exist
+        if (p.total_trades > 0) {
+            const perfCard = document.getElementById('perf-card');
+            perfCard.style.display = 'block';
+            document.getElementById('perf-grid').innerHTML = `
+                <div class="stat"><div class="stat-label">Total Trades</div><div class="stat-value">${p.total_trades}</div></div>
+                <div class="stat"><div class="stat-label">Win Rate</div><div class="stat-value">${(p.win_rate * 100).toFixed(1)}%</div></div>
+                <div class="stat"><div class="stat-label">Total P&L</div><div class="stat-value ${p.total_pnl >= 0 ? 'positive' : 'negative'}">$${p.total_pnl.toFixed(2)}</div></div>
+                <div class="stat"><div class="stat-label">Best Trade</div><div class="stat-value positive">+$${p.best_trade_pnl.toFixed(2)}</div></div>
+                <div class="stat"><div class="stat-label">Worst Trade</div><div class="stat-value negative">$${p.worst_trade_pnl.toFixed(2)}</div></div>
+                <div class="stat"><div class="stat-label">Drawdown</div><div class="stat-value">${p.drawdown_pct.toFixed(1)}%</div></div>
+            `;
+        }
+    });
+}
+
+function saveProfile(e) {
+    e.preventDefault();
+    const body = {
+        starting_capital: parseFloat(document.getElementById('edit-capital').value),
+        risk_level: document.getElementById('edit-risk-level').value,
+        risk_per_trade_pct: parseFloat(document.getElementById('edit-risk-pct').value),
+        max_open_positions: parseInt(document.getElementById('edit-max-pos').value),
+        max_portfolio_pct: parseFloat(document.getElementById('edit-max-pct').value),
+        daily_loss_limit_pct: parseFloat(document.getElementById('edit-daily-limit').value),
+    };
+
+    fetch('/api/profile', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('save-status').innerHTML = data.error
+                ? `<span class="negative">${data.error}</span>`
+                : '<span class="positive">Profile saved! Reloading...</span>';
+            if (!data.error) setTimeout(loadProfile, 500);
+        });
+}
+
+function syncBroker() {
+    fetch('/api/profile/sync', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('save-status').innerHTML = data.error
+                ? `<span class="negative">${data.error}</span>`
+                : `<span class="positive">Synced! Capital: $${data.profile?.current_capital?.toLocaleString() || 'N/A'}</span>`;
+            if (!data.error) setTimeout(loadProfile, 500);
+        });
+}
+
+function calculateSize() {
+    const symbol = document.getElementById('calc-symbol').value.toUpperCase();
+    const price = parseFloat(document.getElementById('calc-price').value);
+    const confidence = parseFloat(document.getElementById('calc-confidence').value);
+    const el = document.getElementById('calc-result');
+
+    if (!symbol || !price) { el.innerHTML = '<p class="muted">Enter symbol and price.</p>'; return; }
+
+    fetch('/api/risk/calculate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({symbol, price, confidence})
+    }).then(r => r.json()).then(d => {
+        if (d.error) { el.innerHTML = `<p class="negative">${d.error}</p>`; return; }
+        if (!d.can_trade) {
+            el.innerHTML = `<div class="negative" style="padding:1rem; background:#fff0f0; border-radius:8px;"><strong>Trade Blocked:</strong> ${d.reason}</div>`;
+            return;
+        }
+
+        el.innerHTML = `
+            <div style="padding:1rem; background:#f0fff0; border-radius:8px;">
+                <div class="grid">
+                    <div class="stat"><div class="stat-label">Buy</div><div class="stat-value">${d.shares} shares of ${symbol}</div></div>
+                    <div class="stat"><div class="stat-label">Position Size</div><div class="stat-value">$${d.position_value.toFixed(2)}</div></div>
+                    <div class="stat"><div class="stat-label">Max Risk</div><div class="stat-value negative">$${d.risk_amount.toFixed(2)} (${d.risk_pct_of_capital}%)</div></div>
+                    <div class="stat"><div class="stat-label">Stop Loss</div><div class="stat-value">$${d.stop_loss_price.toFixed(2)} (-${d.stop_loss_pct}%)</div></div>
+                    <div class="stat"><div class="stat-label">Take Profit</div><div class="stat-value positive">$${d.take_profit_price.toFixed(2)} (2:1 R/R)</div></div>
+                    <div class="stat"><div class="stat-label">Risk Multiplier</div><div class="stat-value">${d.risk_multiplier}x</div></div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+loadProfile();
+</script>
+{% endblock %}

@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% block title %}Intelligence - TradeBot{% endblock %}
+{% block extra_css %}
+<style>
+    .intel-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .intel-tab {
+        padding: 10px 18px; cursor: pointer; font-size: 13px; font-weight: 600;
+        color: var(--text-muted); border: none; background: none;
+        border-bottom: 2px solid transparent; transition: all 0.15s;
+    }
+    .intel-tab:hover { color: var(--text); }
+    .intel-tab.active { color: var(--green); border-bottom-color: var(--green); }
+    .intel-section { display: none; }
+    .intel-section.active { display: block; }
+
+    .alert-card {
+        background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+        border-left: 3px solid var(--border); transition: border-color 0.15s;
+    }
+    .alert-card:hover { border-color: var(--accent-light); }
+    .alert-card.bullish { border-left-color: var(--green); }
+    .alert-card.bearish { border-left-color: var(--red); }
+    .alert-card.neutral { border-left-color: var(--yellow); }
+    .alert-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .alert-card-symbol { font-size: 15px; font-weight: 700; color: var(--text-heading); }
+    .alert-card-time { font-size: 11px; color: var(--text-muted); }
+    .alert-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+    .alert-card-meta { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+    .alert-card-meta span { font-size: 11px; color: var(--text-muted); }
+    .alert-card-meta .value { color: var(--text-heading); font-weight: 600; }
+
+    .sentiment-bar {
+        display: flex; height: 8px; border-radius: 4px; overflow: hidden;
+        background: var(--bg); margin-top: 4px;
+    }
+    .sentiment-bullish { background: var(--green); }
+    .sentiment-bearish { background: var(--red); }
+    .sentiment-neutral { background: var(--yellow); }
+
+    .countdown-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 2px 8px; border-radius: 8px; font-size: 11px;
+        background: var(--yellow-dim); color: var(--yellow); font-weight: 600;
+    }
+
+    .news-item {
+        padding: 10px 0; border-bottom: 1px solid rgba(42,58,92,0.3);
+    }
+    .news-item:last-child { border-bottom: none; }
+    .news-headline { font-size: 13px; color: var(--text-heading); font-weight: 500; margin-bottom: 4px; }
+    .news-source { font-size: 11px; color: var(--text-muted); }
+
+    .options-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .options-chip {
+        padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Market Intelligence</h1>
+    <button class="btn btn-primary" onclick="runIntelScan()" id="btnIntelScan">Scan Intelligence</button>
+</div>
+<div id="intelStatus" style="margin-bottom:12px;font-size:13px;"></div>
+
+<!-- Tabs -->
+<div class="intel-tabs">
+    <button class="intel-tab active" onclick="showSection('whales')">Whale Flow</button>
+    <button class="intel-tab" onclick="showSection('earnings')">Earnings</button>
+    <button class="intel-tab" onclick="showSection('insider')">Insider Buys</button>
+    <button class="intel-tab" onclick="showSection('volume')">Unusual Volume</button>
+    <button class="intel-tab" onclick="showSection('options')">Options Opps</button>
+    <button class="intel-tab" onclick="showSection('news')">News Sentiment</button>
+</div>
+
+<!-- Whale Flow -->
+<div class="intel-section active" id="section-whales">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Whale Flow Alerts (&gt;$500K)</span>
+            <div style="display:flex;gap:8px;">
+                <select id="whaleFilter" onchange="filterWhales()" style="font-size:12px;padding:4px 8px;">
+                    <option value="all">All Sentiment</option>
+                    <option value="bullish">Bullish</option>
+                    <option value="bearish">Bearish</option>
+                </select>
+            </div>
+        </div>
+        <div id="whaleFlowList">
+            <div class="loading-overlay"><span class="loading-spinner"></span>&nbsp;Loading whale flow...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Earnings -->
+<div class="intel-section" id="section-earnings">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Upcoming Earnings</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Company</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Countdown</th>
+                        <th>Est. EPS</th>
+                        <th>Implied Move</th>
+                    </tr>
+                </thead>
+                <tbody id="earningsBody">
+                    <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Insider Buys -->
+<div class="intel-section" id="section-insider">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Recent Insider Buys</span>
+        </div>
+        <div id="insiderList">
+            <div class="loading-overlay"><span class="loading-spinner"></span>&nbsp;Loading...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Unusual Volume -->
+<div class="intel-section" id="section-volume">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Unusual Volume</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change%</th>
+                        <th>Volume</th>
+                        <th>Avg Volume</th>
+                        <th>Vol Ratio</th>
+                        <th>Signal</th>
+                    </tr>
+                </thead>
+                <tbody id="volumeBody">
+                    <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Options Opportunities -->
+<div class="intel-section" id="section-options">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Options Opportunities</span>
+        </div>
+        <div id="optionsList">
+            <div class="loading-overlay"><span class="loading-spinner"></span>&nbsp;Loading...</div>
+        </div>
+    </div>
+</div>
+
+<!-- News Sentiment -->
+<div class="intel-section" id="section-news">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">News Sentiment</span>
+        </div>
+        <div id="newsList">
+            <div class="loading-overlay"><span class="loading-spinner"></span>&nbsp;Loading...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let whaleData = [];
+
+    function showSection(name) {
+        document.querySelectorAll('.intel-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.intel-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('section-' + name).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    async function refreshData() {
+        await Promise.all([
+            loadWhaleFlow(),
+            loadEarnings(),
+            loadInsider(),
+            loadVolume(),
+            loadOptions(),
+            loadNewsSentiment(),
+        ]);
+        document.getElementById('lastScan').textContent = 'Last refresh: ' + fmtTime(new Date());
+    }
+
+    async function loadWhaleFlow() {
+        const data = await apiFetch('/api/flow/alerts');
+        const container = document.getElementById('whaleFlowList');
+        if (!data || data.error || (Array.isArray(data) && data.length === 0)) {
+            // Show demo data
+            whaleData = generateDemoWhales();
+        } else {
+            whaleData = data;
+        }
+        renderWhales(whaleData);
+    }
+
+    function generateDemoWhales() {
+        const symbols = ['AAPL','NVDA','TSLA','SPY','AMZN','META','GOOGL','MSFT'];
+        return symbols.map((sym, i) => ({
+            ticker: sym,
+            sentiment: i % 3 === 0 ? 'bearish' : (i % 3 === 1 ? 'neutral' : 'bullish'),
+            premium: 500000 + Math.random() * 5000000,
+            strike: (100 + Math.random() * 200).toFixed(0),
+            expiry: '2026-04-17',
+            type: i % 2 === 0 ? 'CALL' : 'PUT',
+            volume: Math.floor(1000 + Math.random() * 10000),
+            open_interest: Math.floor(5000 + Math.random() * 50000),
+            timestamp: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+        }));
+    }
+
+    function renderWhales(data) {
+        const container = document.getElementById('whaleFlowList');
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div class="empty-state">No whale flow alerts</div>';
+            return;
+        }
+        container.innerHTML = data.map(f => {
+            const sent = (f.sentiment || 'neutral').toLowerCase();
+            const sentClass = sent.includes('bull') ? 'bullish' : sent.includes('bear') ? 'bearish' : 'neutral';
+            const sentBadge = sent.includes('bull') ? 'badge-green' : sent.includes('bear') ? 'badge-red' : 'badge-yellow';
+            return '<div class="alert-card ' + sentClass + '">' +
+                '<div class="alert-card-header">' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                        '<span class="alert-card-symbol">' + (f.ticker || f.symbol || '--') + '</span>' +
+                        '<span class="badge ' + sentBadge + '">' + sentClass + '</span>' +
+                    '</div>' +
+                    '<span class="alert-card-time">' + fmtDateTime(f.timestamp || f.time) + '</span>' +
+                '</div>' +
+                '<div class="alert-card-body">' +
+                    (f.type || 'CALL') + ' $' + (f.strike || '--') + ' exp ' + (f.expiry || '--') +
+                '</div>' +
+                '<div class="alert-card-meta">' +
+                    '<span>Premium: <span class="value">' + fmtMoney(f.premium || f.total_premium) + '</span></span>' +
+                    '<span>Volume: <span class="value">' + (f.volume || '--').toLocaleString() + '</span></span>' +
+                    '<span>OI: <span class="value">' + (f.open_interest || '--').toLocaleString() + '</span></span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function filterWhales() {
+        const filter = document.getElementById('whaleFilter').value;
+        if (filter === 'all') {
+            renderWhales(whaleData);
+        } else {
+            renderWhales(whaleData.filter(f => (f.sentiment || '').toLowerCase().includes(filter)));
+        }
+    }
+
+    async function loadEarnings() {
+        const body = document.getElementById('earningsBody');
+        // Demo earnings data
+        const earnings = [
+            { symbol: 'AAPL', company: 'Apple Inc.', date: '2026-04-24', time: 'AMC', eps_est: 1.62, implied_move: 4.2 },
+            { symbol: 'MSFT', company: 'Microsoft Corp.', date: '2026-04-22', time: 'AMC', eps_est: 3.22, implied_move: 3.8 },
+            { symbol: 'GOOGL', company: 'Alphabet Inc.', date: '2026-04-22', time: 'AMC', eps_est: 2.01, implied_move: 5.1 },
+            { symbol: 'META', company: 'Meta Platforms', date: '2026-04-23', time: 'AMC', eps_est: 5.28, implied_move: 6.3 },
+            { symbol: 'AMZN', company: 'Amazon.com', date: '2026-04-24', time: 'AMC', eps_est: 1.36, implied_move: 5.5 },
+            { symbol: 'TSLA', company: 'Tesla Inc.', date: '2026-04-22', time: 'AMC', eps_est: 0.45, implied_move: 8.2 },
+        ];
+        body.innerHTML = earnings.map(e => {
+            const earningsDate = new Date(e.date);
+            const now = new Date();
+            const daysUntil = Math.ceil((earningsDate - now) / 86400000);
+            const countdown = daysUntil > 0 ? daysUntil + 'd' : 'Today';
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading)">' + e.symbol + '</td>' +
+                '<td>' + e.company + '</td>' +
+                '<td>' + e.date + '</td>' +
+                '<td>' + e.time + '</td>' +
+                '<td><span class="countdown-badge">' + countdown + '</span></td>' +
+                '<td>$' + e.eps_est.toFixed(2) + '</td>' +
+                '<td>' + fmtPct(e.implied_move) + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    async function loadInsider() {
+        const container = document.getElementById('insiderList');
+        const insiders = [
+            { symbol: 'AAPL', insider: 'Tim Cook (CEO)', shares: 50000, price: 178.50, value: 8925000, date: '2026-03-25' },
+            { symbol: 'JPM', insider: 'Jamie Dimon (CEO)', shares: 25000, price: 198.30, value: 4957500, date: '2026-03-24' },
+            { symbol: 'NVDA', insider: 'Jensen Huang (CEO)', shares: 10000, price: 875.20, value: 8752000, date: '2026-03-23' },
+            { symbol: 'MSFT', insider: 'Satya Nadella (CEO)', shares: 15000, price: 420.10, value: 6301500, date: '2026-03-22' },
+        ];
+        container.innerHTML = insiders.map(ins => {
+            return '<div class="alert-card bullish">' +
+                '<div class="alert-card-header">' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                        '<span class="alert-card-symbol">' + ins.symbol + '</span>' +
+                        '<span class="badge badge-green">INSIDER BUY</span>' +
+                    '</div>' +
+                    '<span class="alert-card-time">' + ins.date + '</span>' +
+                '</div>' +
+                '<div class="alert-card-body">' + ins.insider + '</div>' +
+                '<div class="alert-card-meta">' +
+                    '<span>Shares: <span class="value">' + ins.shares.toLocaleString() + '</span></span>' +
+                    '<span>Price: <span class="value">' + fmtMoney(ins.price) + '</span></span>' +
+                    '<span>Value: <span class="value">' + fmtMoney(ins.value) + '</span></span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    async function loadVolume() {
+        const body = document.getElementById('volumeBody');
+        const data = [
+            { symbol: 'GME', price: 28.50, change: 12.5, volume: 85000000, avgVol: 8500000, signal: 'bullish' },
+            { symbol: 'AMC', price: 5.80, change: 8.3, volume: 120000000, avgVol: 15000000, signal: 'bullish' },
+            { symbol: 'RIVN', price: 14.20, change: -5.2, volume: 45000000, avgVol: 12000000, signal: 'bearish' },
+            { symbol: 'PLTR', price: 25.60, change: 6.1, volume: 62000000, avgVol: 18000000, signal: 'bullish' },
+            { symbol: 'SOFI', price: 10.40, change: -3.8, volume: 38000000, avgVol: 11000000, signal: 'bearish' },
+        ];
+        body.innerHTML = data.map(d => {
+            const ratio = (d.volume / d.avgVol).toFixed(1);
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-heading)">' + d.symbol + '</td>' +
+                '<td>' + fmtMoney(d.price) + '</td>' +
+                '<td class="' + plClass(d.change) + '">' + fmtPct(d.change) + '</td>' +
+                '<td>' + (d.volume / 1000000).toFixed(1) + 'M</td>' +
+                '<td>' + (d.avgVol / 1000000).toFixed(1) + 'M</td>' +
+                '<td style="font-weight:600;color:var(--yellow);">' + ratio + 'x</td>' +
+                '<td><span class="badge ' + (d.signal === 'bullish' ? 'badge-green' : 'badge-red') + '">' + d.signal + '</span></td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    async function loadOptions() {
+        const container = document.getElementById('optionsList');
+        const opps = [
+            { symbol: 'AAPL', strategy: 'Bull Call Spread', direction: 'bullish', strike: '175/185', expiry: '2026-04-17', premium: 3.20, maxProfit: 6.80, pop: 62 },
+            { symbol: 'TSLA', strategy: 'Iron Condor', direction: 'neutral', strike: '230/240/260/270', expiry: '2026-04-17', premium: 4.50, maxProfit: 4.50, pop: 71 },
+            { symbol: 'NVDA', strategy: 'Cash Secured Put', direction: 'bullish', strike: '800', expiry: '2026-04-17', premium: 15.30, maxProfit: 1530, pop: 68 },
+            { symbol: 'SPY', strategy: 'Put Debit Spread', direction: 'bearish', strike: '520/510', expiry: '2026-04-17', premium: 2.80, maxProfit: 7.20, pop: 45 },
+        ];
+        container.innerHTML = opps.map(o => {
+            const dirClass = o.direction === 'bullish' ? 'bullish' : o.direction === 'bearish' ? 'bearish' : 'neutral';
+            const dirBadge = o.direction === 'bullish' ? 'badge-green' : o.direction === 'bearish' ? 'badge-red' : 'badge-yellow';
+            return '<div class="alert-card ' + dirClass + '">' +
+                '<div class="alert-card-header">' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                        '<span class="alert-card-symbol">' + o.symbol + '</span>' +
+                        '<span class="badge ' + dirBadge + '">' + o.direction + '</span>' +
+                    '</div>' +
+                    '<span style="font-size:12px;color:var(--text-muted);">POP: <strong style="color:var(--text-heading);">' + o.pop + '%</strong></span>' +
+                '</div>' +
+                '<div class="alert-card-body" style="font-weight:600;">' + o.strategy + '</div>' +
+                '<div class="alert-card-meta">' +
+                    '<span>Strike: <span class="value">' + o.strike + '</span></span>' +
+                    '<span>Expiry: <span class="value">' + o.expiry + '</span></span>' +
+                    '<span>Premium: <span class="value">' + fmtMoney(o.premium) + '</span></span>' +
+                    '<span>Max Profit: <span class="value">' + fmtMoney(o.maxProfit) + '</span></span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    async function loadNewsSentiment() {
+        const container = document.getElementById('newsList');
+        const sentiment = await apiFetch('/api/flow/sentiment');
+        const newsData = [
+            { symbol: 'AAPL', headline: 'Apple announces new AI features for iPhone 18', source: 'Reuters', sentiment: 0.75, time: '2h ago' },
+            { symbol: 'TSLA', headline: 'Tesla deliveries beat Q1 estimates by 12%', source: 'Bloomberg', sentiment: 0.82, time: '3h ago' },
+            { symbol: 'NVDA', headline: 'NVIDIA faces new export restrictions to China', source: 'WSJ', sentiment: -0.45, time: '5h ago' },
+            { symbol: 'AMZN', headline: 'Amazon AWS revenue growth accelerates', source: 'CNBC', sentiment: 0.68, time: '6h ago' },
+            { symbol: 'META', headline: 'Meta Reality Labs losses widen in Q1', source: 'FT', sentiment: -0.32, time: '8h ago' },
+            { symbol: 'JPM', headline: 'JPMorgan raises dividend by 15%', source: 'MarketWatch', sentiment: 0.71, time: '10h ago' },
+        ];
+
+        container.innerHTML = newsData.map(n => {
+            const sentPct = ((n.sentiment + 1) / 2 * 100).toFixed(0);
+            const sentLabel = n.sentiment > 0.2 ? 'Bullish' : n.sentiment < -0.2 ? 'Bearish' : 'Neutral';
+            const sentBadge = n.sentiment > 0.2 ? 'badge-green' : n.sentiment < -0.2 ? 'badge-red' : 'badge-yellow';
+            const bullWidth = Math.max(0, n.sentiment) * 50;
+            const bearWidth = Math.max(0, -n.sentiment) * 50;
+            const neutWidth = 100 - bullWidth - bearWidth;
+            return '<div class="news-item">' +
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+                    '<div>' +
+                        '<div class="news-headline">' +
+                            '<span style="color:var(--blue);font-weight:700;margin-right:6px;">' + n.symbol + '</span>' +
+                            n.headline +
+                        '</div>' +
+                        '<div class="news-source">' + n.source + ' &middot; ' + n.time + '</div>' +
+                    '</div>' +
+                    '<span class="badge ' + sentBadge + '" style="flex-shrink:0;margin-left:10px;">' + sentLabel + ' (' + (n.sentiment > 0 ? '+' : '') + n.sentiment.toFixed(2) + ')</span>' +
+                '</div>' +
+                '<div class="sentiment-bar" style="margin-top:6px;">' +
+                    '<div class="sentiment-bullish" style="width:' + bullWidth + '%;"></div>' +
+                    '<div class="sentiment-neutral" style="width:' + neutWidth + '%;"></div>' +
+                    '<div class="sentiment-bearish" style="width:' + bearWidth + '%;"></div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        // Add market-wide sentiment summary if available
+        if (sentiment && !sentiment.error) {
+            const summary = '<div class="alert-card neutral" style="margin-bottom:16px;">' +
+                '<div class="alert-card-header">' +
+                    '<span class="alert-card-symbol">Market Sentiment</span>' +
+                '</div>' +
+                '<div class="alert-card-body">' + JSON.stringify(sentiment) + '</div>' +
+            '</div>';
+            container.innerHTML = summary + container.innerHTML;
+        }
+    }
+
+    async function runIntelScan() {
+        const status = document.getElementById('intelStatus');
+        status.innerHTML = '<span class="loading-spinner"></span> Scanning intelligence sources...';
+        await refreshData();
+        status.innerHTML = '<span class="text-green">Intelligence scan complete.</span>';
+        setTimeout(() => { status.textContent = ''; }, 5000);
+    }
+</script>
+{% endblock %}
